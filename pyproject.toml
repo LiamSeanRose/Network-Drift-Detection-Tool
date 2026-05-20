@@ -1,0 +1,22 @@
+[project]
+name = "netdrift"
+version = "0.1.0"
+description = "Open-source network drift detection: compares intended state in NetBox against live device state."
+requires-python = ">=3.11"
+dependencies = [
+    "pynetbox",
+    "napalm",
+]
+
+[project.optional-dependencies]
+dev = ["pytest", "ruff"]
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
