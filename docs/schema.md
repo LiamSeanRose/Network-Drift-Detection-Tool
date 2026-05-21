@@ -8,11 +8,9 @@
 > **Rule: any change to this file is a merge request that BOTH partners review and
 > approve.** Do not change the schema unilaterally.
 >
-> **Status:** Draft for v0.1. Agree on it together before writing collector or
-> differ code.
+> **Status:** frozen for v0.1 as of 2026-05-21. Changes require a merge request both partners approve.
 
 ---
-
 ## 1. Why this exists
 
 Person A builds code that pulls data *from NetBox* and *from devices*. Person B
@@ -326,24 +324,38 @@ diffing and the semantic-equivalence problem — out of scope until v1.0.
 
 ---
 
-## 10. Open questions to resolve on the schema call
+## 10. Resolved questions (schema call, [DATE])
 
-Decide these together and record the answers in this file before coding starts:
+These were the open questions for v0.1. Settled jointly on the schema call;
+the schema is now frozen for v0.1.
 
 1. **Interface-missing convention.** When an interface exists in intent but not
-   reality (or vice versa), what exactly goes in the drift record's `field`? Proposed:
-   `"_interface"`. Confirm and document.
-2. **Case sensitivity of `device`.** Are device names case-sensitive? Proposed: yes,
-   exact match, no normalization. Confirm.
-3. **What if NetBox has an interface the device's platform names differently?** For
-   v0.1 with one vendor this can't happen; note it as a known future concern.
-4. **`collected_at` vs `detected_at`.** Confirmed: `collected_at` is when the
-   snapshot was taken (set by the collector); `detected_at` is when the diff was
-   computed (set by the diff engine). They will differ by seconds.
-5. **Where do hand-written test fixtures live?** Proposed: `tests/fixtures/`, as pairs
-   of intent/reality dicts plus the expected drift list. Person B owns these but
-   Person A should review them so collectors target the right shape.
+   reality (or vice versa), the drift record's `field` is the sentinel
+   `"_interface"`. **Confirmed** — already implemented in `differ.py`.
 
+2. **Case sensitivity of `device`.** Device names are **case-sensitive: exact,
+   byte-for-byte match, no normalization.** `Core-SW-01` and `core-sw-01` are
+   different devices. A casing mismatch surfaces as a loud, obvious failure
+   ("no reality for X") rather than being silently folded — which is the safer
+   behaviour, and matches how real network gear treats identifiers. The name in
+   NetBox, on the device, and in the schema object must be identical;
+   `seed_netbox.py` is responsible for keeping them consistent. **Confirmed.**
+
+3. **NetBox naming an interface differently from the device.** Not applicable
+   in v0.1: one vendor, and we control both the seed script and the device.
+   Per Section 3 rule 1, each collector normalizes interface names to canonical
+   full form before returning, so any vendor-specific naming is handled inside
+   that vendor's collector — not in this schema. Revisit per-vendor specifics
+   when a second vendor's collector is added (v0.2+). **Confirmed — no v0.1
+   action.**
+
+4. **`collected_at` vs `detected_at`.** `collected_at` is set by the collector
+   when the snapshot is taken; `detected_at` is set by the diff engine when the
+   diff is computed. They differ by seconds. **Confirmed.**
+
+5. **Where test fixtures live.** `tests/fixtures/`, as pairs of intent/reality
+   dicts plus the expected drift list. Person B owns them; Person A reviews them
+   so collectors target the right shape. **Confirmed.**
 ---
 
 ## 11. Change log for this document
@@ -352,8 +364,8 @@ Keep a running log so both partners can see how the contract evolved.
 
 | Date       | Change                                  | Approved by |
 |------------|-----------------------------------------|-------------|
-| (fill in)  | Initial v0.1 draft.                     | A + B       |
-
+| 2026-05-20  | Initial v0.1 draft.                     | A + B       |
+| 2026-05-21 | Section 10 open questions resolved; schema frozen for v0.1. | A + B |
 ---
 
 *When this document and the code disagree, this document wins — fix the code. When
