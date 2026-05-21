@@ -3,6 +3,8 @@ __pycache__/
 .venv/
 venv/
 .env
+scratch/
+clab-netdrift-lab/
 *.egg-info/
 .pytest_cache/
 .ruff_cache/
