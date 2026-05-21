@@ -1,0 +1,20 @@
+# Minimal two-node Arista cEOS topology for Network Drift Detection Tool v0.1.
+# Two switches, one link between them. No EVPN, no VXLAN — just enough
+# to develop and test drift detection against real device state.
+name: netdrift-lab
+
+topology:
+  kinds:
+    ceos:
+      image: ceos:4.36.0F
+
+  nodes:
+    core-sw-01:
+      kind: ceos
+      mgmt-ipv4: 172.20.20.11
+    core-sw-02:
+      kind: ceos
+      mgmt-ipv4: 172.20.20.12
+
+  links:
+    - endpoints: ["core-sw-01:eth1", "core-sw-02:eth1"]
