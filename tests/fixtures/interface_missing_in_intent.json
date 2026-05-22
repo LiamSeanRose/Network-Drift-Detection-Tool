@@ -1,0 +1,29 @@
+{
+    "intent": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-20T14:32:00Z",
+        "interfaces": {
+            "Ethernet1": {"description": "Uplink", "enabled": true, "ip_addresses": []}
+        }
+    },
+    "reality": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-20T14:32:03Z",
+        "interfaces": {
+            "Ethernet1": {"description": "Uplink", "enabled": true, "ip_addresses": []},
+            "Ethernet9": {"description": "Undocumented", "enabled": true, "ip_addresses": []}
+        }
+    },
+    "expected_drifts": [
+        {
+            "object": "interface:Ethernet9",
+            "field": "_interface",
+            "intent": "absent",
+            "reality": "present",
+            "drift_kind": "missing_in_intent",
+            "severity": "warning"
+        }
+    ]
+}

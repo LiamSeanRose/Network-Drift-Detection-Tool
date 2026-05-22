@@ -1,0 +1,28 @@
+{
+    "intent": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-20T14:32:00Z",
+        "interfaces": {
+            "Ethernet1": {"description": "Uplink", "enabled": true, "ip_addresses": ["10.0.0.1/30"]}
+        }
+    },
+    "reality": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-20T14:32:03Z",
+        "interfaces": {
+            "Ethernet1": {"description": "Uplink", "enabled": true, "ip_addresses": ["10.0.0.5/30"]}
+        }
+    },
+    "expected_drifts": [
+        {
+            "object": "interface:Ethernet1",
+            "field": "ip_addresses",
+            "intent": ["10.0.0.1/30"],
+            "reality": ["10.0.0.5/30"],
+            "drift_kind": "value_mismatch",
+            "severity": "warning"
+        }
+    ]
+}
