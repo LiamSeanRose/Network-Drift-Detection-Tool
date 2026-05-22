@@ -10,3 +10,4 @@ clab-netdrift-lab/
 .ruff_cache/
 dist/
 build/
+devices.yml
