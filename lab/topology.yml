@@ -12,9 +12,11 @@ topology:
     core-sw-01:
       kind: ceos
       mgmt-ipv4: 172.20.20.11
+      startup-config: configs/core-sw-01.cfg
     core-sw-02:
       kind: ceos
       mgmt-ipv4: 172.20.20.12
-
+      startup-config: configs/core-sw-02.cfg
+      
   links:
     - endpoints: ["core-sw-01:eth1", "core-sw-02:eth1"]
