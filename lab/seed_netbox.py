@@ -29,8 +29,20 @@ import pynetbox
 # not the Containerlab link name (eth1) — see docs/schema.md Rule 1.
 
 DEVICES = [
-    {"name": "core-sw-01", "interface": "Ethernet1", "ip": "10.0.0.1/30"},
-    {"name": "core-sw-02", "interface": "Ethernet1", "ip": "10.0.0.2/30"},
+    {
+        "name": "core-sw-01",
+        "interfaces": [
+            {"name": "Ethernet1", "ip": "10.0.0.1/30"},
+            {"name": "Management0", "ip": "172.20.20.11/24"},
+        ],
+    },
+    {
+        "name": "core-sw-02",
+        "interfaces": [
+            {"name": "Ethernet1", "ip": "10.0.0.2/30"},
+            {"name": "Management0", "ip": "172.20.20.12/24"},
+        ],
+    },
 ]
 
 MANUFACTURER = "Arista"
@@ -126,35 +138,36 @@ def main():
             },
         )
 
-        print(f"  Interface {entry['interface']}:")
-        interface = get_or_create(
-            nb.dcim.interfaces,
-            lookup={"device_id": device.id, "name": entry["interface"]},
-            defaults={
-                "device": device.id,
-                "name": entry["interface"],
-                "type": "1000base-t",   # interface physical type; arbitrary for a lab
-                "enabled": True,
-            },
-        )
+        for iface in entry["interfaces"]:
+            print(f"  Interface {iface['name']}:")
+            interface = get_or_create(
+                nb.dcim.interfaces,
+                lookup={"device_id": device.id, "name": iface["name"]},
+                defaults={
+                    "device": device.id,
+                    "name": iface["name"],
+                    "type": "1000base-t",   # interface physical type; arbitrary for a lab
+                    "enabled": True,
+                },
+            )
 
-        print(f"  IP {entry['ip']}:")
-        ip = get_or_create(
-            nb.ipam.ip_addresses,
-            lookup={"address": entry["ip"]},
-            defaults={
-                "address": entry["ip"],
-                "assigned_object_type": "dcim.interface",
-                "assigned_object_id": interface.id,
-            },
-        )
-        # Make sure the IP is attached to this interface even if it already
-        # existed unassigned from a previous partial run.
-        if ip.assigned_object_id != interface.id:
-            ip.assigned_object_type = "dcim.interface"
-            ip.assigned_object_id = interface.id
-            ip.save()
-            print(f"    (re-attached {ip} to {interface})")
+            print(f"  IP {iface['ip']}:")
+            ip = get_or_create(
+                nb.ipam.ip_addresses,
+                lookup={"address": iface["ip"]},
+                defaults={
+                    "address": iface["ip"],
+                    "assigned_object_type": "dcim.interface",
+                    "assigned_object_id": interface.id,
+                },
+            )
+            # Make sure the IP is attached to this interface even if it already
+            # existed unassigned from a previous partial run.
+            if ip.assigned_object_id != interface.id:
+                ip.assigned_object_type = "dcim.interface"
+                ip.assigned_object_id = interface.id
+                ip.save()
+                print(f"    (re-attached {ip} to {interface})")
 
     print("\nDone. NetBox now mirrors the Containerlab topology.")
 
