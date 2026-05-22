@@ -410,12 +410,12 @@ Suggest-by-default. Per-issue opt-in. Confirm-N-times. Mandatory confirmation di
 15. Definition Of Done — Per Version
 A version is shippable only when all its criteria are met.
 v0.1
-[ ] driftcheck <device> prints real drift from a live Containerlab device.
-[ ] Diff covers interface description, enabled state, IP addresses.
+[x] driftcheck core-sw-01 prints real drift from a live Containerlab device.
+[x] Diff covers interface description, enabled state, IP addresses.
 [ ] differ.py has unit tests; CI runs ruff + pytest and passes.
 [ ] topology.yml and seed_netbox.py reproduce the environment from scratch.
 [ ] README has the architecture diagram and a working quickstart.
-[ ] Repo is public on GitLab.
+[x] Repo is public on GitHub.
 v0.2
 [ ] Drift events persist in Postgres with timestamps; history is queryable.
 [ ] A second vendor is supported.
