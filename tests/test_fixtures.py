@@ -39,3 +39,28 @@ def test_enabled_and_description_drift_fixture():
 
     # Compare everything EXCEPT detected_at against the expected answer.
     assert strip_detected_at(result) == fixture["expected_drifts"]
+
+def test_ip_address_drift_fixture():
+    fixture = load_fixture("ip_address_drift.json")
+    result = diff(fixture["intent"], fixture["reality"])
+    for record in result:
+        assert "detected_at" in record
+        assert record["detected_at"].endswith("Z")
+    assert strip_detected_at(result) == fixture["expected_drifts"]
+
+def test_interface_missing_in_reality_fixture():
+    fixture = load_fixture("interface_missing_in_reality.json")
+    result = diff(fixture["intent"], fixture["reality"])
+    for record in result:
+        assert "detected_at" in record
+        assert record["detected_at"].endswith("Z")
+    assert strip_detected_at(result) == fixture["expected_drifts"]
+
+
+def test_interface_missing_in_intent_fixture():
+    fixture = load_fixture("interface_missing_in_intent.json")
+    result = diff(fixture["intent"], fixture["reality"])
+    for record in result:
+        assert "detected_at" in record
+        assert record["detected_at"].endswith("Z")
+    assert strip_detected_at(result) == fixture["expected_drifts"]
