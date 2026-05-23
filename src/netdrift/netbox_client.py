@@ -64,6 +64,50 @@ def _normalize_platform(device):
     slug = device.platform.slug
     return PLATFORM_MAP.get(slug, DEFAULT_PLATFORM)
 
+def _build_vlans(nb, site_id):
+    """Build the schema's top-level `vlans` block from NetBox.
+
+    Scoped to the device's site — VLANs in this lab belong to a site
+    (see seed_netbox.py). NetBox VLAN IDs are integers; schema Rule 7
+    requires the `vlans` dict to be keyed by VLAN ID as a STRING, so
+    we str() each vid.
+    """
+    vlans = {}
+    for nb_vlan in nb.ipam.vlans.filter(site_id=site_id):
+        vlans[str(nb_vlan.vid)] = {"name": nb_vlan.name or ""}
+    return vlans
+
+def _interface_vlan_fields(nb_iface):
+    """Map a NetBox interface's VLAN config to the schema's v0.2 fields.
+
+    Returns a dict with mode / untagged_vlan / tagged_vlans.
+
+    NetBox stores VLANs as objects and has no `routed` mode — a routed
+    interface simply has `mode` unset. The schema requires an explicit
+    `routed`, so an empty NetBox mode maps to "routed" here (schema Rule 8).
+    pynetbox returns VLANs as objects; the schema wants integer VLAN IDs,
+    so we pull `.vid` off each.
+    """
+    nb_mode = nb_iface.mode  # NetBox: "Access" / "Tagged" / None
+
+    if nb_mode is None:
+        mode = "routed"
+    else:
+        # nb_iface.mode is a pynetbox value; str() then lowercase it.
+        mode = str(nb_mode).lower()
+
+    if nb_iface.untagged_vlan is not None:
+        untagged_vlan = nb_iface.untagged_vlan.vid
+    else:
+        untagged_vlan = None
+
+    tagged_vlans = sorted(v.vid for v in nb_iface.tagged_vlans)
+
+    return {
+        "mode": mode,
+        "untagged_vlan": untagged_vlan,
+        "tagged_vlans": tagged_vlans,
+    }
 
 def get_intent(device_name):
     """
@@ -87,12 +131,16 @@ def get_intent(device_name):
             for ip in nb.ipam.ip_addresses.filter(interface_id=nb_iface.id)
         )
 
+        vlan_fields = _interface_vlan_fields(nb_iface)
         interfaces[nb_iface.name] = {
             # NetBox may return None for an unset description; schema Rule 4
             # requires "" instead.
             "description": nb_iface.description or "",
             "enabled": bool(nb_iface.enabled),
             "ip_addresses": ip_addresses,
+            "mode": vlan_fields["mode"],
+            "untagged_vlan": vlan_fields["untagged_vlan"],
+            "tagged_vlans": vlan_fields["tagged_vlans"],
         }
 
     return {
@@ -100,8 +148,8 @@ def get_intent(device_name):
         "platform": _normalize_platform(device),
         "collected_at": _utc_now_iso(),
         "interfaces": interfaces,
+        "vlans": _build_vlans(nb, device.site.id),
     }
-
 
 if __name__ == "__main__":
     # Quick manual smoke test:  python -m netdrift.netbox_client core-sw-01
