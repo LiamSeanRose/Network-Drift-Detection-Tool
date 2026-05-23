@@ -8,7 +8,8 @@
 > **Rule: any change to this file is a merge request that BOTH partners review and
 > approve.** Do not change the schema unilaterally.
 >
-> **Status:** frozen for v0.1 as of 2026-05-21. Changes require a merge request both partners approve.
+> **Status:** v0.2. VLAN / layer-2 fields added 2026-05-23 (see the change log).
+> Further changes require a merge request both partners approve.
 
 ---
 ## 1. Why this exists
@@ -29,7 +30,7 @@ contract.
 
 ---
 
-## 2. The device-state object (v0.1)
+## 2. The device-state object (v0.2)
 
 This is what `get_intent(device_name)` and `get_reality(device)` both return.
 
@@ -44,12 +45,32 @@ This is what `get_intent(device_name)` and `get_reality(device)` both return.
             "description": "Uplink to dist-01",  # str
             "enabled": True,                     # bool
             "ip_addresses": ["10.1.1.5/24"],     # list[str], sorted
+            "mode": "routed",                    # "access" | "tagged" | "routed"
+            "untagged_vlan": None,               # int | None
+            "tagged_vlans": [],                  # list[int], sorted
         },
         "Ethernet2": {
-            "description": "",
-            "enabled": False,
+            "description": "Access port - users",
+            "enabled": True,
             "ip_addresses": [],
+            "mode": "access",
+            "untagged_vlan": 10,
+            "tagged_vlans": [],
         },
+        "Ethernet3": {
+            "description": "Trunk to dist-01",
+            "enabled": True,
+            "ip_addresses": [],
+            "mode": "tagged",
+            "untagged_vlan": None,
+            "tagged_vlans": [10, 20, 30],
+        },
+    },
+    "vlans": {
+        # keys are VLAN IDs as STRINGS, not ints — see Rule 7
+        "10": {"name": "users"},
+        "20": {"name": "voice"},
+        "30": {"name": "mgmt"},
     },
 }
 ```
@@ -65,6 +86,11 @@ This is what `get_intent(device_name)` and `get_reality(device)` both return.
 | `interfaces[].description` | `str`   | Interface description. Empty string `""` if unset — never `None`. |
 | `interfaces[].enabled` | `bool`      | **Administrative** state: is the interface NOT shut down? This is config intent, not link/carrier state. |
 | `interfaces[].ip_addresses` | `list[str]` | IPs in CIDR notation (`"10.1.1.5/24"`). Sorted ascending. Empty list `[]` if none. |
+| `interfaces[].mode`    | `str`       | One of `access`, `tagged`, `routed`. Always present, never `None`. See Rule 8. |
+| `interfaces[].untagged_vlan` | `int \| None` | The access/untagged VLAN ID. `None` when the interface has no untagged VLAN (routed interfaces; trunks). |
+| `interfaces[].tagged_vlans` | `list[int]` | Tagged VLAN IDs, sorted ascending. Empty list `[]` if none. |
+| `vlans`                | `dict`      | Top-level VLAN definitions. Keyed by VLAN ID **as a string**. Value is a dict with at least `name`. |
+| `vlans[].name`         | `str`       | VLAN name. Empty string `""` if unset — never `None`.          |
 
 ---
 
@@ -83,15 +109,21 @@ a formatting or ordering artifact.
    produce it with a timezone-aware UTC datetime and `.isoformat()`, or
    `datetime.now(timezone.utc)`.
 
-3. **Lists are sorted before returning.** `ip_addresses` is sorted ascending. Any
-   list-valued field added later (e.g. `tagged_vlans`) is also sorted. This means
+3. **Lists are sorted before returning.** `ip_addresses` and `tagged_vlans` are
+   sorted ascending. Any list-valued field added later is also sorted. This means
    `["10.1.1.5/24", "10.1.1.6/24"]` and `["10.1.1.6/24", "10.1.1.5/24"]` can never
-   be reported as drift.
+   be reported as drift. `tagged_vlans` is sorted as a list of integers.
 
-4. **Absent values are explicit, never missing and never `None`.**
+4. **Absent values are explicit for string and list fields, never a missing key.**
    - Unset description → `""` (empty string)
    - No IP addresses → `[]` (empty list)
-   - Every interface dict has all three keys, always.
+   - No tagged VLANs → `[]` (empty list)
+   - This rule governs **string and list** fields, where "empty" and "absent" are
+     the same real-world thing and must look identical so the diff engine never
+     reports representation noise as drift.
+   - **Nullable scalar fields** (e.g. `untagged_vlan`) are typed `X | None` and use
+     `None` to mean "genuinely absent". They must still always be present as a key.
+   - Every interface dict has all six keys, always.
 
 5. **`enabled` is administrative state.** It answers "is this interface configured
    as `no shutdown`?" — not "is the cable plugged in?" Link/carrier state is a
@@ -100,6 +132,21 @@ a formatting or ordering artifact.
 6. **`device` must match across all three places** — the name in NetBox, the name
    on the physical/virtual device, and the value in this object. If they differ,
    intent and reality cannot be paired up. Keep them consistent.
+
+7. **`vlans` dict keys are strings.** The top-level `vlans` dict is keyed by VLAN
+   ID as a **string** (`"10"`), not an integer. This data is JSON-serialized
+   (Postgres JSON columns, FastAPI responses), and JSON object keys are always
+   strings — an int-keyed dict silently becomes string-keyed on a JSON round-trip.
+   Keeping keys as strings everywhere makes the in-memory and JSON representations
+   identical, so the diff engine never sees false drift from a type mismatch.
+   Note the deliberate asymmetry: `tagged_vlans` stays a `list[int]` — lists
+   survive JSON unchanged, and integer sorting is correct.
+
+8. **`mode` is one of exactly three values** — `access`, `tagged`, `routed` — and
+   is always present. A routed layer-3 interface is **not** "modeless"; `routed`
+   *is* its mode. There is no fourth "unknown" value. If a collector cannot
+   classify an interface into one of the three, that is a collector bug to surface
+   loudly — not a schema value to invent.
 
 ---
 
@@ -144,8 +191,8 @@ device) and returns a `list` of drift records. Each record is one difference.
 | Field         | Type   | Meaning                                                          |
 |---------------|--------|------------------------------------------------------------------|
 | `device`      | `str`  | Device the drift was found on.                                   |
-| `object`      | `str`  | `"<type>:<identifier>"`. v0.1 only type is `interface`. e.g. `interface:Ethernet1`. |
-| `field`       | `str`  | Which field drifted: `description`, `enabled`, or `ip_addresses`.|
+| `object`      | `str`  | `"<type>:<identifier>"`. Types: `interface` (e.g. `interface:Ethernet1`) and `vlan` (e.g. `vlan:20`). |
+| `field`       | `str`  | Which field drifted: `description`, `enabled`, `ip_addresses`, `mode`, `untagged_vlan`, `tagged_vlans`, `name`, or the sentinel `_interface` / `_vlan`. |
 | `intent`      | varies | The value NetBox says it should be. Type matches the field.      |
 | `reality`     | varies | The value the device actually reports.                          |
 | `drift_kind`  | `str`  | Category of difference. See Section 6.                           |
@@ -161,18 +208,23 @@ If intent and reality match perfectly, the diff engine returns an **empty list**
 | Value                | Meaning                                                            |
 |----------------------|--------------------------------------------------------------------|
 | `value_mismatch`     | Both intent and reality have a value for this field, and they differ. |
-| `missing_in_reality` | Intent has it, the device does not. (e.g. NetBox lists an interface the device doesn't have, or an IP the device isn't carrying.) |
+| `missing_in_reality` | Intent has it, the device does not. (e.g. NetBox lists an interface or VLAN the device doesn't have, or an IP the device isn't carrying.) |
 | `missing_in_intent`  | The device has it, NetBox does not. Undocumented configuration.    |
 | `extra`              | Generic catch-all. Avoid using it; prefer a specific kind.         |
 
 **How this maps to interfaces:** if an interface key exists in intent but not in
 reality, that is one drift record with `drift_kind = missing_in_reality` and
-`field` set to a sentinel like `"_interface"` (Person B to confirm the exact
-convention when building `differ.py` — document the decision back here).
+`field` set to the sentinel `"_interface"`.
+
+**How this maps to VLANs:** the top-level `vlans` block can drift on its own — a
+VLAN present on one side but not the other, or a `name` mismatch. A VLAN missing
+on one side is one drift record with `object = "vlan:<id>"`, `field` set to the
+sentinel `"_vlan"`, and the appropriate `missing_in_*` kind. A `name` mismatch is
+`object = "vlan:<id>"`, `field = "name"`, `drift_kind = value_mismatch`.
 
 ---
 
-## 7. `severity` guidance (v0.1)
+## 7. `severity` guidance
 
 Severity is assigned by the diff engine based on field and kind. Starting rules —
 refine as you learn:
@@ -185,12 +237,18 @@ refine as you learn:
 | `ip_addresses` mismatch                              | `warning`  |
 | Interface missing in reality                         | `critical` |
 | Interface missing in intent (undocumented)           | `warning`  |
+| `mode` mismatch (e.g. access vs tagged)              | `warning`  |
+| `untagged_vlan` mismatch                             | `warning`  |
+| `tagged_vlans` mismatch                              | `warning`  |
+| VLAN present in intent, missing in reality           | `warning`  |
+| VLAN present in reality, missing in intent           | `info`     |
+| VLAN `name` mismatch                                 | `info`     |
 
 These are defaults. In a later version, severity becomes configurable per site/role.
 
 ---
 
-## 8. Worked example (the full v0.1 loop)
+## 8. Worked example (the full loop)
 
 **Intent — from NetBox via `get_intent("core-sw-01")`:**
 
@@ -204,12 +262,22 @@ These are defaults. In a later version, severity becomes configurable per site/r
             "description": "Uplink to dist-01",
             "enabled": True,
             "ip_addresses": [],
+            "mode": "routed",
+            "untagged_vlan": None,
+            "tagged_vlans": [],
         },
         "Ethernet2": {
-            "description": "Mgmt",
+            "description": "Access port - users",
             "enabled": True,
-            "ip_addresses": ["10.1.1.5/24"],
+            "ip_addresses": [],
+            "mode": "access",
+            "untagged_vlan": 10,
+            "tagged_vlans": [],
         },
+    },
+    "vlans": {
+        "10": {"name": "users"},
+        "20": {"name": "voice"},
     },
 }
 ```
@@ -224,14 +292,24 @@ These are defaults. In a later version, severity becomes configurable per site/r
     "interfaces": {
         "Ethernet1": {
             "description": "Uplink to dist-01",
-            "enabled": False,                      # drift: should be enabled
+            "enabled": True,
             "ip_addresses": [],
+            "mode": "routed",
+            "untagged_vlan": None,
+            "tagged_vlans": [],
         },
         "Ethernet2": {
-            "description": "MGMT - DO NOT TOUCH",  # drift: description differs
+            "description": "Access port - users",
             "enabled": True,
-            "ip_addresses": ["10.1.1.5/24"],
+            "ip_addresses": [],
+            "mode": "access",
+            "untagged_vlan": 99,                   # drift: should be VLAN 10
+            "tagged_vlans": [],
         },
+    },
+    "vlans": {
+        "10": {"name": "users"},
+        "20": {"name": "Voice-VLAN"},              # drift: name differs
     },
 }
 ```
@@ -242,20 +320,20 @@ These are defaults. In a later version, severity becomes configurable per site/r
 [
     {
         "device": "core-sw-01",
-        "object": "interface:Ethernet1",
-        "field": "enabled",
-        "intent": True,
-        "reality": False,
+        "object": "interface:Ethernet2",
+        "field": "untagged_vlan",
+        "intent": 10,
+        "reality": 99,
         "drift_kind": "value_mismatch",
-        "severity": "critical",
+        "severity": "warning",
         "detected_at": "2026-05-20T14:32:04Z",
     },
     {
         "device": "core-sw-01",
-        "object": "interface:Ethernet2",
-        "field": "description",
-        "intent": "Mgmt",
-        "reality": "MGMT - DO NOT TOUCH",
+        "object": "vlan:20",
+        "field": "name",
+        "intent": "voice",
+        "reality": "Voice-VLAN",
         "drift_kind": "value_mismatch",
         "severity": "info",
         "detected_at": "2026-05-20T14:32:04Z",
@@ -268,26 +346,7 @@ These are defaults. In a later version, severity becomes configurable per site/r
 ## 9. Planned schema growth (do NOT build yet)
 
 Listed here so both partners can see where it's going and avoid design choices that
-would block these. **Only the v0.1 fields in Section 2 are in scope right now.**
-
-### v0.2 — VLANs / layer 2
-
-Add to each interface:
-
-```python
-"mode": "tagged",              # "access" | "tagged" | "routed" | None
-"untagged_vlan": 99,           # int | None
-"tagged_vlans": [10, 20, 30],  # list[int], sorted
-```
-
-Add a top-level key:
-
-```python
-"vlans": {
-    10: {"name": "users"},
-    20: {"name": "voice"},
-}
-```
+would block these. **Only the fields in Section 2 are in scope right now.**
 
 ### v0.3 — routing state
 
@@ -308,8 +367,8 @@ Add top-level keys:
 },
 ```
 
-This also expands the drift-record `object` types beyond `interface` — e.g.
-`bgp_neighbor:10.0.0.1`, `ospf_adjacency:10.0.0.1`.
+This also expands the drift-record `object` types beyond `interface` and `vlan` —
+e.g. `bgp_neighbor:10.0.0.1`, `ospf_adjacency:10.0.0.1`.
 
 ### v1.0 — config-level drift
 
@@ -324,38 +383,64 @@ diffing and the semantic-equivalence problem — out of scope until v1.0.
 
 ---
 
-## 10. Resolved questions (schema call, [DATE])
+## 10. Resolved questions
 
-These were the open questions for v0.1. Settled jointly on the schema call;
-the schema is now frozen for v0.1.
+### v0.1 schema call (2026-05-21)
+
+These were the open questions for v0.1. Settled jointly; the schema was frozen for
+v0.1.
 
 1. **Interface-missing convention.** When an interface exists in intent but not
    reality (or vice versa), the drift record's `field` is the sentinel
-   `"_interface"`. **Confirmed** — already implemented in `differ.py`.
+   `"_interface"`. **Confirmed** — implemented in `differ.py`.
 
 2. **Case sensitivity of `device`.** Device names are **case-sensitive: exact,
    byte-for-byte match, no normalization.** `Core-SW-01` and `core-sw-01` are
    different devices. A casing mismatch surfaces as a loud, obvious failure
-   ("no reality for X") rather than being silently folded — which is the safer
-   behaviour, and matches how real network gear treats identifiers. The name in
-   NetBox, on the device, and in the schema object must be identical;
-   `seed_netbox.py` is responsible for keeping them consistent. **Confirmed.**
+   ("no reality for X") rather than being silently folded. The name in NetBox, on
+   the device, and in the schema object must be identical; `seed_netbox.py` is
+   responsible for keeping them consistent. **Confirmed.**
 
-3. **NetBox naming an interface differently from the device.** Not applicable
-   in v0.1: one vendor, and we control both the seed script and the device.
-   Per Section 3 rule 1, each collector normalizes interface names to canonical
-   full form before returning, so any vendor-specific naming is handled inside
-   that vendor's collector — not in this schema. Revisit per-vendor specifics
-   when a second vendor's collector is added (v0.2+). **Confirmed — no v0.1
-   action.**
+3. **NetBox naming an interface differently from the device.** Per Section 3
+   rule 1, each collector normalizes interface names to canonical full form before
+   returning, so any vendor-specific naming is handled inside that vendor's
+   collector — not in this schema. **Confirmed.**
 
 4. **`collected_at` vs `detected_at`.** `collected_at` is set by the collector
    when the snapshot is taken; `detected_at` is set by the diff engine when the
-   diff is computed. They differ by seconds. **Confirmed.**
+   diff is computed. **Confirmed.**
 
 5. **Where test fixtures live.** `tests/fixtures/`, as pairs of intent/reality
-   dicts plus the expected drift list. Person B owns them; Person A reviews them
-   so collectors target the right shape. **Confirmed.**
+   dicts plus the expected drift list. Person B owns them; Person A reviews them.
+   **Confirmed.**
+
+### v0.2 schema call (2026-05-23)
+
+The v0.2 VLAN additions. Settled jointly from the v0.2 proposal.
+
+6. **`mode` is `access` / `tagged` / `routed`, always present, never `None`.** The
+   three values are exhaustive; `routed` is a real mode, not the absence of one.
+   See Rule 8. **Confirmed.**
+
+7. **`untagged_vlan` is `int | None`.** `None` means "no untagged VLAN" (routed
+   interfaces, trunks). Rule 4 was reworded to scope its "never `None`" to string
+   and list fields only; nullable scalar fields use `None`. **Confirmed.**
+
+8. **Native VLAN not modelled in v0.2.** A trunk's native VLAN is a real concept
+   but an edge case; out of scope for v0.2 per the project's #1 risk (scope creep
+   on the diff engine). `untagged_vlan` means strictly "the access VLAN of an
+   access port." Recorded as a known future gap. **Confirmed.**
+
+9. **`vlans` dict keys are strings; `tagged_vlans` stays `list[int]`.** See
+   Rule 7. **Confirmed.**
+
+10. **Routed interfaces carry empty VLAN fields, not missing keys.** A routed
+    interface has `mode: "routed"`, `untagged_vlan: None`, `tagged_vlans: []`.
+    Keys always present. **Confirmed.**
+
+11. **New `vlan:<id>` drift-record object type.** Top-level VLAN drift uses
+    `object = "vlan:<id>"`. See Section 6. **Confirmed.**
+
 ---
 
 ## 11. Change log for this document
@@ -364,8 +449,10 @@ Keep a running log so both partners can see how the contract evolved.
 
 | Date       | Change                                  | Approved by |
 |------------|-----------------------------------------|-------------|
-| 2026-05-20  | Initial v0.1 draft.                     | A + B       |
+| 2026-05-20 | Initial v0.1 draft.                     | A + B       |
 | 2026-05-21 | Section 10 open questions resolved; schema frozen for v0.1. | A + B |
+| 2026-05-23 | v0.2 VLAN / layer-2 fields added: interface `mode`, `untagged_vlan`, `tagged_vlans`; top-level `vlans`. Rule 4 reworded; Rules 7 and 8 added; `vlan:<id>` drift object type. | A + B |
+
 ---
 
 *When this document and the code disagree, this document wins — fix the code. When
