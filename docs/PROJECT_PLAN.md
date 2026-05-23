@@ -1,7 +1,7 @@
 Network Drift Detection Tool — Master Project Plan
 What this is: A self-hosted, open-source application that continuously compares the intended state of a network (documented in NetBox) against the actual live state of network devices, surfaces the differences ("drift") in a web UI, and — over time — learns the causes and fixes for recurring drift so it can diagnose and remediate issues automatically.
 One-line pitch: The open-source alternative to NetBox Assurance, with an institutional memory.
-Status: Planning. Last updated: keep this date current as you edit.
+Status: Planning. Last updated: 2026-05-23.
 
 Table of Contents
 The Concept
