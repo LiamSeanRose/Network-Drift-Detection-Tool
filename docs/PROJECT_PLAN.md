@@ -320,7 +320,9 @@ Person A — "data in": netbox_client.py, the collectors, the Containerlab lab, 
 Person B — "logic and out": differ.py, the Postgres schema, FastAPI, the scheduler, the React frontend. Becomes the expert on the app architecture.
 They meet at the normalized schema. Agree it first, write it in docs/schema.md, treat changes as a joint decision. While the schema holds, neither blocks the other: A builds collectors against the spec, B builds the differ against hand-written sample dicts in tests/fixtures/.
 Two rules:
-This is primary ownership, not a wall. Read each other's merge requests — even after merge — so neither person becomes the only one who understands a half of the system. Reviewing before merge is not required; staying aware of what merged is.For v2 (knowledge base + signature matching), drop the split and pair. It is the hard, original part — two brains beats two halves.
+This is primary ownership, not a wall. Read each other's merge requests — even after merge — so neither person becomes the only one who understands a half of the system. Reviewing before merge is not required; staying aware of what merged is.
+
+For v2 (knowledge base + signature matching), drop the split and pair. It is the hard, original part — two brains beats two halves.
 One person should act as informal release shepherd: decides when a version meets its Definition of Done and tags the release.
 
 11. Working Practices
