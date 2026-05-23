@@ -33,6 +33,8 @@ DEVICES = [
         "name": "core-sw-01",
         "interfaces": [
             {"name": "Ethernet1", "ip": "10.0.0.1/30"},
+            {"name": "Ethernet2", "mode": "access", "untagged_vlan": 10},
+            {"name": "Ethernet3", "mode": "tagged", "tagged_vlans": [10, 20]},
             {"name": "Management0", "ip": "172.20.20.11/24"},
         ],
     },
@@ -40,9 +42,21 @@ DEVICES = [
         "name": "core-sw-02",
         "interfaces": [
             {"name": "Ethernet1", "ip": "10.0.0.2/30"},
+            {"name": "Ethernet2", "mode": "access", "untagged_vlan": 10},
+            {"name": "Ethernet3", "mode": "tagged", "tagged_vlans": [10, 20]},
             {"name": "Management0", "ip": "172.20.20.12/24"},
         ],
     },
+]
+
+# VLANs to seed. Mirrors the `vlan` stanzas in lab/configs/*.cfg.
+# These are the top-level VLAN definitions (schema.md Section 2, `vlans` block).
+# NOTE (v0.2 TODO): per-interface VLAN assignment (access/trunk membership)
+# is not seeded here yet — that intent is exercised when netbox_client.py
+# is extended for v0.2 fields. For now we only seed the VLAN definitions.
+VLANS = [
+    {"vid": 10, "name": "users"},
+    {"vid": 20, "name": "voice"},
 ]
 
 MANUFACTURER = "Arista"
@@ -124,6 +138,21 @@ def main():
         defaults={"name": SITE, "slug": slugify(SITE)},
     )
 
+    # 4b. VLANs (belong to the site)
+    print("VLANs:")
+    vlan_objects = {}   # vid -> NetBox VLAN object, for interface assignment below
+    for vlan in VLANS:
+        vlan_obj = get_or_create(
+            nb.ipam.vlans,
+            lookup={"vid": vlan["vid"], "site_id": site.id},
+            defaults={
+                "vid": vlan["vid"],
+                "name": vlan["name"],
+                "site": site.id,
+            },
+        )
+        vlan_objects[vlan["vid"]] = vlan_obj  
+
     # 5. Devices, their interfaces, and their IPs
     for entry in DEVICES:
         print(f"Device {entry['name']}:")
@@ -150,24 +179,43 @@ def main():
                     "enabled": True,
                 },
             )
+            # If this interface has VLAN config in the seed data, set it.
+            # NetBox stores mode + VLAN object references; routed interfaces
+            # have no `mode` key in the seed and are left untouched (NetBox
+            # mode stays empty, which netbox_client.py reads as "routed").
+            mode = iface.get("mode")
+            if mode:
+                interface.mode = mode
+                if iface.get("untagged_vlan") is not None:
+                    interface.untagged_vlan = vlan_objects[iface["untagged_vlan"]].id
+                if iface.get("tagged_vlans"):
+                    interface.tagged_vlans = [
+                        vlan_objects[v].id for v in iface["tagged_vlans"]
+                    ]
+                interface.save()
+                print(f"    set mode={mode}")
 
-            print(f"  IP {iface['ip']}:")
-            ip = get_or_create(
-                nb.ipam.ip_addresses,
-                lookup={"address": iface["ip"]},
-                defaults={
-                    "address": iface["ip"],
-                    "assigned_object_type": "dcim.interface",
-                    "assigned_object_id": interface.id,
-                },
-            )
-            # Make sure the IP is attached to this interface even if it already
-            # existed unassigned from a previous partial run.
-            if ip.assigned_object_id != interface.id:
-                ip.assigned_object_type = "dcim.interface"
-                ip.assigned_object_id = interface.id
-                ip.save()
-                print(f"    (re-attached {ip} to {interface})")
+
+            # IP assignment — only for interfaces that have one in the seed
+            # data (routed/mgmt interfaces here; switchports carry no IP).
+            if iface.get("ip"):
+                print(f"  IP {iface['ip']}:")
+                ip = get_or_create(
+                    nb.ipam.ip_addresses,
+                    lookup={"address": iface["ip"]},
+                    defaults={
+                        "address": iface["ip"],
+                        "assigned_object_type": "dcim.interface",
+                        "assigned_object_id": interface.id,
+                    },
+                )
+                # Make sure the IP is attached to this interface even if it
+                # already existed unassigned from a previous partial run.
+                if ip.assigned_object_id != interface.id:
+                    ip.assigned_object_type = "dcim.interface"
+                    ip.assigned_object_id = interface.id
+                    ip.save()
+                    print(f"    (re-attached {ip} to {interface})")
 
     print("\nDone. NetBox now mirrors the Containerlab topology.")
 
