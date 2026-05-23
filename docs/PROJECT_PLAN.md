@@ -412,9 +412,9 @@ A version is shippable only when all its criteria are met.
 v0.1
 [x] driftcheck core-sw-01 prints real drift from a live Containerlab device.
 [x] Diff covers interface description, enabled state, IP addresses.
-[ ] differ.py has unit tests; CI runs ruff + pytest and passes.
-[ ] topology.yml and seed_netbox.py reproduce the environment from scratch.
-[ ] README has the architecture diagram and a working quickstart.
+[x] differ.py has unit tests; CI runs ruff + pytest and passes.
+[x] topology.yml and seed_netbox.py reproduce the environment from scratch.
+[x] README has the architecture diagram and a working quickstart.
 [x] Repo is public on GitHub.
 v0.2
 [ ] Drift events persist in Postgres with timestamps; history is queryable.
