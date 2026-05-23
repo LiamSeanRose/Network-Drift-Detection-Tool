@@ -20,3 +20,5 @@ topology:
       
   links:
     - endpoints: ["core-sw-01:eth1", "core-sw-02:eth1"]
+    - endpoints: ["core-sw-01:eth2", "core-sw-02:eth2"]
+    - endpoints: ["core-sw-01:eth3", "core-sw-02:eth3"]

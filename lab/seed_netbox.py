@@ -45,6 +45,16 @@ DEVICES = [
     },
 ]
 
+# VLANs to seed. Mirrors the `vlan` stanzas in lab/configs/*.cfg.
+# These are the top-level VLAN definitions (schema.md Section 2, `vlans` block).
+# NOTE (v0.2 TODO): per-interface VLAN assignment (access/trunk membership)
+# is not seeded here yet — that intent is exercised when netbox_client.py
+# is extended for v0.2 fields. For now we only seed the VLAN definitions.
+VLANS = [
+    {"vid": 10, "name": "users"},
+    {"vid": 20, "name": "voice"},
+]
+
 MANUFACTURER = "Arista"
 DEVICE_TYPE = "cEOS"          # model name
 DEVICE_ROLE = "Core Switch"
@@ -123,6 +133,19 @@ def main():
         lookup={"slug": slugify(SITE)},
         defaults={"name": SITE, "slug": slugify(SITE)},
     )
+
+    # 4b. VLANs (belong to the site)
+    print("VLANs:")
+    for vlan in VLANS:
+        get_or_create(
+            nb.ipam.vlans,
+            lookup={"vid": vlan["vid"], "site_id": site.id},
+            defaults={
+                "vid": vlan["vid"],
+                "name": vlan["name"],
+                "site": site.id,
+            },
+        )    
 
     # 5. Devices, their interfaces, and their IPs
     for entry in DEVICES:
