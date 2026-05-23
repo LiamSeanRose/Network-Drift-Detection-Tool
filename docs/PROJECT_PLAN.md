@@ -1,7 +1,7 @@
 Network Drift Detection Tool — Master Project Plan
 What this is: A self-hosted, open-source application that continuously compares the intended state of a network (documented in NetBox) against the actual live state of network devices, surfaces the differences ("drift") in a web UI, and — over time — learns the causes and fixes for recurring drift so it can diagnose and remediate issues automatically.
 One-line pitch: The open-source alternative to NetBox Assurance, with an institutional memory.
-Status: Planning. Last updated: keep this date current as you edit.
+Status: Planning. Last updated: 2026-05-23.
 
 Table of Contents
 The Concept
@@ -320,15 +320,14 @@ Person A — "data in": netbox_client.py, the collectors, the Containerlab lab, 
 Person B — "logic and out": differ.py, the Postgres schema, FastAPI, the scheduler, the React frontend. Becomes the expert on the app architecture.
 They meet at the normalized schema. Agree it first, write it in docs/schema.md, treat changes as a joint decision. While the schema holds, neither blocks the other: A builds collectors against the spec, B builds the differ against hand-written sample dicts in tests/fixtures/.
 Two rules:
-This is primary ownership, not a wall. Review each other's merge requests so neither person becomes the only one who understands a half of the system.
-For v2 (knowledge base + signature matching), drop the split and pair. It is the hard, original part — two brains beats two halves.
+This is primary ownership, not a wall. Read each other's merge requests — even after merge — so neither person becomes the only one who understands a half of the system. Reviewing before merge is not required; staying aware of what merged is.For v2 (knowledge base + signature matching), drop the split and pair. It is the hard, original part — two brains beats two halves.
 One person should act as informal release shepherd: decides when a version meets its Definition of Done and tags the release.
 
 11. Working Practices
 Git workflow.
 main is always working and shippable.
 One branch per ticket: feat/arista-collector, fix/vlan-sort, etc.
-Every change goes through a merge request; the other person reviews it.
+Every change goes through a merge request with a meaningful description. Reviewing the other person's merge request before merge is encouraged but not required — given differing time availability, the author may self-merge once CI passes, but MUST post a description on the MR and alert the partner (e.g. by text) so they can review after the fact and comment on the closed MR.
 Write meaningful commit messages — the history is part of the project's story.
 Issue tracking.
 Use GitLab issues. Label every issue with its version (v0.1, v0.2, …).
@@ -344,7 +343,7 @@ CI must pass before any merge.
 On using Claude / AI assistants.
 Do create a shared Claude Project. Put this plan, docs/schema.md, and architecture decisions in it so any chat — yours or your partner's — has accurate context and you don't have to re-explain the project every time.
 Understand the limit: a Project shares documents, not live memory. Your Claude conversation and your partner's are independent — they do not see each other and cannot auto-deduplicate your work. There is no "two chatbots coordinating" feature.
-Deduplication of actual work comes from you two: the schema contract, clear GitLab issue ownership, and reviewing each other's merge requests. Git catches literal conflicts. The Project just keeps both assistants on the same page about the plan.
+Deduplication of actual work comes from you two: the schema contract, clear issue ownership, and staying aware of each other's merge requests. Git catches literal conflicts. The Project just keeps both assistants on the same page about the plan.
 When asking an assistant for help, paste in the relevant docs/ file so the answer fits the real, current design.
 
 12. Lab Environment Setup
@@ -394,7 +393,7 @@ Expect to iterate. Don't design it until you have a month of real drift data. Pa
 Building the cool v2 feature first
 Follow the roadmap order. v2 is worthless with no drift data flowing.
 Bus factor — one person owns half the system
-Mandatory cross-review of merge requests. Keep docs/ current.
+Every MR carries a description and a partner alert so both stay aware of all changes; review-after-merge expected. Keep docs/ current.
 Credential security — storing device passwords
 Never roll your own crypto. Use Fernet with a documented key setup, or Vault later. Never commit secrets.
 Long branches / merge hell
