@@ -1,0 +1,48 @@
+{
+    "intent": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-20T14:32:00Z",
+        "interfaces": {
+            "Ethernet2": {
+                "description": "Access port - users",
+                "enabled": true,
+                "ip_addresses": [],
+                "mode": "access",
+                "untagged_vlan": 10,
+                "tagged_vlans": []
+            }
+        },
+        "vlans": {
+            "10": {"name": "users"}
+        }
+    },
+    "reality": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-20T14:32:03Z",
+        "interfaces": {
+            "Ethernet2": {
+                "description": "Access port - users",
+                "enabled": true,
+                "ip_addresses": [],
+                "mode": "access",
+                "untagged_vlan": 99,
+                "tagged_vlans": []
+            }
+        },
+        "vlans": {
+            "10": {"name": "users"}
+        }
+    },
+    "expected_drifts": [
+        {
+            "object": "interface:Ethernet2",
+            "field": "untagged_vlan",
+            "intent": 10,
+            "reality": 99,
+            "drift_kind": "value_mismatch",
+            "severity": "warning"
+        }
+    ]
+}

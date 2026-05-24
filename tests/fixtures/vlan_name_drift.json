@@ -1,0 +1,30 @@
+{
+    "intent": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-20T14:32:00Z",
+        "interfaces": {},
+        "vlans": {
+            "20": {"name": "voice"}
+        }
+    },
+    "reality": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-20T14:32:03Z",
+        "interfaces": {},
+        "vlans": {
+            "20": {"name": "Voice-VLAN"}
+        }
+    },
+    "expected_drifts": [
+        {
+            "object": "vlan:20",
+            "field": "name",
+            "intent": "voice",
+            "reality": "Voice-VLAN",
+            "drift_kind": "value_mismatch",
+            "severity": "info"
+        }
+    ]
+}

@@ -1,0 +1,31 @@
+{
+    "intent": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-20T14:32:00Z",
+        "interfaces": {},
+        "vlans": {
+            "10": {"name": "users"},
+            "20": {"name": "voice"}
+        }
+    },
+    "reality": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-20T14:32:03Z",
+        "interfaces": {},
+        "vlans": {
+            "10": {"name": "users"}
+        }
+    },
+    "expected_drifts": [
+        {
+            "object": "vlan:20",
+            "field": "_vlan",
+            "intent": "present",
+            "reality": "absent",
+            "drift_kind": "missing_in_reality",
+            "severity": "warning"
+        }
+    ]
+}
