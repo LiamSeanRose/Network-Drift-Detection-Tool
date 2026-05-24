@@ -55,6 +55,7 @@ DEVICES = [
 # is not seeded here yet — that intent is exercised when netbox_client.py
 # is extended for v0.2 fields. For now we only seed the VLAN definitions.
 VLANS = [
+    {"vid": 1, "name": "default"},
     {"vid": 10, "name": "users"},
     {"vid": 20, "name": "voice"},
 ]
