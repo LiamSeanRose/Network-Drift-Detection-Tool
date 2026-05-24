@@ -89,7 +89,7 @@ This is what `get_intent(device_name)` and `get_reality(device)` both return.
 | `interfaces[].mode`    | `str`       | One of `access`, `tagged`, `routed`. Always present, never `None`. See Rule 8. |
 | `interfaces[].untagged_vlan` | `int \| None` | The access/untagged VLAN ID. `None` when the interface has no untagged VLAN (routed interfaces; trunks). |
 | `interfaces[].tagged_vlans` | `list[int]` | Tagged VLAN IDs, sorted ascending. Empty list `[]` if none. |
-| `vlans`                | `dict`      | Top-level VLAN definitions. Keyed by VLAN ID **as a string**. Value is a dict with at least `name`. |
+| `vlans`                | `dict`      | Top-level VLAN definitions. Keyed by VLAN ID **as a string**. Value is a dict with at least `name`. On the intent side, VLANs are scoped to the device's NetBox **site** (v0.2). |
 | `vlans[].name`         | `str`       | VLAN name. Empty string `""` if unset — never `None`.          |
 
 ---
@@ -147,6 +147,14 @@ a formatting or ordering artifact.
    *is* its mode. There is no fourth "unknown" value. If a collector cannot
    classify an interface into one of the three, that is a collector bug to surface
    loudly — not a schema value to invent.
+
+9. **The `vlans` block contains every VLAN present on the device, including the
+   default VLAN (VLAN 1).** There is no special-casing of reserved or default
+   VLAN IDs — neither collectors nor the diff engine filter them. VLAN 1 is a
+   normal VLAN: the collector reports it, and intent (NetBox) is expected to
+   document it like any other. If a VLAN exists on one side but not the other,
+   that is genuine drift and is reported as such. The fix for "VLAN 1 shows as
+   undocumented drift" is to document VLAN 1 in NetBox, not to filter it out.
 
 ---
 
@@ -441,6 +449,25 @@ The v0.2 VLAN additions. Settled jointly from the v0.2 proposal.
 11. **New `vlan:<id>` drift-record object type.** Top-level VLAN drift uses
     `object = "vlan:<id>"`. See Section 6. **Confirmed.**
 
+### v0.2 follow-up (2026-05-24)
+
+Three operational questions raised after the v0.2 collector work (PR #23),
+tracked in the GitHub issue and settled jointly.
+
+12. **Default/reserved VLANs are in scope.** VLAN 1 (and any reserved IDs a
+    device reports) are treated as normal VLANs — no filtering in collectors or
+    the diff engine. Intent must document them. `seed_netbox.py` seeds VLAN 1.
+    Reserved range 1002–1005 is not special-cased; Arista cEOS does not create
+    it, and if a future platform does, it is documented in intent like any other
+    VLAN. See Rule 9. **Confirmed.**
+
+13. **`vlans` block is site-scoped on the intent side.** `netbox_client.py`
+    scopes VLANs to the device's NetBox site. Device-scoped or global VLANs are
+    a later concern. **Confirmed.**
+
+14. **`Management0` is `mode: "routed"`.** It has an IP and no switchport, so
+    `routed` is correct per Rule 8 — not an oversight. **Confirmed.**
+
 ---
 
 ## 11. Change log for this document
@@ -452,6 +479,7 @@ Keep a running log so both partners can see how the contract evolved.
 | 2026-05-20 | Initial v0.1 draft.                     | A + B       |
 | 2026-05-21 | Section 10 open questions resolved; schema frozen for v0.1. | A + B |
 | 2026-05-23 | v0.2 VLAN / layer-2 fields added: interface `mode`, `untagged_vlan`, `tagged_vlans`; top-level `vlans`. Rule 4 reworded; Rules 7 and 8 added; `vlan:<id>` drift object type. | A + B |
+| 2026-05-24 | v0.2 follow-up: Rule 9 added (default/reserved VLANs in scope, no filtering); `vlans` site-scoping documented; Section 10 items 12–14. | A + B |
 
 ---
 
