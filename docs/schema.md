@@ -166,9 +166,9 @@ vendor's own naming, not NetBox's slug if it differs.
 | Value          | Vendor / OS              | Introduced |
 |----------------|--------------------------|------------|
 | `arista_eos`   | Arista EOS               | v0.1       |
-| `juniper_junos`| Juniper Junos            | v0.2       |
-| `cisco_iosxe`  | Cisco IOS-XE             | v0.2       |
-| `nokia_srlinux`| Nokia SR Linux           | later      |
+| `juniper_junos`| Juniper Junos            | later      |
+| `cisco_iosxe`  | Cisco IOS-XE             | v0.3       |
+| `nokia_srlinux`| Nokia SR Linux           | v0.2       |
 | `frr`          | FRRouting                | later      |
 
 If a new platform is needed, add it here in the same merge request that adds its
@@ -480,7 +480,8 @@ Keep a running log so both partners can see how the contract evolved.
 | 2026-05-21 | Section 10 open questions resolved; schema frozen for v0.1. | A + B |
 | 2026-05-23 | v0.2 VLAN / layer-2 fields added: interface `mode`, `untagged_vlan`, `tagged_vlans`; top-level `vlans`. Rule 4 reworded; Rules 7 and 8 added; `vlan:<id>` drift object type. | A + B |
 | 2026-05-24 | v0.2 follow-up: Rule 9 added (default/reserved VLANs in scope, no filtering); `vlans` site-scoping documented; Section 10 items 12–14. | A + B |
-| 2026-05-24 | Roadmap change: v0.2 second/third vendors are Juniper (vJunos-switch) then Cisco (IOS-XE), replacing Nokia SR Linux / FRR. SR Linux and FRR deferred to a later version. Joint decision A + B. | A + B |
+| 2026-05-25 | Roadmap change: v0.2 second/third vendors are Juniper (vJunos-switch) then Cisco (IOS-XE), replacing Nokia SR Linux / FRR. SR Linux and FRR deferred to a later version. Joint decision A + B. | A + B |
+| 2026-05-25 | Roadmap revert: v0.2 second vendor is Nokia SR Linux (was Juniper vJunos-switch). vJunos-switch is a QEMU VM and cannot run nested inside the lab VM. Cisco IOS-XE stays v0.3. Joint decision A + B. | A + B |
 
 ---
 
