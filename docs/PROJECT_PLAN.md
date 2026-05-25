@@ -194,7 +194,7 @@ License
 Apache-2.0 (recommended) or MIT
 Permissive; Apache-2.0 adds a patent grant
 
-v0.1 first vendor: Arista EOS (via the free cEOS container). It has a real API (eAPI), is free to download, and is widely used. v0.2 vendors: Juniper (vJunos-switch, containerised) then Cisco IOS-XE (validated against physical hardware). Nokia SR Linux and FRR remain free options for a later version.
+v0.1 first vendor: Arista EOS (via the free cEOS container). It has a real API (eAPI), is free to download, and is widely used. v0.2 second vendor: Nokia SR Linux (containerised, native). Cisco IOS-XE comes in v0.3, validated against physical hardware. Juniper vJunos-switch and FRR remain free options for a later version.
 
 6. What You Both Need To Learn
 You both have the networking fundamentals (BGP, OSPF, VLANs, what configs look like). On top of that:
@@ -248,7 +248,7 @@ Total: roughly 12–16 months part-time. Full-time, ~6–8 months.
 v0.1 — Detector PoC
 One vendor (Arista cEOS). Pull intent from NetBox, pull reality from the device, diff three fields (interface description, enabled state, IP addresses). CLI output. No database, no UI. Containerlab demo topology + seed_netbox.py. Ship to GitLab, post on r/networking to validate interest.
 v0.2 — Persist + UI
-Add Postgres + the drift_events history table. Add a second vendor — Juniper, via the containerised vJunos-switch image in Containerlab. Add VLANs to the comparison. FastAPI backend + basic React dashboard. Scheduled polling every 1–5 minutes — this is the "actively listens" behaviour.
+Add Postgres + the drift_events history table. Add a second vendor — Nokia SR Linux, a native containerised NOS in Containerlab. Add VLANs to the comparison. FastAPI backend + basic React dashboard. Scheduled polling every 1–5 minutes — this is the "actively listens" behaviour.
 v0.3 — Production-ish
 Add routing state to the schema and diff (BGP neighbors, OSPF adjacencies). Diff history/trends in the UI. Webhooks for Slack/Teams. Optional syslog receiver: a device logs an event, the tool immediately polls just that device instead of waiting for the cycle. Nautobot support alongside NetBox.
 v1.0 — Detector complete
@@ -366,7 +366,7 @@ Download the free Arista cEOS image (needs a free Arista account) and import it.
 5. Develop. Point the app's config at http://localhost:8000 for NetBox and at the Containerlab node names for devices.
 
 13. Costs
-The build phase can cost $0. Everything needed to develop and test is free: GitLab public repo + CI, Containerlab, Arista cEOS, Juniper vJunos-switch, NetBox, Python, Postgres, Docker, all the libraries.
+The build phase can cost $0. Everything needed to develop and test is free: GitLab public repo + CI, Containerlab, Arista cEOS, Nokia SR Linux, NetBox, Python, Postgres, Docker, all the libraries.
 Optional spending, only once you want to show the project:
 Item
 Cost (approx)
@@ -419,7 +419,7 @@ v0.1
 [x] Repo is public on GitHub.
 v0.2
 [ ] Drift events persist in Postgres with timestamps; history is queryable.
-[ ] A second vendor (Juniper, via vJunos-switch) is supported.
+[ ] A second vendor (Nokia SR Linux, native container) is supported.
 [ ] VLAN fields are in the schema and the diff.
 [ ] React dashboard shows devices + their drift; FastAPI serves the data.
 [ ] The scheduler polls every 1–5 minutes automatically.
