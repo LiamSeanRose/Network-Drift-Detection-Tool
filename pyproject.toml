@@ -6,6 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "pynetbox",
     "napalm",
+    "napalm-srl",
     "pyyaml",
 ]
 

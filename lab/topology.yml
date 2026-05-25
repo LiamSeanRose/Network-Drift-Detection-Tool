@@ -1,12 +1,15 @@
-# Minimal two-node Arista cEOS topology for Network Drift Detection Tool v0.1.
-# Two switches, one link between them. No EVPN, no VXLAN — just enough
-# to develop and test drift detection against real device state.
+# Minimal lab topology for Network Drift Detection Tool.
+# Two Arista cEOS switches (v0.1) plus one Nokia SR Linux node (v0.2,
+# second vendor). The SR Linux node is standalone — drift detection is
+# per-device, so it needs no links to the cEOS pair.
 name: netdrift-lab
 
 topology:
   kinds:
     ceos:
       image: ceos:4.36.0F
+    nokia_srlinux:
+      image: ghcr.io/nokia/srlinux:latest
 
   nodes:
     core-sw-01:
@@ -17,7 +20,10 @@ topology:
       kind: ceos
       mgmt-ipv4: 172.20.20.12
       startup-config: configs/core-sw-02.cfg
-      
+    nokia-sw-01:
+      kind: nokia_srlinux
+      mgmt-ipv4: 172.20.20.21
+
   links:
     - endpoints: ["core-sw-01:eth1", "core-sw-02:eth1"]
     - endpoints: ["core-sw-01:eth2", "core-sw-02:eth2"]
