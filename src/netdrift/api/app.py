@@ -21,9 +21,19 @@ from netdrift.storage.repository import get_drifts
 
 app = FastAPI(title="netdrift API", version="0.2.0")
 
-# One sessionmaker for the whole app (it builds its own engine from
-# DATABASE_URL). Created once at import time, reused for every request.
-_SessionLocal = get_sessionmaker()
+# The sessionmaker is built lazily on first use, NOT at import time. Building
+# it reads DATABASE_URL, and importing this module must not require a database
+# to be configured (e.g. CI imports the app to test /health, which touches no
+# database). _get_sessionmaker() creates it once on first request and caches it.
+_SessionLocal = None
+
+
+def _get_sessionmaker():
+    """Return the app's sessionmaker, creating it on first use."""
+    global _SessionLocal
+    if _SessionLocal is None:
+        _SessionLocal = get_sessionmaker()
+    return _SessionLocal
 
 
 def get_session():
@@ -34,7 +44,7 @@ def get_session():
     cleanup once the response is sent (close it). This guarantees every
     request gets a fresh session and no session is ever left open.
     """
-    session = _SessionLocal()
+    session = _get_sessionmaker()()
     try:
         yield session
     finally:
