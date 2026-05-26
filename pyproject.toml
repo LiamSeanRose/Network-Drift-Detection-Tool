@@ -13,6 +13,7 @@ dependencies = [
     "alembic",
     "fastapi",
     "uvicorn[standard]",
+    "apscheduler",
 ]
 
 [project.scripts]
