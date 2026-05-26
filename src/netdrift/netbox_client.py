@@ -28,14 +28,15 @@ import pynetbox
 # unset). We map NetBox's slug to the canonical schema value here. For v0.1
 # there is one vendor; this table grows as vendors are added.
 
+# Maps a NetBox platform slug to the schema's canonical platform string
+# (schema.md Section 4). Each vendor's seed_netbox.py creates a platform
+# object whose slug appears here.
 PLATFORM_MAP = {
     "arista-eos": "arista_eos",
     "eos": "arista_eos",
+    "nokia-srlinux": "nokia_srlinux",
+    "srlinux": "nokia_srlinux",
 }
-
-# v0.1 is single-vendor. Until netbox_client learns to read NetBox's platform
-# field reliably, we assume Arista. Revisit when a second vendor is added.
-DEFAULT_PLATFORM = "arista_eos"
 
 
 def _utc_now_iso():
@@ -57,12 +58,25 @@ def _connect():
 def _normalize_platform(device):
     """
     Map a NetBox device's platform to a canonical schema platform string.
-    Falls back to DEFAULT_PLATFORM if NetBox has no platform set.
+
+    Raises ValueError if the device has no platform set, or its platform
+    slug is not in PLATFORM_MAP. This is deliberately loud: a v0.1 fallback
+    used to assume Arista, which silently mislabelled non-Arista devices and
+    sent them to the wrong collector. With a second vendor that shortcut is
+    unsafe — an unknown platform must fail clearly, not guess.
     """
     if device.platform is None:
-        return DEFAULT_PLATFORM
+        raise ValueError(
+            f"Device '{device.name}' has no platform set in NetBox. "
+            f"Set its platform (seed_netbox.py assigns one per device)."
+        )
     slug = device.platform.slug
-    return PLATFORM_MAP.get(slug, DEFAULT_PLATFORM)
+    if slug not in PLATFORM_MAP:
+        raise ValueError(
+            f"Device '{device.name}' has unknown platform slug '{slug}'. "
+            f"Known slugs: {', '.join(sorted(PLATFORM_MAP))}."
+        )
+    return PLATFORM_MAP[slug]
 
 def _build_vlans(nb, site_id):
     """Build the schema's top-level `vlans` block from NetBox.
