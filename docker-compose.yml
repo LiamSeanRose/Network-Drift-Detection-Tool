@@ -1,0 +1,75 @@
+# docker-compose.yml — runs the whole netdrift stack (v0.2).
+#
+# Three services on one network:
+#   postgres  — the database (official image)
+#   api       — the FastAPI app (uvicorn), built from our Dockerfile
+#   scheduler — the polling loop, same image, different command
+#
+# Bring it all up with:   docker compose up
+# (add --build the first time, or after changing the Dockerfile/code)
+#
+# NOTE: api and scheduler reach Postgres at host "postgres" (the service name),
+# NOT "localhost" — inside the compose network each service is reachable by its
+# service name. That is why DATABASE_URL below points at @postgres, not
+# @localhost.
+
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: netdrift
+    ports:
+      # Expose Postgres on the host too, so you can still connect from the
+      # laptop (psql, the smoke tests) at localhost:5432.
+      - "5432:5432"
+    volumes:
+      # Persist the database across `docker compose down`/`up` so drift history
+      # is not lost when the stack restarts.
+      - netdrift_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      # api/scheduler wait for this to pass before starting (see depends_on).
+      test: ["CMD-SHELL", "pg_isready -U postgres -d netdrift"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    build: .
+    command: alembic upgrade head
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:devpassword@postgres:5432/netdrift
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build: .
+    command: uvicorn netdrift.api.app:app --host 0.0.0.0 --port 8000
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:devpassword@postgres:5432/netdrift
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+  scheduler:
+    build: .
+    command: python -m netdrift.scheduler --interval 5
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:devpassword@postgres:5432/netdrift
+      # The scheduler's real run also needs NetBox + device access. Those are
+      # left for the lab integration step (set NETBOX_URL/NETBOX_TOKEN and
+      # mount devices.yml there); without them the scheduler starts and ticks,
+      # but each check logs a failure — which is fine for verifying the wiring.
+    depends_on:
+      postgres:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  netdrift_pgdata:
