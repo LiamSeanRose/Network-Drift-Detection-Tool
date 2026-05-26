@@ -1,0 +1,17 @@
+# Keep the Docker build context small and clean — exclude things the image
+# never needs. Mirrors .gitignore plus build-specific noise.
+.git
+.gitignore
+venv/
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+scratch/
+devices.yml
+.env
+clab-netdrift-lab/
