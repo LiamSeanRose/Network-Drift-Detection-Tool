@@ -3,19 +3,29 @@
 The "reality" side for Nokia SR Linux devices. Connects to an SR Linux node
 and returns its real state in the normalized schema (docs/schema.md Section 2).
 
-Mirrors collectors/arista.py: same public function, same returned shape. The
-diff engine consumes this output identically — it does not care which vendor
-produced it.
+Returns the same shape as collectors/arista.py — the diff engine consumes the
+output identically and does not care which vendor produced it.
 
-NOTE — partial implementation (v0.2, first pass):
-    The v0.1 interface fields (description, enabled, ip_addresses) are fully
-    implemented. The v0.2 VLAN fields (mode, untagged_vlan, tagged_vlans, and
-    the top-level `vlans` block) are STUBBED to schema-valid defaults — every
-    interface reports mode "routed" with no VLANs, and `vlans` is empty.
-    SR Linux has no NAPALM VLAN getter (same gap arista.py fills with raw
-    eAPI); the SR Linux equivalent is a separate second pass. The stub keeps
-    the returned dict schema-complete so the diff engine never sees a missing
-    key — it just will not yet detect real VLAN drift on Nokia devices.
+WHY pygnmi AND NOT NAPALM:
+    SR Linux is gNMI-native. NAPALM's community srl driver was tried first
+    but proved unusable: get_vlans() is an unimplemented stub, its raw gNMI
+    path crashes inside the driver's own response parser, and it cannot even
+    be imported alongside pygnmi (both ship their own compiled gNMI protobuf
+    definitions and protobuf's global registry rejects the duplicate). This
+    collector therefore talks gNMI directly via pygnmi.
+
+SR LINUX VLAN MODEL — BEST-EFFORT MAPPING (known approximation):
+    SR Linux has no Arista-style access/trunk port modes. It uses
+    subinterfaces with VLAN encapsulation bound into a mac-vrf
+    network-instance. Mapped onto the schema best-effort:
+      - bridged subinterface with single-tagged encap -> mode "access",
+        untagged_vlan = that VLAN id.
+      - interface with no bridged subinterface -> mode "routed".
+      - the top-level vlans block is derived; a VLAN's name is the mac-vrf
+        instance the subinterface is bound to (SR Linux has no VLAN name).
+    KNOWN GAPS (out of scope for v0.2): trunk/tagged mode not produced
+    (tagged_vlans always []); only the first single-tagged subinterface is
+    used; mac-vrf-name-as-VLAN-name is an approximation.
 
 Public function:
     get_reality(device: dict) -> dict
@@ -23,101 +33,122 @@ Public function:
 
 from datetime import datetime, timezone
 
-from napalm import get_network_driver
+from pygnmi.client import gNMIclient
+
+GNMI_PORT = 57400
 
 
-def _build_ip_list(ip_raw):
-    """Shape a NAPALM get_interfaces_ip entry into a sorted list of CIDR strings.
-
-    Identical logic to arista.py: pull each IPv4 address and its prefix length,
-    format as "address/prefix", sort ascending (schema Rule 3). IPv6 is not in
-    the v0.1/v0.2 schema, so it is ignored.
-    """
-    ips = []
-    for address, detail in ip_raw.get("ipv4", {}).items():
-        ips.append(f"{address}/{detail['prefix_length']}")
-    return sorted(ips)
+def _gnmi_first_val(response):
+    """Return the first update's value from a pygnmi get() response, or None."""
+    notifications = response.get("notification", [])
+    if not notifications:
+        return None
+    updates = notifications[0].get("update")
+    if not updates:
+        return None
+    return updates[0].get("val")
 
 
-def _strip_subinterface(name):
-    """Strip an SR Linux subinterface suffix, returning the parent interface name.
-
-    SR Linux assigns IP addresses to *subinterfaces* — get_interfaces_ip()
-    returns keys like "mgmt0.0" and "ethernet-1/1.0", where ".0" is the
-    subinterface index. get_interfaces() uses the bare parent name ("mgmt0",
-    "ethernet-1/1"). To attach an IP to its interface we match on the parent,
-    so we drop everything from the last "." onward.
-
-    Arista does not need this — EOS reports IPs directly on the interface.
-    "ethernet-1/1.0" -> "ethernet-1/1";  "mgmt0.0" -> "mgmt0".
-    """
-    return name.rsplit(".", 1)[0]
+def _build_ip_list(subif):
+    """Sorted list of CIDR IPv4 strings for one subinterface dict."""
+    ipv4 = subif.get("ipv4", {})
+    addresses = ipv4.get("address", [])
+    return sorted(a["ip-prefix"] for a in addresses if "ip-prefix" in a)
 
 
-def _build_ip_map(raw_ips):
-    """Collapse SR Linux's subinterface-keyed IP data onto parent interfaces.
+def _vlan_id_from_subinterface(subif):
+    """Return the single-tagged VLAN id from a subinterface dict, or None."""
+    vlan = subif.get("srl_nokia-interfaces-vlans:vlan", {})
+    single = vlan.get("encap", {}).get("single-tagged", {})
+    return single.get("vlan-id")
 
-    raw_ips is keyed by subinterface ("ethernet-1/1.0"). Returns a dict keyed
-    by parent interface name ("ethernet-1/1"), each value the sorted CIDR list
-    for that interface. If a parent somehow has multiple subinterfaces with
-    IPs, their addresses are merged and re-sorted.
-    """
-    ip_map = {}
-    for sub_name, ip_raw in raw_ips.items():
-        parent = _strip_subinterface(sub_name)
-        addresses = _build_ip_list(ip_raw)
-        if parent in ip_map:
-            ip_map[parent] = sorted(ip_map[parent] + addresses)
-        else:
-            ip_map[parent] = addresses
-    return ip_map
+
+def _is_bridged(subif):
+    """True if a subinterface is type 'bridged' (an L2 subinterface)."""
+    return str(subif.get("type", "")).endswith("bridged")
+
+
+def _build_macvrf_map(gc):
+    """Build {subinterface_name: mac-vrf_instance_name} from network-instances."""
+    subif_to_macvrf = {}
+    val = _gnmi_first_val(gc.get(path=["/network-instance"], datatype="all"))
+    instances = val.get("srl_nokia-network-instance:network-instance", []) if val else []
+    for ni in instances:
+        if not str(ni.get("type", "")).endswith("mac-vrf"):
+            continue
+        ni_name = ni.get("name", "")
+        for bound in ni.get("interface", []):
+            subif_name = bound.get("name", "")
+            if subif_name:
+                subif_to_macvrf[subif_name] = ni_name
+    return subif_to_macvrf
+
+
+def _parse_interface(iface):
+    """Map one gNMI interface dict to schema fields. Returns (dict, vlan_id)."""
+    description = iface.get("description", "")
+    enabled = iface.get("admin-state", "") == "enable"
+
+    ip_addresses = []
+    mode = "routed"
+    untagged_vlan = None
+    vlan_id_seen = None
+
+    for subif in iface.get("subinterface", []):
+        ip_addresses.extend(_build_ip_list(subif))
+        if vlan_id_seen is None and _is_bridged(subif):
+            vlan_id = _vlan_id_from_subinterface(subif)
+            if vlan_id is not None:
+                mode = "access"
+                untagged_vlan = vlan_id
+                vlan_id_seen = vlan_id
+
+    iface_dict = {
+        "description": description,
+        "enabled": enabled,
+        "ip_addresses": sorted(ip_addresses),
+        "mode": mode,
+        "untagged_vlan": untagged_vlan,
+        "tagged_vlans": [],
+    }
+    return iface_dict, vlan_id_seen
 
 
 def get_reality(device):
-    """Return the real state of an SR Linux device in the normalized schema.
+    """Return the real state of an SR Linux device in the normalized schema."""
+    host = (device["hostname"], GNMI_PORT)
 
-    `device` is a dict with at least: name, hostname, username, password.
-    """
-    driver = get_network_driver("srl")
-    conn = driver(
-        hostname=device["hostname"],
+    with gNMIclient(
+        target=host,
         username=device["username"],
         password=device["password"],
-        # insecure=True skips the CA/certificate setup by trusting whatever
-        # cert the node presents. Fine for the lab; NOT for production.
-        # JSON_IETF is the encoding the SR Linux driver expects for gNMI.
-        optional_args={"insecure": True, "encoding": "JSON_IETF"},
-    )
-    conn.open()
-    try:
-        raw_interfaces = conn.get_interfaces()
-        raw_ips = conn.get_interfaces_ip()
-    finally:
-        conn.close()
-
-    ip_map = _build_ip_map(raw_ips)
+        skip_verify=True,
+    ) as gc:
+        iface_val = _gnmi_first_val(gc.get(path=["/interface"], datatype="all"))
+        iface_list = iface_val.get("srl_nokia-interfaces:interface", []) if iface_val else []
+        subif_to_macvrf = _build_macvrf_map(gc)
 
     interfaces = {}
-    for name, data in raw_interfaces.items():
-        interfaces[name] = {
-            # --- v0.1 fields (fully implemented) ---
-            "description": data["description"],
-            "enabled": data["is_enabled"],
-            "ip_addresses": ip_map.get(name, []),
-            # --- v0.2 VLAN fields (STUBBED — see module docstring) ---
-            # Schema-valid defaults so the dict is schema-complete. Replaced
-            # with real SR Linux VLAN data in the second pass.
-            "mode": "routed",
-            "untagged_vlan": None,
-            "tagged_vlans": [],
-        }
+    vlans = {}
+    for iface in iface_list:
+        name = iface.get("name")
+        if not name:
+            continue
+        iface_dict, vlan_id = _parse_interface(iface)
+        interfaces[name] = iface_dict
+
+        if vlan_id is not None:
+            vlan_name = ""
+            for subif in iface.get("subinterface", []):
+                if _is_bridged(subif):
+                    vlan_name = subif_to_macvrf.get(subif.get("name", ""), "")
+                    break
+            vlans[str(vlan_id)] = {"name": vlan_name}
 
     return {
         "device": device["name"],
         "platform": "nokia_srlinux",
         "collected_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "interfaces": interfaces,
-        # STUBBED — empty until the VLAN second pass. Schema Rule 7: keys
-        # would be VLAN IDs as strings.
-        "vlans": {},
+        "vlans": vlans,
     }
