@@ -1,4 +1,4 @@
-# Device inventory for driftcheck (v0.1 lab scope).
+# Device inventory for driftcheck.
 #
 # Copy this file to `devices.yml` and fill in real values.
 # `devices.yml` is gitignored and must NEVER be committed (it holds credentials).
@@ -6,8 +6,8 @@
 # Each top-level key is a device name. It MUST match the device name in NetBox
 # and the value returned by the collector, so intent and reality can be paired.
 #
-# cEOS lab management IPs are 172.20.20.11 / 172.20.20.12.
-# Default cEOS credentials are admin / admin.
+# Lab management IPs: cEOS nodes 172.20.20.11 / 172.20.20.12; SR Linux node
+# 172.20.20.21. Default cEOS credentials are admin / admin.
 
 core-sw-01:
   hostname: 172.20.20.11
@@ -16,5 +16,10 @@ core-sw-01:
 
 core-sw-02:
   hostname: 172.20.20.12
+  username: admin
+  password: changeme
+
+nokia-sw-01:
+  hostname: 172.20.20.21
   username: admin
   password: changeme
