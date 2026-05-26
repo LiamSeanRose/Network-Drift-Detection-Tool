@@ -11,13 +11,16 @@ dependencies = [
     "sqlalchemy",
     "psycopg[binary]",
     "alembic",
+    "fastapi",
+    "uvicorn[standard]",
+    "apscheduler",
 ]
 
 [project.scripts]
 driftcheck = "netdrift.cli:main"
 
 [project.optional-dependencies]
-dev = ["pytest", "ruff"]
+dev = ["pytest", "ruff", "httpx"]
 
 [build-system]
 requires = ["setuptools"]

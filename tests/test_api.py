@@ -1,0 +1,92 @@
+"""tests/test_api.py — API endpoint tests (v0.2).
+
+Uses FastAPI's TestClient, which calls endpoints in-process — no running
+uvicorn, no network. The app's get_session dependency is overridden to hand
+out sessions on an in-memory SQLite database (same approach as the storage
+tests), so the API is exercised end-to-end with zero infrastructure.
+"""
+
+import pytest
+from fastapi.testclient import TestClient
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
+
+from netdrift.api.app import app, get_session
+from netdrift.storage.models import Base
+from netdrift.storage.repository import save_drifts
+
+
+@pytest.fixture
+def client():
+    """A TestClient whose get_session dependency points at a fresh in-memory
+    SQLite database, seeded with two drift events.
+
+    NOTE: ':memory:' gives each new connection its own empty database. To make
+    the seeded table visible to the endpoint (which opens its own session), we
+    pin the engine to ONE shared connection via StaticPool — so the create,
+    the seed, and the endpoint query all hit the same in-memory database.
+    """
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    TestingSession = sessionmaker(bind=engine)
+
+    # Seed two events so the endpoint has something to return.
+    with TestingSession() as s:
+        save_drifts(s, [
+            {"device": "core-sw-01", "object": "interface:Ethernet2",
+             "field": "untagged_vlan", "intent": 10, "reality": 99,
+             "drift_kind": "value_mismatch", "severity": "warning",
+             "detected_at": "2026-05-26T14:32:00Z"},
+            {"device": "core-sw-02", "object": "vlan:20", "field": "name",
+             "intent": "voice", "reality": "Voice-VLAN",
+             "drift_kind": "value_mismatch", "severity": "info",
+             "detected_at": "2026-05-26T14:32:01Z"},
+        ])
+        s.commit()
+
+    # Override the app's real session dependency with the test database.
+    def override_get_session():
+        with TestingSession() as s:
+            yield s
+
+    app.dependency_overrides[get_session] = override_get_session
+    yield TestClient(app)
+    app.dependency_overrides.clear()  # cleanup so tests don't leak
+
+
+def test_health_returns_ok(client):
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json() == {"status": "ok"}
+
+
+def test_drifts_returns_all_events(client):
+    response = client.get("/drifts")
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+def test_drifts_preserves_json_types(client):
+    response = client.get("/drifts")
+    events = response.json()
+    # Find the untagged_vlan event; its intent must be the integer 10.
+    vlan_event = next(e for e in events if e["field"] == "untagged_vlan")
+    assert vlan_event["intent"] == 10
+    assert isinstance(vlan_event["intent"], int)
+
+
+def test_drifts_filters_by_device(client):
+    response = client.get("/drifts?device=core-sw-02")
+    events = response.json()
+    assert len(events) == 1
+    assert events[0]["device"] == "core-sw-02"
+
+
+def test_drifts_respects_limit(client):
+    response = client.get("/drifts?limit=1")
+    assert len(response.json()) == 1
