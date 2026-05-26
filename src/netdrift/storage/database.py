@@ -52,11 +52,14 @@ def get_sessionmaker(engine=None):
 
 
 def create_all(engine=None):
-    """Create every table defined on Base if it does not already exist.
+    """Create every table defined on Base. TESTS ONLY — not for app use.
 
-    Fine for v0.2 development. NOTE: this is the quick way to make tables;
-    Alembic (migrations) is the grown-up way that also handles *changing*
-    tables later without losing data. We add Alembic as the next step.
+    Alembic migrations are now the source of truth for the real database
+    schema (run `alembic upgrade head`). This helper remains only because the
+    test suite uses an in-memory SQLite database where a one-shot create is
+    simpler than running migrations. The application must NOT call this against
+    Postgres — doing so would create tables outside Alembic's tracking and let
+    the real schema drift from the migration history.
     """
     if engine is None:
         engine = get_engine()
