@@ -17,7 +17,9 @@ import pytest
 from unittest.mock import patch
 
 from netdrift.collectors.arista import (
+    _build_bgp_neighbors,
     _build_ip_list,
+    _build_ospf_adjacencies,
     _build_switchport_map,
     _build_vlans,
     _expand_interface_name,
@@ -163,14 +165,15 @@ class FakeNapalmDevice:
 class FakeNapalmConn:
     """Stands in for the NAPALM EOS connection object.
 
-    Answers the three calls get_reality() makes — get_interfaces(),
-    get_interfaces_ip(), and device.run_commands() — from canned payloads.
-    open() / close() are no-ops; no socket is ever opened.
+    Answers the four calls get_reality() makes — get_interfaces(),
+    get_interfaces_ip(), get_bgp_neighbors(), and device.run_commands() —
+    from canned payloads. open() / close() are no-ops; no socket is ever opened.
     """
 
-    def __init__(self, interfaces, interfaces_ip, run_commands_result):
+    def __init__(self, interfaces, interfaces_ip, bgp_neighbors, run_commands_result):
         self._interfaces = interfaces
         self._interfaces_ip = interfaces_ip
+        self._bgp_neighbors = bgp_neighbors
         self.device = FakeNapalmDevice(run_commands_result)
 
     def open(self):
@@ -185,9 +188,13 @@ class FakeNapalmConn:
     def get_interfaces_ip(self):
         return self._interfaces_ip
 
+    def get_bgp_neighbors(self):
+        return self._bgp_neighbors
 
-# A consistent device: Ethernet1 is a routed uplink with an IP; Ethernet2 is
-# an access port on VLAN 10. VLANs 10 and 20 exist.
+
+# A consistent device: Ethernet1 is a routed uplink with an IP and an OSPF
+# adjacency / BGP peer to 10.0.0.2; Ethernet2 is an access port on VLAN 10.
+# VLANs 10 and 20 exist.
 INTERFACES = {
     "Ethernet1": {
         "description": "Uplink to core",
@@ -206,8 +213,23 @@ INTERFACES_IP = {
     # Ethernet2 has no IP — absent from get_interfaces_ip() output entirely.
 }
 
-# run_commands(["show vlan", "show interfaces switchport"]) returns a list in
-# the same order as the commands.
+# NAPALM get_bgp_neighbors() value shape:
+# {"global": {"peers": {"<ip>": {remote_as, is_enabled, description, ...}}}}
+BGP_NEIGHBORS = {
+    "global": {
+        "peers": {
+            "10.0.0.2": {
+                "remote_as": 65000,
+                "is_enabled": True,
+                "description": "iBGP to core-sw-02",
+            },
+        },
+    },
+}
+
+# run_commands(["show vlan", "show interfaces switchport",
+#               "show ip bgp summary", "show ip ospf neighbor"]) returns a
+# list in the same order as the commands.
 RUN_COMMANDS_RESULT = [
     {"vlans": {
         "10": {"name": "users"},
@@ -215,6 +237,33 @@ RUN_COMMANDS_RESULT = [
     }},
     {"switchports": {
         "Et2": {"switchportInfo": {"mode": "access", "accessVlanId": 10}},
+    }},
+    # show ip bgp summary | json — peerState is what the eAPI returns,
+    # capitalized. The collector lower-cases it.
+    {"vrfs": {
+        "default": {
+            "peers": {
+                "10.0.0.2": {"peerState": "Established"},
+            },
+        },
+    }},
+    # show ip ospf neighbor | json — adjacencyState already lower-case from
+    # EOS; areaId is dotted form, nested under details.
+    {"vrfs": {
+        "default": {
+            "instList": {
+                "1": {
+                    "ospfNeighborEntries": [
+                        {
+                            "routerId": "2.2.2.2",
+                            "interfaceName": "Ethernet1",
+                            "adjacencyState": "full",
+                            "details": {"areaId": "0.0.0.0"},
+                        },
+                    ],
+                },
+            },
+        },
     }},
 ]
 
@@ -228,7 +277,9 @@ DEVICE = {
 
 def _run_get_reality():
     """Run get_reality() with the NAPALM driver patched out for the fake."""
-    fake_conn = FakeNapalmConn(INTERFACES, INTERFACES_IP, RUN_COMMANDS_RESULT)
+    fake_conn = FakeNapalmConn(
+        INTERFACES, INTERFACES_IP, BGP_NEIGHBORS, RUN_COMMANDS_RESULT,
+    )
     # arista.py does `driver = get_network_driver("eos")` then `driver(...)`.
     # Patch get_network_driver so it returns a factory that yields our fake
     # connection regardless of the arguments passed.
@@ -245,6 +296,7 @@ def test_get_reality_top_level_shape():
     assert result["platform"] == "arista_eos"
     assert set(result.keys()) == {
         "device", "platform", "collected_at", "interfaces", "vlans",
+        "bgp_neighbors", "ospf",
     }
 
 
@@ -277,4 +329,150 @@ def test_get_reality_builds_vlans_block():
     assert _run_get_reality()["vlans"] == {
         "10": {"name": "users"},
         "20": {"name": "voice"},
+    }
+# --- _build_bgp_neighbors ----------------------------------------------------
+# NAPALM get_bgp_neighbors() value shape: {"global": {"peers": {"<ip>": {...}}}}
+# eAPI `show ip bgp summary | json` shape: {"vrfs": {"default": {"peers": {...}}}}
+
+def test_build_bgp_neighbors_merges_napalm_and_eapi():
+    napalm_bgp = {"global": {"peers": {
+        "10.0.0.2": {
+            "remote_as": 65000,
+            "is_enabled": True,
+            "description": "iBGP",
+        },
+    }}}
+    summary = {"vrfs": {"default": {"peers": {
+        "10.0.0.2": {"peerState": "Established"},
+    }}}}
+    assert _build_bgp_neighbors(napalm_bgp, summary) == {
+        "10.0.0.2": {
+            "remote_as": 65000,
+            "enabled": True,
+            "description": "iBGP",
+            # schema Rule 10: state lower-cased.
+            "session_state": "established",
+        },
+    }
+
+
+def test_build_bgp_neighbors_lowercases_all_states():
+    # All six EOS state names — collector must lower-case every one to match
+    # the schema's allowed values.
+    napalm_bgp = {"global": {"peers": {
+        f"10.0.0.{i + 2}": {"remote_as": 65000, "is_enabled": True, "description": ""}
+        for i in range(6)
+    }}}
+    states = ["Established", "Idle", "Active", "Connect", "OpenSent", "OpenConfirm"]
+    summary = {"vrfs": {"default": {"peers": {
+        f"10.0.0.{i + 2}": {"peerState": state}
+        for i, state in enumerate(states)
+    }}}}
+    result = _build_bgp_neighbors(napalm_bgp, summary)
+    assert [result[f"10.0.0.{i + 2}"]["session_state"] for i in range(6)] == [
+        "established", "idle", "active", "connect", "opensent", "openconfirm",
+    ]
+
+
+def test_build_bgp_neighbors_no_peers_is_empty():
+    # No BGP configured -> empty dict, never None (schema Rule 4 spirit).
+    assert _build_bgp_neighbors({"global": {"peers": {}}}, {"vrfs": {}}) == {}
+
+
+def test_build_bgp_neighbors_missing_description_is_empty_string():
+    # NAPALM may omit description entirely — schema Rule 4: "" not None.
+    napalm_bgp = {"global": {"peers": {
+        "10.0.0.2": {"remote_as": 65000, "is_enabled": True},
+    }}}
+    summary = {"vrfs": {"default": {"peers": {
+        "10.0.0.2": {"peerState": "Established"},
+    }}}}
+    assert _build_bgp_neighbors(napalm_bgp, summary)["10.0.0.2"]["description"] == ""
+
+
+# --- _build_ospf_adjacencies -------------------------------------------------
+# eAPI `show ip ospf neighbor | json` shape:
+#   {"vrfs": {"default": {"instList": {"1": {"ospfNeighborEntries": [...]}}}}}
+
+def test_build_ospf_adjacencies_basic():
+    ospf_json = {"vrfs": {"default": {"instList": {"1": {
+        "ospfNeighborEntries": [
+            {
+                "routerId": "2.2.2.2",
+                "interfaceName": "Ethernet1",
+                "adjacencyState": "full",
+                "details": {"areaId": "0.0.0.0"},
+            },
+        ],
+    }}}}}
+    assert _build_ospf_adjacencies(ospf_json) == {
+        "2.2.2.2": {
+            "area": "0.0.0.0",
+            "interface": "Ethernet1",
+            "adjacency_state": "full",
+        },
+    }
+
+
+def test_build_ospf_adjacencies_merges_multiple_processes():
+    # EOS supports multiple OSPF processes; schema does not model process ID,
+    # so adjacencies from instList "1" and "2" merge into one dict.
+    ospf_json = {"vrfs": {"default": {"instList": {
+        "1": {"ospfNeighborEntries": [
+            {
+                "routerId": "2.2.2.2", "interfaceName": "Ethernet1",
+                "adjacencyState": "full", "details": {"areaId": "0.0.0.0"},
+            },
+        ]},
+        "2": {"ospfNeighborEntries": [
+            {
+                "routerId": "3.3.3.3", "interfaceName": "Ethernet2",
+                "adjacencyState": "full", "details": {"areaId": "0.0.0.1"},
+            },
+        ]},
+    }}}}
+    result = _build_ospf_adjacencies(ospf_json)
+    assert set(result.keys()) == {"2.2.2.2", "3.3.3.3"}
+
+
+def test_build_ospf_adjacencies_no_ospf_is_empty():
+    assert _build_ospf_adjacencies({"vrfs": {}}) == {}
+
+
+def test_build_ospf_adjacencies_skips_entries_without_router_id():
+    # A malformed entry without a routerId would crash a naive dict-key
+    # assignment; the builder should silently skip it.
+    ospf_json = {"vrfs": {"default": {"instList": {"1": {
+        "ospfNeighborEntries": [
+            {"interfaceName": "Ethernet1", "adjacencyState": "full",
+             "details": {"areaId": "0.0.0.0"}},
+        ],
+    }}}}}
+    assert _build_ospf_adjacencies(ospf_json) == {}
+
+
+# --- get_reality routing assertions ------------------------------------------
+
+def test_get_reality_builds_bgp_neighbors_block():
+    result = _run_get_reality()
+    assert result["bgp_neighbors"] == {
+        "10.0.0.2": {
+            "remote_as": 65000,
+            "enabled": True,
+            "description": "iBGP to core-sw-02",
+            "session_state": "established",
+        },
+    }
+
+
+def test_get_reality_builds_ospf_block():
+    result = _run_get_reality()
+    assert result["ospf"] == {
+        "adjacencies": {
+            "2.2.2.2": {
+                "area": "0.0.0.0",
+                "interface": "Ethernet1",
+                "adjacency_state": "full",
+            },
+        },
     }
