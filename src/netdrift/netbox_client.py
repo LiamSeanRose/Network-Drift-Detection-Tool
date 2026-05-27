@@ -1,5 +1,5 @@
 """
-netbox_client.py — Ticket 4, v0.1
+netbox_client.py — Ticket 4, v0.1 (extended for v0.3 routing intent)
 
 The "intent" side of the drift tool. Reads a device's documented state from
 NetBox and returns it in the normalized schema (see docs/schema.md Section 2).
@@ -7,6 +7,12 @@ NetBox and returns it in the normalized schema (see docs/schema.md Section 2).
 The diff engine consumes this shape directly, so it must match the schema
 exactly. NetBox's own data model does NOT match the schema 1:1 — this module
 is the translation layer that maps NetBox -> normalized schema.
+
+v0.3: routing intent (BGP neighbors, OSPF adjacencies) is read from each
+device's local_context_data (NetBox's per-device config context JSON). The
+shape of that JSON mirrors the device-state schema exactly — no translation
+between intent and reality, so the differ can compare like-for-like. See
+docs/schema.md Section 10 item 18 for the rationale.
 
 Public function:
     get_intent(device_name: str) -> dict
@@ -123,6 +129,34 @@ def _interface_vlan_fields(nb_iface):
         "tagged_vlans": tagged_vlans,
     }
 
+
+def _build_routing_from_context(device):
+    """Extract routing intent (BGP + OSPF) from a NetBox device's config context.
+
+    NetBox has no native BGP/OSPF model; routing intent lives in each device's
+    `local_context_data` — arbitrary JSON attached to one device. We expect a
+    shape mirroring the device-state schema exactly:
+
+        {
+            "bgp_neighbors": {"10.0.0.2": {remote_as, enabled, description,
+                                           session_state}},
+            "ospf": {"adjacencies": {"2.2.2.2": {area, interface,
+                                                  adjacency_state}}},
+        }
+
+    A device with no local_context_data, or one whose context omits these
+    keys, yields empty containers — never None — per schema Rule 4 spirit
+    (empty maps where the protocol is not configured).
+
+    Returns (bgp_neighbors_dict, ospf_dict).
+    """
+    context = device.local_context_data or {}
+    bgp = context.get("bgp_neighbors", {}) or {}
+    ospf_raw = context.get("ospf", {}) or {}
+    ospf = {"adjacencies": ospf_raw.get("adjacencies", {}) or {}}
+    return bgp, ospf
+
+
 def get_intent(device_name):
     """
     Return the intended state of `device_name` from NetBox, in the normalized
@@ -157,12 +191,16 @@ def get_intent(device_name):
             "tagged_vlans": vlan_fields["tagged_vlans"],
         }
 
+    bgp_neighbors, ospf = _build_routing_from_context(device)
+
     return {
         "device": device.name,
         "platform": _normalize_platform(device),
         "collected_at": _utc_now_iso(),
         "interfaces": interfaces,
         "vlans": _build_vlans(nb, device.site.id),
+        "bgp_neighbors": bgp_neighbors,
+        "ospf": ospf,
     }
 
 if __name__ == "__main__":
