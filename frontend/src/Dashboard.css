@@ -1,0 +1,169 @@
+/* Dashboard.css — drift events dashboard styles.
+ *
+ * Aesthetic: operator tool. Dark charcoal background, near-white text,
+ * monospace for identifiers, restrained chrome. Severity is communicated
+ * by a left-edge color bar on each row, not by filling the whole row.
+ *
+ * All colors are declared as CSS custom properties at the top so they
+ * can be tweaked in one place.
+ */
+
+:root {
+  --bg:           #0e1014;   /* page background */
+  --bg-panel:     #161922;   /* panels, header */
+  --bg-row-alt:   #1a1d27;   /* zebra striping */
+  --border:       #262a36;
+  --fg:           #e6e8ee;   /* primary text */
+  --fg-muted:     #8b91a3;   /* secondary text, headers */
+  --accent:       #6fb3ff;   /* links, focus */
+
+  --sev-info:     #565d6e;   /* grey */
+  --sev-warning:  #d4a017;   /* amber */
+  --sev-critical: #d83a52;   /* red */
+
+  --mono: ui-monospace, "JetBrains Mono", "Fira Code", "Cascadia Code", Menlo, Consolas, monospace;
+  --sans: "IBM Plex Sans", "Helvetica Neue", system-ui, sans-serif;
+}
+
+.dashboard {
+  font-family: var(--sans);
+  color: var(--fg);
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+/* ---- Header bar -------------------------------------------------- */
+
+.dashboard__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding-bottom: 1rem;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.dashboard__title-group {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.dashboard__title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  margin: 0;
+}
+
+.dashboard__subtitle {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: var(--fg-muted);
+}
+
+.dashboard__count {
+  color: var(--fg);
+}
+
+.dashboard__refresh {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.9rem;
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.dashboard__refresh:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.dashboard__refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ---- States: loading / error / empty ----------------------------- */
+
+.dashboard__state {
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  color: var(--fg-muted);
+  padding: 3rem 0;
+  text-align: center;
+}
+
+.dashboard__state--error {
+  color: var(--sev-critical);
+}
+
+/* ---- Table ------------------------------------------------------- */
+
+.drift-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+.drift-table thead th {
+  text-align: left;
+  font-family: var(--sans);
+  font-weight: 500;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.drift-table tbody tr {
+  border-left: 3px solid var(--sev-info);   /* default; overridden by severity class */
+  background: var(--bg-panel);
+}
+
+.drift-table tbody tr:nth-child(even) {
+  background: var(--bg-row-alt);
+}
+
+.drift-table tbody tr.sev-info     { border-left-color: var(--sev-info); }
+.drift-table tbody tr.sev-warning  { border-left-color: var(--sev-warning); }
+.drift-table tbody tr.sev-critical { border-left-color: var(--sev-critical); }
+
+.drift-table td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+  white-space: nowrap;
+}
+
+.drift-table td.col-intent,
+.drift-table td.col-reality {
+  white-space: normal;
+  word-break: break-word;
+  max-width: 22ch;
+}
+
+.drift-table td.col-severity {
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  font-family: var(--sans);
+}
+
+.drift-table tr.sev-info     td.col-severity { color: var(--fg-muted); }
+.drift-table tr.sev-warning  td.col-severity { color: var(--sev-warning); }
+.drift-table tr.sev-critical td.col-severity { color: var(--sev-critical); }
+
+.drift-table td.col-detected {
+  color: var(--fg-muted);
+  font-size: 0.78rem;
+}

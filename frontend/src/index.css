@@ -1,0 +1,24 @@
+/* index.css — base styles applied to the whole page.
+ *
+ * Most styling lives in component CSS files (e.g. Dashboard.css). This file
+ * only handles the things that need to apply globally: resetting browser
+ * defaults and making sure the dark background covers the whole viewport.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  min-height: 100vh;
+  background: #0e1014;
+}
+
+body {
+  font-family: "IBM Plex Sans", "Helvetica Neue", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
