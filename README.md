@@ -5,11 +5,10 @@ Open-source network drift detection. Compares the *intended* state of a network
 surfaces the differences ("drift").
 
 The open-source alternative to NetBox Assurance.
-
-**Status:** early development (v0.1). v0.1 is a proof-of-concept: it pulls intent
-from NetBox, pulls reality from one Arista cEOS device, diffs three interface
-fields (description, admin state, IP addresses), and prints drift to the CLI.
-No database or web UI yet — see [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md)
+**Status:** v0.2 — adds Postgres-backed drift history, a FastAPI service, a
+React dashboard, an APScheduler that polls devices on a 1–5 minute interval,
+Nokia SR Linux as a second vendor (alongside Arista cEOS), and `docker compose
+up` to run the whole stack. See [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md)
 for the full roadmap.
 
 ## Architecture
@@ -69,6 +68,36 @@ driftcheck core-sw-01
 
 If intent and reality match, `driftcheck` prints `OK — no drift`. Change a field
 on the device (or in NetBox) and re-run to see a drift record.
+
+## Frontend (development)
+
+A React dashboard for viewing drift events lives in [`frontend/`](frontend/).
+To run it locally:
+
+```bash
+cd frontend
+npm install      # first time only
+npm run dev      # starts Vite at http://localhost:5173
+```
+
+The dashboard fetches `/drifts` from the FastAPI service. In dev, Vite proxies
+`/drifts` to `http://localhost:8000` (see [`frontend/vite.config.js`](frontend/vite.config.js)),
+so the API must also be running:
+
+```bash
+uvicorn netdrift.api.app:app --reload
+```
+
+Frontend tests use Vitest:
+
+```bash
+cd frontend
+npm test
+```
+
+For the full stack — Postgres, migrations, API, and scheduler — use Docker
+Compose from the repo root: `docker compose up --build`. The dashboard then
+talks to the containerized API.
 
 ## Documentation
 
