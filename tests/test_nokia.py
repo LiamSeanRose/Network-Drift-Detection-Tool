@@ -1,4 +1,4 @@
-"""tests/test_nokia.py — Nokia SR Linux collector unit tests (v0.2).
+"""tests/test_nokia.py — Nokia SR Linux collector unit tests (v0.3).
 
 The collector (collectors/nokia.py) does two things: it talks gNMI to a live
 SR Linux node, and it transforms the raw gNMI response into the normalized
@@ -11,15 +11,26 @@ tested with a fake gNMI client (FakeGNMIClient) standing in for pygnmi's
 gNMIclient — it is a context manager whose .get() returns a canned response
 chosen by the requested path. That lets the whole get_reality() loop run with
 no socket opened.
+
+CAVEAT (v0.3, Path A): the BGP/OSPF gNMI response shapes used in these
+fixtures are modelled on the SR Linux YANG spec, not captured from a live
+node running routing. The collector is verified end-to-end on the
+"no routing configured" path (which is the current lab state). The populated
+fixtures here exercise the parser logic but their precise field structure
+may need a tweak when routing is later configured on the Nokia and live
+data is captured.
 """
 
 from unittest.mock import patch
 
 from netdrift.collectors.nokia import (
+    _build_bgp_neighbors,
     _build_ip_list,
     _build_macvrf_map,
+    _build_ospf_adjacencies,
     _gnmi_first_val,
     _is_bridged,
+    _normalize_area,
     _parse_interface,
     _vlan_id_from_subinterface,
     get_reality,
@@ -113,6 +124,27 @@ def test_is_bridged_false_when_type_missing():
     assert _is_bridged({}) is False
 
 
+# --- _normalize_area ---------------------------------------------------------
+
+def test_normalize_area_int_zero_becomes_dotted():
+    # SR Linux may return area as an int 0 — schema Rule 10 wants dotted.
+    assert _normalize_area(0) == "0.0.0.0"
+
+
+def test_normalize_area_string_int_becomes_dotted():
+    # Or as the string "0".
+    assert _normalize_area("0") == "0.0.0.0"
+
+
+def test_normalize_area_already_dotted_passes_through():
+    assert _normalize_area("0.0.0.1") == "0.0.0.1"
+
+
+def test_normalize_area_empty_is_empty():
+    assert _normalize_area("") == ""
+    assert _normalize_area(None) == ""
+
+
 # --- _build_macvrf_map -------------------------------------------------------
 
 def test_build_macvrf_map_pairs_subif_to_instance():
@@ -185,20 +217,207 @@ def test_parse_interface_missing_description_is_empty_string():
     assert result["description"] == ""
 
 
+# --- _build_bgp_neighbors ----------------------------------------------------
+
+def test_build_bgp_neighbors_empty_when_unconfigured():
+    # No BGP configured -> gNMI returns empty notification -> empty dict.
+    fake = FakeGNMIClient()
+    assert _build_bgp_neighbors(fake) == {}
+
+
+def test_build_bgp_neighbors_parses_neighbor_list():
+    bgp_payload = {"srl_nokia-bgp:neighbor": [
+        {
+            "peer-address": "10.0.0.1",
+            "peer-as": 65000,
+            "admin-state": "enable",
+            "description": "iBGP to core-sw-01",
+            "session-state": "established",
+        },
+    ]}
+    fake = FakeGNMIClient(bgp=bgp_payload)
+    assert _build_bgp_neighbors(fake) == {
+        "10.0.0.1": {
+            "remote_as": 65000,
+            "enabled": True,
+            "description": "iBGP to core-sw-01",
+            "session_state": "established",
+        },
+    }
+
+
+def test_build_bgp_neighbors_lowercases_state():
+    # Defensive — even though SR Linux already lower-cases, the collector
+    # should not assume it. A non-lower input must still come out lower.
+    bgp_payload = {"srl_nokia-bgp:neighbor": [
+        {
+            "peer-address": "10.0.0.1",
+            "peer-as": 65000,
+            "admin-state": "enable",
+            "session-state": "Established",
+        },
+    ]}
+    assert _build_bgp_neighbors(
+        FakeGNMIClient(bgp=bgp_payload)
+    )["10.0.0.1"]["session_state"] == "established"
+
+
+def test_build_bgp_neighbors_missing_description_is_empty_string():
+    # schema Rule 4: "" not None, even when SR Linux omits the key entirely.
+    bgp_payload = {"srl_nokia-bgp:neighbor": [
+        {
+            "peer-address": "10.0.0.1",
+            "peer-as": 65000,
+            "admin-state": "enable",
+            "session-state": "established",
+        },
+    ]}
+    assert _build_bgp_neighbors(
+        FakeGNMIClient(bgp=bgp_payload)
+    )["10.0.0.1"]["description"] == ""
+
+
+def test_build_bgp_neighbors_admin_state_disable_is_false():
+    bgp_payload = {"srl_nokia-bgp:neighbor": [
+        {
+            "peer-address": "10.0.0.1",
+            "peer-as": 65000,
+            "admin-state": "disable",
+            "session-state": "idle",
+        },
+    ]}
+    assert _build_bgp_neighbors(
+        FakeGNMIClient(bgp=bgp_payload)
+    )["10.0.0.1"]["enabled"] is False
+
+
+# --- _build_ospf_adjacencies -------------------------------------------------
+
+def test_build_ospf_adjacencies_empty_when_unconfigured():
+    fake = FakeGNMIClient()
+    assert _build_ospf_adjacencies(fake) == {}
+
+
+def test_build_ospf_adjacencies_parses_neighbor():
+    ospf_payload = {"srl_nokia-ospf:instance": [
+        {
+            "name": "default",
+            "area": [
+                {
+                    "area-id": "0.0.0.0",
+                    "interface": [
+                        {
+                            "interface-name": "ethernet-1/1.0",
+                            "neighbor": [
+                                {
+                                    "neighbor-router-id": "1.1.1.1",
+                                    "adjacency-state": "full",
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+    ]}
+    fake = FakeGNMIClient(ospf=ospf_payload)
+    assert _build_ospf_adjacencies(fake) == {
+        "1.1.1.1": {
+            "area": "0.0.0.0",
+            "interface": "ethernet-1/1.0",
+            "adjacency_state": "full",
+        },
+    }
+
+
+def test_build_ospf_adjacencies_normalizes_int_area():
+    # SR Linux may emit area-id as an int — collector must normalize to dotted.
+    ospf_payload = {"srl_nokia-ospf:instance": [
+        {
+            "name": "default",
+            "area": [
+                {
+                    "area-id": 0,
+                    "interface": [
+                        {
+                            "interface-name": "ethernet-1/1.0",
+                            "neighbor": [
+                                {
+                                    "neighbor-router-id": "1.1.1.1",
+                                    "adjacency-state": "full",
+                                },
+                            ],
+                        },
+                    ],
+                },
+            ],
+        },
+    ]}
+    assert _build_ospf_adjacencies(
+        FakeGNMIClient(ospf=ospf_payload)
+    )["1.1.1.1"]["area"] == "0.0.0.0"
+
+
+def test_build_ospf_adjacencies_merges_multiple_instances():
+    # schema does not model OSPF process IDs — adjacencies from multiple
+    # instances merge into one dict keyed by router-id.
+    ospf_payload = {"srl_nokia-ospf:instance": [
+        {
+            "name": "default", "area": [{
+                "area-id": "0.0.0.0", "interface": [{
+                    "interface-name": "ethernet-1/1.0", "neighbor": [
+                        {"neighbor-router-id": "1.1.1.1", "adjacency-state": "full"},
+                    ],
+                }],
+            }],
+        },
+        {
+            "name": "second", "area": [{
+                "area-id": "0.0.0.1", "interface": [{
+                    "interface-name": "ethernet-1/2.0", "neighbor": [
+                        {"neighbor-router-id": "3.3.3.3", "adjacency-state": "full"},
+                    ],
+                }],
+            }],
+        },
+    ]}
+    result = _build_ospf_adjacencies(FakeGNMIClient(ospf=ospf_payload))
+    assert set(result.keys()) == {"1.1.1.1", "3.3.3.3"}
+
+
+def test_build_ospf_adjacencies_skips_neighbor_without_router_id():
+    # A malformed entry must be skipped, not crash the parse.
+    ospf_payload = {"srl_nokia-ospf:instance": [
+        {
+            "name": "default", "area": [{
+                "area-id": "0.0.0.0", "interface": [{
+                    "interface-name": "ethernet-1/1.0", "neighbor": [
+                        {"adjacency-state": "full"},
+                    ],
+                }],
+            }],
+        },
+    ]}
+    assert _build_ospf_adjacencies(FakeGNMIClient(ospf=ospf_payload)) == {}
+
+
 # --- get_reality (gNMI client mocked) ----------------------------------------
 
 class FakeGNMIClient:
     """Stand-in for pygnmi's gNMIclient — a context manager whose .get()
     returns a canned response chosen by the requested path.
 
-    nokia.py calls gc.get() for "/interface" and "/network-instance"; this
-    fake answers both from payloads handed in at construction. Anything else
+    nokia.py calls gc.get() for "/interface", "/network-instance",
+    ".../protocols/bgp/neighbor", and ".../protocols/ospfv2/instance"; this
+    fake answers each from a payload handed in at construction. Anything else
     returns an empty notification, the same as a real node with no data.
     """
 
-    def __init__(self, interface=None, network_instance=None):
+    def __init__(self, interface=None, network_instance=None, bgp=None, ospf=None):
         self._interface = interface
         self._network_instance = network_instance
+        self._bgp = bgp
+        self._ospf = ospf
 
     def __enter__(self):
         return self
@@ -212,11 +431,16 @@ class FakeGNMIClient:
             return gnmi_response(self._interface)
         if key == "/network-instance" and self._network_instance is not None:
             return gnmi_response(self._network_instance)
+        if "bgp/neighbor" in key and self._bgp is not None:
+            return gnmi_response(self._bgp)
+        if "ospf/instance" in key and self._ospf is not None:
+            return gnmi_response(self._ospf)
         return {"notification": []}
 
 
 # A complete, internally consistent device: ethernet-1/1 is an access port on
 # VLAN 10 bound into the "mac-vrf-10" instance; mgmt0 is routed with an IP.
+# One BGP neighbor to 10.0.0.1, one OSPF adjacency to 1.1.1.1.
 INTERFACE_PAYLOAD = {"srl_nokia-interfaces:interface": [
     {
         "name": "ethernet-1/1",
@@ -240,6 +464,38 @@ NETWORK_INSTANCE_PAYLOAD = {"srl_nokia-network-instance:network-instance": [
     },
 ]}
 
+BGP_PAYLOAD = {"srl_nokia-bgp:neighbor": [
+    {
+        "peer-address": "10.0.0.1",
+        "peer-as": 65000,
+        "admin-state": "enable",
+        "description": "iBGP to core-sw-01",
+        "session-state": "established",
+    },
+]}
+
+OSPF_PAYLOAD = {"srl_nokia-ospf:instance": [
+    {
+        "name": "default",
+        "area": [
+            {
+                "area-id": "0.0.0.0",
+                "interface": [
+                    {
+                        "interface-name": "ethernet-1/1.0",
+                        "neighbor": [
+                            {
+                                "neighbor-router-id": "1.1.1.1",
+                                "adjacency-state": "full",
+                            },
+                        ],
+                    },
+                ],
+            },
+        ],
+    },
+]}
+
 DEVICE = {
     "name": "nokia-sw-01",
     "hostname": "172.20.20.21",
@@ -253,6 +509,8 @@ def _run_get_reality():
     fake = FakeGNMIClient(
         interface=INTERFACE_PAYLOAD,
         network_instance=NETWORK_INSTANCE_PAYLOAD,
+        bgp=BGP_PAYLOAD,
+        ospf=OSPF_PAYLOAD,
     )
     # nokia.py does `with gNMIclient(...) as gc:` — patch the name it imported
     # so constructing it returns our fake instead of opening a connection.
@@ -266,6 +524,7 @@ def test_get_reality_top_level_shape():
     assert result["platform"] == "nokia_srlinux"
     assert set(result.keys()) == {
         "device", "platform", "collected_at", "interfaces", "vlans",
+        "bgp_neighbors", "ospf",
     }
 
 
@@ -299,3 +558,28 @@ def test_get_reality_vlan_name_comes_from_macvrf():
     # port's subinterface is bound to — joined across two separate gNMI calls.
     result = _run_get_reality()
     assert result["vlans"] == {"10": {"name": "mac-vrf-10"}}
+
+
+def test_get_reality_builds_bgp_neighbors_block():
+    result = _run_get_reality()
+    assert result["bgp_neighbors"] == {
+        "10.0.0.1": {
+            "remote_as": 65000,
+            "enabled": True,
+            "description": "iBGP to core-sw-01",
+            "session_state": "established",
+        },
+    }
+
+
+def test_get_reality_builds_ospf_block():
+    result = _run_get_reality()
+    assert result["ospf"] == {
+        "adjacencies": {
+            "1.1.1.1": {
+                "area": "0.0.0.0",
+                "interface": "ethernet-1/1.0",
+                "adjacency_state": "full",
+            },
+        },
+    }
