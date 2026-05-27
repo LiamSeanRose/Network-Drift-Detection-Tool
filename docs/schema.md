@@ -8,8 +8,9 @@
 > **Rule: any change to this file is a merge request that BOTH partners review and
 > approve.** Do not change the schema unilaterally.
 >
-> **Status:** v0.2. VLAN / layer-2 fields added 2026-05-23 (see the change log).
-> Further changes require a merge request both partners approve.
+> **Status:** v0.3. Routing-state fields (BGP neighbors, OSPF adjacencies) added
+> 2026-05-26 (see the change log). Further changes require a merge request both
+> partners approve.
 
 ---
 ## 1. Why this exists
@@ -30,7 +31,7 @@ contract.
 
 ---
 
-## 2. The device-state object (v0.2)
+## 2. The device-state object (v0.3)
 
 This is what `get_intent(device_name)` and `get_reality(device)` both return.
 
@@ -72,6 +73,25 @@ This is what `get_intent(device_name)` and `get_reality(device)` both return.
         "20": {"name": "voice"},
         "30": {"name": "mgmt"},
     },
+    "bgp_neighbors": {
+        # keys are the neighbor IP as a STRING — see Rule 7
+        "10.0.0.2": {
+            "remote_as": 65000,              # int
+            "enabled": True,                 # bool — admin state
+            "description": "",               # str, "" if unset — never None
+            "session_state": "established",   # str, lower-cased — see Rule 10
+        },
+    },
+    "ospf": {
+        "adjacencies": {
+            # keys are the neighbor router-id as a STRING
+            "2.2.2.2": {
+                "area": "0.0.0.0",            # str — dotted-decimal, always
+                "interface": "Ethernet1",     # str — canonical interface name
+                "adjacency_state": "full",    # str, lower-cased — see Rule 10
+            },
+        },
+    },
 }
 ```
 
@@ -91,6 +111,16 @@ This is what `get_intent(device_name)` and `get_reality(device)` both return.
 | `interfaces[].tagged_vlans` | `list[int]` | Tagged VLAN IDs, sorted ascending. Empty list `[]` if none. |
 | `vlans`                | `dict`      | Top-level VLAN definitions. Keyed by VLAN ID **as a string**. Value is a dict with at least `name`. On the intent side, VLANs are scoped to the device's NetBox **site** (v0.2). |
 | `vlans[].name`         | `str`       | VLAN name. Empty string `""` if unset — never `None`.          |
+| `bgp_neighbors`        | `dict`      | Top-level. BGP neighbors keyed by neighbor IP **as a string**. Empty dict `{}` if the device runs no BGP. |
+| `bgp_neighbors[].remote_as` | `int`  | The AS number the peer is expected to be in.                   |
+| `bgp_neighbors[].enabled` | `bool`   | Administrative state of the neighbor: configured up vs shut down. |
+| `bgp_neighbors[].description` | `str` | Neighbor description. Empty string `""` if unset — never `None`. |
+| `bgp_neighbors[].session_state` | `str` | Operational BGP session state, lower-cased (`established`, `idle`, `active`, `connect`, `opensent`, `openconfirm`). See Rule 10. |
+| `ospf`                 | `dict`      | Top-level. Always present; `{"adjacencies": {}}` if the device runs no OSPF. |
+| `ospf.adjacencies`     | `dict`      | OSPF adjacencies keyed by neighbor router-id **as a string**.  |
+| `ospf.adjacencies[].area` | `str`    | OSPF area in dotted-decimal form (`"0.0.0.0"`), never the bare-integer form. |
+| `ospf.adjacencies[].interface` | `str` | Canonical full interface name the adjacency is formed on.     |
+| `ospf.adjacencies[].adjacency_state` | `str` | Operational OSPF adjacency state, lower-cased (`full`, `2-way`, `init`, `exstart`, `exchange`, `loading`, `down`). See Rule 10. |
 
 ---
 
@@ -156,6 +186,16 @@ a formatting or ordering artifact.
    that is genuine drift and is reported as such. The fix for "VLAN 1 shows as
    undocumented drift" is to document VLAN 1 in NetBox, not to filter it out.
 
+10. **Operational routing-state values are lower-cased strings, and they ARE in
+    scope for drift.** `session_state` (BGP) and `adjacency_state` (OSPF) are
+    operational, not pure configuration — but a configured peer or adjacency
+    being *down* is the single most useful routing-drift signal, so they are
+    compared like any other field. Each collector lower-cases whatever the device
+    reports (`established`, not `Established`) so intent and reality compare
+    like-for-like. The `area` field is likewise always normalized to
+    dotted-decimal form (`"0.0.0.0"`), since EOS accepts both `0` and `0.0.0.0`
+    as input but the collector must emit one canonical form.
+
 ---
 
 ## 4. Allowed `platform` values
@@ -199,8 +239,8 @@ device) and returns a `list` of drift records. Each record is one difference.
 | Field         | Type   | Meaning                                                          |
 |---------------|--------|------------------------------------------------------------------|
 | `device`      | `str`  | Device the drift was found on.                                   |
-| `object`      | `str`  | `"<type>:<identifier>"`. Types: `interface` (e.g. `interface:Ethernet1`) and `vlan` (e.g. `vlan:20`). |
-| `field`       | `str`  | Which field drifted: `description`, `enabled`, `ip_addresses`, `mode`, `untagged_vlan`, `tagged_vlans`, `name`, or the sentinel `_interface` / `_vlan`. |
+| `object`      | `str`  | `"<type>:<identifier>"`. Types: `interface` (e.g. `interface:Ethernet1`), `vlan` (e.g. `vlan:20`), `bgp_neighbor` (e.g. `bgp_neighbor:10.0.0.2`), and `ospf_adjacency` (e.g. `ospf_adjacency:2.2.2.2`). |
+| `field`       | `str`  | Which field drifted: `description`, `enabled`, `ip_addresses`, `mode`, `untagged_vlan`, `tagged_vlans`, `name`, `remote_as`, `session_state`, `area`, `interface`, `adjacency_state`, or a sentinel (`_interface`, `_vlan`, `_bgp_neighbor`, `_ospf_adjacency`). |
 | `intent`      | varies | The value NetBox says it should be. Type matches the field.      |
 | `reality`     | varies | The value the device actually reports.                          |
 | `drift_kind`  | `str`  | Category of difference. See Section 6.                           |
@@ -230,6 +270,21 @@ on one side is one drift record with `object = "vlan:<id>"`, `field` set to the
 sentinel `"_vlan"`, and the appropriate `missing_in_*` kind. A `name` mismatch is
 `object = "vlan:<id>"`, `field = "name"`, `drift_kind = value_mismatch`.
 
+**How this maps to BGP neighbors:** the top-level `bgp_neighbors` block drifts per
+neighbor, keyed by IP. A neighbor present on one side but not the other is one
+drift record with `object = "bgp_neighbor:<ip>"`, `field` set to the sentinel
+`"_bgp_neighbor"`, and the appropriate `missing_in_*` kind. A field difference is
+`object = "bgp_neighbor:<ip>"`, `field` one of `remote_as` / `enabled` /
+`description` / `session_state`, `drift_kind = value_mismatch`.
+
+**How this maps to OSPF adjacencies:** the `ospf.adjacencies` block drifts per
+adjacency, keyed by neighbor router-id. An adjacency present on one side but not
+the other is one drift record with `object = "ospf_adjacency:<router-id>"`,
+`field` set to the sentinel `"_ospf_adjacency"`, and the appropriate
+`missing_in_*` kind. A field difference is
+`object = "ospf_adjacency:<router-id>"`, `field` one of `area` / `interface` /
+`adjacency_state`, `drift_kind = value_mismatch`.
+
 ---
 
 ## 7. `severity` guidance
@@ -251,6 +306,16 @@ refine as you learn:
 | VLAN present in intent, missing in reality           | `warning`  |
 | VLAN present in reality, missing in intent           | `info`     |
 | VLAN `name` mismatch                                 | `info`     |
+| BGP neighbor missing in reality (intent has it)      | `warning`  |
+| BGP neighbor missing in intent (undocumented)        | `info`     |
+| BGP `remote_as` mismatch                             | `warning`  |
+| BGP `enabled` mismatch                               | `warning`  |
+| BGP `session_state` mismatch                         | `warning`  |
+| BGP `description` mismatch                           | `info`     |
+| OSPF adjacency missing in reality (intent has it)    | `warning`  |
+| OSPF adjacency missing in intent (undocumented)      | `info`     |
+| OSPF `area` mismatch                                 | `warning`  |
+| OSPF `adjacency_state` mismatch                      | `warning`  |
 
 These are defaults. In a later version, severity becomes configurable per site/role.
 
@@ -356,28 +421,6 @@ These are defaults. In a later version, severity becomes configurable per site/r
 Listed here so both partners can see where it's going and avoid design choices that
 would block these. **Only the fields in Section 2 are in scope right now.**
 
-### v0.3 — routing state
-
-Add top-level keys:
-
-```python
-"bgp_neighbors": {
-    "10.0.0.1": {
-        "remote_as": 65001,
-        "state": "established",   # established | idle | active | connect | ...
-        "enabled": True,
-    },
-},
-"ospf": {
-    "adjacencies": {
-        "10.0.0.1": {"state": "full", "area": "0.0.0.0"},
-    },
-},
-```
-
-This also expands the drift-record `object` types beyond `interface` and `vlan` —
-e.g. `bgp_neighbor:10.0.0.1`, `ospf_adjacency:10.0.0.1`.
-
 ### v1.0 — config-level drift
 
 Add a top-level key:
@@ -468,6 +511,39 @@ tracked in the GitHub issue and settled jointly.
 14. **`Management0` is `mode: "routed"`.** It has an IP and no switchport, so
     `routed` is correct per Rule 8 — not an oversight. **Confirmed.**
 
+### v0.3 schema call (2026-05-26)
+
+The v0.3 routing-state additions. Settled jointly from the v0.3 proposal
+(`docs/schema-v0.3-proposal.md`).
+
+15. **Operational state (`session_state`, `adjacency_state`) is drift.** A
+    configured BGP peer or OSPF adjacency being down is the most useful routing
+    signal the tool produces, so operational state is compared like any other
+    field, at `warning` severity. See Rule 10. **Confirmed.**
+
+16. **BGP address families deferred.** v0.3 models one entry per neighbor, not
+    per address-family (ipv4/ipv6/evpn). The v0.3 lab is ipv4-only;
+    per-address-family state is revisited if/when a multi-AF lab exists.
+    **Confirmed.**
+
+17. **OSPF: adjacencies only for v0.3.** v0.3 captures OSPF *adjacencies*
+    (neighbor relationships). Per-interface OSPF config (cost, passive-interface,
+    area membership) is real config-intent but is deferred to a later version to
+    keep v0.3 scope contained. **Confirmed.**
+
+18. **Routing intent is stored in NetBox config contexts.** NetBox has no native
+    BGP/OSPF data model. Of the options (the `netbox-bgp` plugin, config
+    contexts, custom fields), config contexts were chosen: native to NetBox (no
+    plugin dependency), handle nested/list data naturally, and one mechanism
+    covers both BGP and OSPF. This is an intent-side implementation decision
+    (`netbox_client.py`, `seed_netbox.py`); it does not change the device-state
+    shape in Section 2. **Confirmed.**
+
+19. **New `bgp_neighbor:<ip>` and `ospf_adjacency:<router-id>` drift-record
+    object types.** Plus the sentinels `_bgp_neighbor` and `_ospf_adjacency` for
+    missing-object drift, following the existing `_interface` / `_vlan` pattern.
+    See Sections 5 and 6. **Confirmed.**
+
 ---
 
 ## 11. Change log for this document
@@ -482,6 +558,7 @@ Keep a running log so both partners can see how the contract evolved.
 | 2026-05-24 | v0.2 follow-up: Rule 9 added (default/reserved VLANs in scope, no filtering); `vlans` site-scoping documented; Section 10 items 12–14. | A + B |
 | 2026-05-25 | Roadmap change: v0.2 second/third vendors are Juniper (vJunos-switch) then Cisco (IOS-XE), replacing Nokia SR Linux / FRR. SR Linux and FRR deferred to a later version. Joint decision A + B. | A + B |
 | 2026-05-25 | Roadmap revert: v0.2 second vendor is Nokia SR Linux (was Juniper vJunos-switch). vJunos-switch is a QEMU VM and cannot run nested inside the lab VM. Cisco IOS-XE stays v0.3. Joint decision A + B. | A + B |
+| 2026-05-26 | v0.3 routing-state fields added: top-level `bgp_neighbors` and `ospf`. Rule 10 added (operational state in scope, lower-cased values, area normalization). New `bgp_neighbor` / `ospf_adjacency` drift object types and `_bgp_neighbor` / `_ospf_adjacency` sentinels. Section 10 items 15–19. Routing intent stored via NetBox config contexts. | A + B |
 
 ---
 
