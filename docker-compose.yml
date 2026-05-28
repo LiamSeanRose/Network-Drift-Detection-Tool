@@ -12,7 +12,12 @@
 # NOT "localhost" — inside the compose network each service is reachable by its
 # service name. That is why DATABASE_URL below points at @postgres, not
 # @localhost.
-
+#
+# Port choice: the API publishes on host port 8001 (not 8000) because NetBox
+# — the user's source-of-truth, which this tool reads from — conventionally
+# runs on host port 8000. Co-locating netdrift's API on 8000 collides on any
+# host that already runs NetBox locally. 8001 keeps the "+1 from NetBox"
+# convention obvious without inventing a random port.
 services:
   postgres:
     image: postgres:16
@@ -33,7 +38,6 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
   migrate:
     build: .
     command: alembic upgrade head
@@ -42,20 +46,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-
   api:
     build: .
-    command: uvicorn netdrift.api.app:app --host 0.0.0.0 --port 8000
+    command: uvicorn netdrift.api.app:app --host 0.0.0.0 --port 8001
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:devpassword@postgres:5432/netdrift
     ports:
-      - "8000:8000"
+      - "8001:8001"
     depends_on:
       postgres:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-
   scheduler:
     build: .
     command: python -m netdrift.scheduler --interval 5
@@ -70,6 +72,5 @@ services:
         condition: service_healthy
       migrate:
         condition: service_completed_successfully
-
 volumes:
   netdrift_pgdata:

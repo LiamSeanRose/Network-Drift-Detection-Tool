@@ -1,7 +1,6 @@
 /// <reference types="vitest" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
@@ -9,10 +8,14 @@ export default defineConfig({
     // In development, forward API requests to the FastAPI server so the
     // browser thinks it's calling its own origin (avoids CORS issues).
     // The frontend code calls e.g. fetch('/drifts'), Vite forwards it to
-    // http://localhost:8000/drifts.
+    // http://localhost:8001/drifts.
+    //
+    // Port 8001 (not 8000) because NetBox conventionally runs on 8000 and
+    // would collide with the API on any host running both. See the comment
+    // block at the top of docker-compose.yml for the full rationale.
     proxy: {
-      '/drifts': 'http://localhost:8000',
-      '/health': 'http://localhost:8000',
+      '/drifts': 'http://localhost:8001',
+      '/health': 'http://localhost:8001',
     },
   },
   test: {
