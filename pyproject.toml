@@ -5,6 +5,7 @@ description = "Open-source network drift detection: compares intended state in N
 requires-python = ">=3.11"
 dependencies = [
     "pynetbox",
+    "pynautobot",
     "napalm",
     "pygnmi",
     "pyyaml",
