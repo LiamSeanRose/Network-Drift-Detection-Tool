@@ -15,7 +15,9 @@
         },
         "vlans": {
             "10": {"name": "users"}
-        }
+        },
+        "bgp_neighbors": {},
+        "ospf": {"adjacencies": {}}
     },
     "reality": {
         "device": "core-sw-01",
@@ -33,7 +35,9 @@
         },
         "vlans": {
             "10": {"name": "users"}
-        }
+        },
+        "bgp_neighbors": {},
+        "ospf": {"adjacencies": {}}
     },
     "expected_drifts": [
         {

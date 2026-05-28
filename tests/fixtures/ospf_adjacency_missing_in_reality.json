@@ -2,30 +2,33 @@
     "intent": {
         "device": "core-sw-01",
         "platform": "arista_eos",
-        "collected_at": "2026-05-20T14:32:00Z",
+        "collected_at": "2026-05-27T14:32:00Z",
         "interfaces": {},
-        "vlans": {
-            "10": {"name": "users"},
-            "20": {"name": "voice"}
-        },
+        "vlans": {},
         "bgp_neighbors": {},
-        "ospf": {"adjacencies": {}}
+        "ospf": {
+            "adjacencies": {
+                "2.2.2.2": {
+                    "area": "0.0.0.0",
+                    "interface": "Ethernet1",
+                    "adjacency_state": "full"
+                }
+            }
+        }
     },
     "reality": {
         "device": "core-sw-01",
         "platform": "arista_eos",
-        "collected_at": "2026-05-20T14:32:03Z",
+        "collected_at": "2026-05-27T14:32:03Z",
         "interfaces": {},
-        "vlans": {
-            "10": {"name": "users"}
-        },
+        "vlans": {},
         "bgp_neighbors": {},
         "ospf": {"adjacencies": {}}
     },
     "expected_drifts": [
         {
-            "object": "vlan:20",
-            "field": "_vlan",
+            "object": "ospf_adjacency:2.2.2.2",
+            "field": "_ospf_adjacency",
             "intent": "present",
             "reality": "absent",
             "drift_kind": "missing_in_reality",

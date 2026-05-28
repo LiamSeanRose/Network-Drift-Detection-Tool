@@ -158,4 +158,153 @@ def diff(intent, reality):
                 "detected_at": _now(),
             })
 
+    # v0.3 top-level BGP neighbors block. Keyed by neighbor IP as a STRING
+    # (schema.md Rule for v0.3, mirrors VLAN keying). A neighbor present on
+    # one side and absent on the other is a missing_in_* record with the
+    # sentinel field "_bgp_neighbor". A neighbor on both sides whose fields
+    # differ is a per-field value_mismatch. Severities per schema.md Section 7.
+    intent_bgp = intent["bgp_neighbors"]
+    reality_bgp = reality["bgp_neighbors"]
+
+    for peer_ip, intent_peer in intent_bgp.items():
+        if peer_ip not in reality_bgp:
+            drifts.append({
+                "object": "bgp_neighbor:" + peer_ip,
+                "field": "_bgp_neighbor",
+                "intent": "present",
+                "reality": "absent",
+                "drift_kind": "missing_in_reality",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+            continue
+
+        reality_peer = reality_bgp[peer_ip]
+
+        if intent_peer["remote_as"] != reality_peer["remote_as"]:
+            drifts.append({
+                "object": "bgp_neighbor:" + peer_ip,
+                "field": "remote_as",
+                "intent": intent_peer["remote_as"],
+                "reality": reality_peer["remote_as"],
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
+        if intent_peer["enabled"] != reality_peer["enabled"]:
+            drifts.append({
+                "object": "bgp_neighbor:" + peer_ip,
+                "field": "enabled",
+                "intent": intent_peer["enabled"],
+                "reality": reality_peer["enabled"],
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
+        if intent_peer["description"] != reality_peer["description"]:
+            drifts.append({
+                "object": "bgp_neighbor:" + peer_ip,
+                "field": "description",
+                "intent": intent_peer["description"],
+                "reality": reality_peer["description"],
+                "drift_kind": "value_mismatch",
+                "severity": "info",
+                "detected_at": _now(),
+            })
+
+        if intent_peer["session_state"] != reality_peer["session_state"]:
+            drifts.append({
+                "object": "bgp_neighbor:" + peer_ip,
+                "field": "session_state",
+                "intent": intent_peer["session_state"],
+                "reality": reality_peer["session_state"],
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
+    for peer_ip in reality_bgp:
+        if peer_ip not in intent_bgp:
+            drifts.append({
+                "object": "bgp_neighbor:" + peer_ip,
+                "field": "_bgp_neighbor",
+                "intent": "absent",
+                "reality": "present",
+                "drift_kind": "missing_in_intent",
+                "severity": "info",
+                "detected_at": _now(),
+            })
+
+    # v0.3 top-level OSPF adjacencies block. Lives under ospf.adjacencies,
+    # keyed by neighbor router-id as a STRING. An adjacency present on one
+    # side and absent on the other is a missing_in_* record with the sentinel
+    # field "_ospf_adjacency". An adjacency on both sides whose fields differ
+    # is a per-field value_mismatch on area / interface / adjacency_state.
+    # Severities per schema.md Section 7 (interface follows the other two at
+    # warning).
+    intent_ospf = intent["ospf"]["adjacencies"]
+    reality_ospf = reality["ospf"]["adjacencies"]
+
+    for router_id, intent_adj in intent_ospf.items():
+        if router_id not in reality_ospf:
+            drifts.append({
+                "object": "ospf_adjacency:" + router_id,
+                "field": "_ospf_adjacency",
+                "intent": "present",
+                "reality": "absent",
+                "drift_kind": "missing_in_reality",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+            continue
+
+        reality_adj = reality_ospf[router_id]
+
+        if intent_adj["area"] != reality_adj["area"]:
+            drifts.append({
+                "object": "ospf_adjacency:" + router_id,
+                "field": "area",
+                "intent": intent_adj["area"],
+                "reality": reality_adj["area"],
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
+        if intent_adj["interface"] != reality_adj["interface"]:
+            drifts.append({
+                "object": "ospf_adjacency:" + router_id,
+                "field": "interface",
+                "intent": intent_adj["interface"],
+                "reality": reality_adj["interface"],
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
+        if intent_adj["adjacency_state"] != reality_adj["adjacency_state"]:
+            drifts.append({
+                "object": "ospf_adjacency:" + router_id,
+                "field": "adjacency_state",
+                "intent": intent_adj["adjacency_state"],
+                "reality": reality_adj["adjacency_state"],
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
+    for router_id in reality_ospf:
+        if router_id not in intent_ospf:
+            drifts.append({
+                "object": "ospf_adjacency:" + router_id,
+                "field": "_ospf_adjacency",
+                "intent": "absent",
+                "reality": "present",
+                "drift_kind": "missing_in_intent",
+                "severity": "info",
+                "detected_at": _now(),
+            })
+
     return drifts

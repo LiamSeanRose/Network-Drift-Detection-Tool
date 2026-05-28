@@ -1,0 +1,44 @@
+{
+    "intent": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-27T14:32:00Z",
+        "interfaces": {},
+        "vlans": {},
+        "bgp_neighbors": {
+            "10.0.0.2": {
+                "remote_as": 65000,
+                "enabled": true,
+                "description": "iBGP to core-sw-02",
+                "session_state": "established"
+            }
+        },
+        "ospf": {"adjacencies": {}}
+    },
+    "reality": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-27T14:32:03Z",
+        "interfaces": {},
+        "vlans": {},
+        "bgp_neighbors": {
+            "10.0.0.2": {
+                "remote_as": 65000,
+                "enabled": true,
+                "description": "peering with core-sw-02",
+                "session_state": "established"
+            }
+        },
+        "ospf": {"adjacencies": {}}
+    },
+    "expected_drifts": [
+        {
+            "object": "bgp_neighbor:10.0.0.2",
+            "field": "description",
+            "intent": "iBGP to core-sw-02",
+            "reality": "peering with core-sw-02",
+            "drift_kind": "value_mismatch",
+            "severity": "info"
+        }
+    ]
+}

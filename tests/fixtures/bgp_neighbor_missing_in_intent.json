@@ -1,0 +1,37 @@
+{
+    "intent": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-27T14:32:00Z",
+        "interfaces": {},
+        "vlans": {},
+        "bgp_neighbors": {},
+        "ospf": {"adjacencies": {}}
+    },
+    "reality": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-27T14:32:03Z",
+        "interfaces": {},
+        "vlans": {},
+        "bgp_neighbors": {
+            "10.0.0.9": {
+                "remote_as": 65001,
+                "enabled": true,
+                "description": "undocumented peer",
+                "session_state": "established"
+            }
+        },
+        "ospf": {"adjacencies": {}}
+    },
+    "expected_drifts": [
+        {
+            "object": "bgp_neighbor:10.0.0.9",
+            "field": "_bgp_neighbor",
+            "intent": "absent",
+            "reality": "present",
+            "drift_kind": "missing_in_intent",
+            "severity": "info"
+        }
+    ]
+}
