@@ -22,12 +22,15 @@ def iface(**overrides):
     return base
 
 
-def state(interfaces=None, vlans=None):
+def state(interfaces=None, vlans=None, bgp_neighbors=None, ospf=None):
     """A schema-complete device-state object wrapping the given interfaces
-    and vlans (both default to empty)."""
+    and vlans (both default to empty). v0.3 adds bgp_neighbors and ospf;
+    both default to the "no routing on this device" empty shape."""
     return {
         "interfaces": interfaces or {},
         "vlans": vlans or {},
+        "bgp_neighbors": bgp_neighbors or {},
+        "ospf": ospf or {"adjacencies": {}},
     }
 
 

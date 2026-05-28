@@ -73,7 +73,6 @@ def test_untagged_vlan_drift_fixture():
         assert record["detected_at"].endswith("Z")
     assert strip_detected_at(result) == fixture["expected_drifts"]
 
-
 def test_vlan_missing_in_reality_fixture():
     fixture = load_fixture("vlan_missing_in_reality.json")
     result = diff(fixture["intent"], fixture["reality"])
@@ -82,9 +81,16 @@ def test_vlan_missing_in_reality_fixture():
         assert record["detected_at"].endswith("Z")
     assert strip_detected_at(result) == fixture["expected_drifts"]
 
-
 def test_vlan_name_drift_fixture():
     fixture = load_fixture("vlan_name_drift.json")
+    result = diff(fixture["intent"], fixture["reality"])
+    for record in result:
+        assert "detected_at" in record
+        assert record["detected_at"].endswith("Z")
+    assert strip_detected_at(result) == fixture["expected_drifts"]
+
+def test_bgp_neighbor_missing_in_reality_fixture():
+    fixture = load_fixture("bgp_neighbor_missing_in_reality.json")
     result = diff(fixture["intent"], fixture["reality"])
     for record in result:
         assert "detected_at" in record

@@ -158,4 +158,24 @@ def diff(intent, reality):
                 "detected_at": _now(),
             })
 
+    # v0.3 top-level BGP neighbors block. Keyed by neighbor IP as a STRING
+    # (schema.md Rule for v0.3, mirrors VLAN keying). A neighbor present on
+    # one side and absent on the other is a missing_in_* record with the
+    # sentinel field "_bgp_neighbor". Severities per schema.md Section 7.
+    intent_bgp = intent["bgp_neighbors"]
+    reality_bgp = reality["bgp_neighbors"]
+
+    for peer_ip, intent_peer in intent_bgp.items():
+        if peer_ip not in reality_bgp:
+            drifts.append({
+                "object": "bgp_neighbor:" + peer_ip,
+                "field": "_bgp_neighbor",
+                "intent": "present",
+                "reality": "absent",
+                "drift_kind": "missing_in_reality",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+            continue
+
     return drifts

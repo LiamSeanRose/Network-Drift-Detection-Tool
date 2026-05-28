@@ -19,14 +19,18 @@ from netdrift.storage.models import Base
 from netdrift.storage.repository import get_drifts
 
 
-def _state(interfaces=None, vlans=None, platform="arista_eos"):
-    """A schema-complete device-state dict for intent/reality fakes."""
+def _state(interfaces=None, vlans=None, bgp_neighbors=None, ospf=None, platform="arista_eos"):
+    """A schema-complete device-state dict for intent/reality fakes.
+    v0.3 adds bgp_neighbors and ospf; both default to the "no routing on
+    this device" empty shape."""
     return {
         "device": "core-sw-01",
         "platform": platform,
         "collected_at": "2026-05-26T14:32:00Z",
         "interfaces": interfaces or {},
         "vlans": vlans or {},
+        "bgp_neighbors": bgp_neighbors or {},
+        "ospf": ospf or {"adjacencies": {}},
     }
 
 

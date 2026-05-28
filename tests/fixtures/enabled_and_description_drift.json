@@ -23,7 +23,9 @@
                 "tagged_vlans": []
             }
         },
-        "vlans": {}
+        "vlans": {},
+        "bgp_neighbors": {},
+        "ospf": {"adjacencies": {}}
     },
     "reality": {
         "device": "core-sw-01",
@@ -49,7 +51,9 @@
                 "tagged_vlans": []
             }
         },
-        "vlans": {}
+        "vlans": {},
+        "bgp_neighbors": {},
+        "ospf": {"adjacencies": {}}
     },
     "expected_drifts": [
         {

@@ -7,7 +7,9 @@
         "vlans": {
             "10": {"name": "users"},
             "20": {"name": "voice"}
-        }
+        },
+        "bgp_neighbors": {},
+        "ospf": {"adjacencies": {}}
     },
     "reality": {
         "device": "core-sw-01",
@@ -16,7 +18,9 @@
         "interfaces": {},
         "vlans": {
             "10": {"name": "users"}
-        }
+        },
+        "bgp_neighbors": {},
+        "ospf": {"adjacencies": {}}
     },
     "expected_drifts": [
         {

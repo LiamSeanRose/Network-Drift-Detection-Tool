@@ -6,7 +6,9 @@
         "interfaces": {},
         "vlans": {
             "20": {"name": "voice"}
-        }
+        },
+        "bgp_neighbors": {},
+        "ospf": {"adjacencies": {}}
     },
     "reality": {
         "device": "core-sw-01",
@@ -15,7 +17,9 @@
         "interfaces": {},
         "vlans": {
             "20": {"name": "Voice-VLAN"}
-        }
+        },
+        "bgp_neighbors": {},
+        "ospf": {"adjacencies": {}}
     },
     "expected_drifts": [
         {
