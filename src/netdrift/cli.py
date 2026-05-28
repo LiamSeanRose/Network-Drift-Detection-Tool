@@ -10,6 +10,7 @@ Usage:
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -29,6 +30,23 @@ COLLECTORS = {
     "arista_eos": arista.get_reality,
     "nokia_srlinux": nokia.get_reality,
 }
+
+def _resolve_intent_fn():
+    """Return the get_intent callable for the configured source of truth.
+
+    Reads SOURCE_OF_TRUTH from the environment. Defaults to 'netbox'.
+    """
+    source = os.environ.get("SOURCE_OF_TRUTH", "netbox").lower()
+    if source == "nautobot":
+        from netdrift import nautobot_client
+        return nautobot_client.get_intent
+    if source == "netbox":
+        return netbox_client.get_intent
+    sys.exit(
+        f"Error: unknown SOURCE_OF_TRUTH '{source}'. "
+        f"Valid values: 'netbox', 'nautobot'."
+    )
+
 
 def load_devices(path=DEVICES_FILE):
     """Load the device inventory (connection details + credentials)."""
@@ -78,10 +96,12 @@ def main():
     # The collector needs a dict with name + connection details.
     device = {"name": device_name, **devices[device_name]}
 
+    get_intent = _resolve_intent_fn()
+    source_label = os.environ.get("SOURCE_OF_TRUTH", "netbox").capitalize()
     try:
-        intent = netbox_client.get_intent(device_name)
+        intent = get_intent(device_name)
     except ValueError as e:
-        sys.exit(f"Error fetching intent from NetBox: {e}")
+        sys.exit(f"Error fetching intent from {source_label}: {e}")
 
     platform = intent["platform"]
     get_reality = COLLECTORS.get(platform)
