@@ -18,6 +18,23 @@
 # runs on host port 8000. Co-locating netdrift's API on 8000 collides on any
 # host that already runs NetBox locally. 8001 keeps the "+1 from NetBox"
 # convention obvious without inventing a random port.
+#
+# devices.yml: src/netdrift/cli.py computes DEVICES_FILE as
+#   Path(__file__).resolve().parents[2] / "devices.yml"
+# which, inside the container, resolves to /usr/local/lib/python3.11/devices.yml
+# (the package is installed there by `pip install .` in the Dockerfile). Both
+# api and scheduler need that file to exist at that exact path; we bind-mount
+# the host's ./devices.yml in, read-only. The host file is gitignored and
+# must never be committed (it holds credentials).
+#
+# NETBOX_URL / NETBOX_TOKEN: the scheduler must reach NetBox to read intent.
+# NetBox runs on the HOST at localhost:8000 — but "localhost" inside a
+# container means the container itself, not the host. host.docker.internal
+# is the bridge name docker provides so a container can reach a service on
+# its own host. The api container does not call NetBox today (it only reads
+# from Postgres) but we pass the same vars through for symmetry and to
+# future-proof endpoints that may need them.
+
 services:
   postgres:
     image: postgres:16
@@ -51,8 +68,20 @@ services:
     command: uvicorn netdrift.api.app:app --host 0.0.0.0 --port 8001
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:devpassword@postgres:5432/netdrift
+      NETBOX_URL: ${NETBOX_URL:-}
+      NETBOX_TOKEN: ${NETBOX_TOKEN:-}
+    volumes:
+      # See top-of-file comment: cli.DEVICES_FILE resolves here inside the
+      # container. Read-only because the app never writes to this file.
+      - ./devices.yml:/usr/local/lib/python3.11/devices.yml:ro
     ports:
       - "8001:8001"
+    extra_hosts:
+      # Linux docker doesn't add host.docker.internal by default; this line
+      # makes it resolve to the host's gateway IP from inside the container.
+      # Required for NetBox-on-host access. Harmless on Docker Desktop where
+      # the name already exists.
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
@@ -63,10 +92,12 @@ services:
     command: python -m netdrift.scheduler --interval 5
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:devpassword@postgres:5432/netdrift
-      # The scheduler's real run also needs NetBox + device access. Those are
-      # left for the lab integration step (set NETBOX_URL/NETBOX_TOKEN and
-      # mount devices.yml there); without them the scheduler starts and ticks,
-      # but each check logs a failure — which is fine for verifying the wiring.
+      NETBOX_URL: ${NETBOX_URL:-}
+      NETBOX_TOKEN: ${NETBOX_TOKEN:-}
+    volumes:
+      - ./devices.yml:/usr/local/lib/python3.11/devices.yml:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       postgres:
         condition: service_healthy
