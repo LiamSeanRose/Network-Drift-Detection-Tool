@@ -19,6 +19,8 @@ Public function:
         -> list[drift record]
 """
 
+import os
+
 from netdrift import differ, netbox_client
 from netdrift.collectors import arista, nokia
 from netdrift.storage.database import get_sessionmaker
@@ -33,7 +35,24 @@ COLLECTORS = {
 }
 
 
-def run_drift_check(device, *, get_intent=netbox_client.get_intent,
+def _resolve_intent_fn():
+    """Return the get_intent callable for the configured source of truth.
+
+    Reads SOURCE_OF_TRUTH from the environment at call time so the env var
+    can be set after the module is imported. Defaults to 'netbox'.
+    """
+    source = os.environ.get("SOURCE_OF_TRUTH", "netbox").lower()
+    if source == "nautobot":
+        from netdrift import nautobot_client
+        return nautobot_client.get_intent
+    if source == "netbox":
+        return netbox_client.get_intent
+    raise ValueError(
+        f"Unknown SOURCE_OF_TRUTH '{source}'. Valid values: 'netbox', 'nautobot'."
+    )
+
+
+def run_drift_check(device, *, get_intent=None,
                     collectors=None, session_factory=None):
     """Run the full drift pipeline for one device and persist the result.
 
@@ -56,6 +75,8 @@ def run_drift_check(device, *, get_intent=netbox_client.get_intent,
         collectors = COLLECTORS
     if session_factory is None:
         session_factory = get_sessionmaker()
+    if get_intent is None:
+        get_intent = _resolve_intent_fn()
 
     device_name = device["name"]
 
