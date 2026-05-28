@@ -1,0 +1,38 @@
+{
+    "intent": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-27T14:32:00Z",
+        "interfaces": {},
+        "vlans": {},
+        "bgp_neighbors": {},
+        "ospf": {"adjacencies": {}}
+    },
+    "reality": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-27T14:32:03Z",
+        "interfaces": {},
+        "vlans": {},
+        "bgp_neighbors": {},
+        "ospf": {
+            "adjacencies": {
+                "3.3.3.3": {
+                    "area": "0.0.0.0",
+                    "interface": "Ethernet2",
+                    "adjacency_state": "full"
+                }
+            }
+        }
+    },
+    "expected_drifts": [
+        {
+            "object": "ospf_adjacency:3.3.3.3",
+            "field": "_ospf_adjacency",
+            "intent": "absent",
+            "reality": "present",
+            "drift_kind": "missing_in_intent",
+            "severity": "info"
+        }
+    ]
+}

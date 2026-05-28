@@ -136,3 +136,47 @@ def test_bgp_session_state_drift_fixture():
         assert "detected_at" in record
         assert record["detected_at"].endswith("Z")
     assert strip_detected_at(result) == fixture["expected_drifts"]
+
+def test_ospf_adjacency_missing_in_reality_fixture():
+    fixture = load_fixture("ospf_adjacency_missing_in_reality.json")
+    result = diff(fixture["intent"], fixture["reality"])
+    for record in result:
+        assert "detected_at" in record
+        assert record["detected_at"].endswith("Z")
+    assert strip_detected_at(result) == fixture["expected_drifts"]
+
+
+def test_ospf_adjacency_missing_in_intent_fixture():
+    fixture = load_fixture("ospf_adjacency_missing_in_intent.json")
+    result = diff(fixture["intent"], fixture["reality"])
+    for record in result:
+        assert "detected_at" in record
+        assert record["detected_at"].endswith("Z")
+    assert strip_detected_at(result) == fixture["expected_drifts"]
+
+
+def test_ospf_area_drift_fixture():
+    fixture = load_fixture("ospf_area_drift.json")
+    result = diff(fixture["intent"], fixture["reality"])
+    for record in result:
+        assert "detected_at" in record
+        assert record["detected_at"].endswith("Z")
+    assert strip_detected_at(result) == fixture["expected_drifts"]
+
+
+def test_ospf_interface_drift_fixture():
+    fixture = load_fixture("ospf_interface_drift.json")
+    result = diff(fixture["intent"], fixture["reality"])
+    for record in result:
+        assert "detected_at" in record
+        assert record["detected_at"].endswith("Z")
+    assert strip_detected_at(result) == fixture["expected_drifts"]
+
+
+def test_ospf_adjacency_state_drift_fixture():
+    fixture = load_fixture("ospf_adjacency_state_drift.json")
+    result = diff(fixture["intent"], fixture["reality"])
+    for record in result:
+        assert "detected_at" in record
+        assert record["detected_at"].endswith("Z")
+    assert strip_detected_at(result) == fixture["expected_drifts"]
