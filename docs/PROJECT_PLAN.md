@@ -250,7 +250,7 @@ One vendor (Arista cEOS). Pull intent from NetBox, pull reality from the device,
 v0.2 — Persist + UI
 Add Postgres + the drift_events history table. Add a second vendor — Nokia SR Linux, a native containerised NOS in Containerlab. Add VLANs to the comparison. FastAPI backend + basic React dashboard. Scheduled polling every 1–5 minutes — this is the "actively listens" behaviour.
 v0.3 — Production-ish
-Add routing state to the schema and diff (BGP neighbors, OSPF adjacencies). Diff history/trends in the UI. Webhooks for Slack/Teams. Optional syslog receiver: a device logs an event, the tool immediately polls just that device instead of waiting for the cycle. Nautobot support alongside NetBox.
+Add routing state to the schema and diff (BGP neighbors, OSPF adjacencies). Diff history/trends in the UI. Optional syslog receiver: a device logs an event, the tool immediately polls just that device instead of waiting for the cycle. Nautobot support alongside NetBox.
 v1.0 — Detector complete
 Config-level drift: compare the device's running config against a NetBox-rendered intended config (not just operational state). Plugin architecture so users can add their own vendors. Documentation site. Helm chart for Kubernetes deployment. This alone is the "open-source NetBox Assurance" portfolio piece.
 v1.5 — Static diagnosis
@@ -418,17 +418,16 @@ v0.1
 [x] README has the architecture diagram and a working quickstart.
 [x] Repo is public on GitHub.
 v0.2
-[ ] Drift events persist in Postgres with timestamps; history is queryable.
-[ ] A second vendor (Nokia SR Linux, native container) is supported.
-[ ] VLAN fields are in the schema and the diff.
-[ ] React dashboard shows devices + their drift; FastAPI serves the data.
-[ ] The scheduler polls every 1–5 minutes automatically.
-[ ] docker compose up brings up the whole stack.
+[x] Drift events persist in Postgres with timestamps; history is queryable.
+[x] A second vendor (Nokia SR Linux, native container) is supported.
+[x] VLAN fields are in the schema and the diff.
+[x] React dashboard shows devices + their drift; FastAPI serves the data.
+[x] The scheduler polls every 1–5 minutes automatically.
+[x] docker compose up brings up the whole stack.
 v0.3
-[ ] BGP neighbor + OSPF adjacency drift detected.
+[x] BGP neighbor + OSPF adjacency drift detected.
 [ ] UI shows drift history/trends.
 [ ] Cisco IOS-XE drift is validated against physical hardware (3850).
-[ ] Slack/Teams webhook alerts work.
 [ ] Syslog receiver triggers an immediate targeted poll.
 [ ] Nautobot works as an alternative to NetBox.
 v1.0
