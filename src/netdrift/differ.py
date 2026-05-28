@@ -161,7 +161,8 @@ def diff(intent, reality):
     # v0.3 top-level BGP neighbors block. Keyed by neighbor IP as a STRING
     # (schema.md Rule for v0.3, mirrors VLAN keying). A neighbor present on
     # one side and absent on the other is a missing_in_* record with the
-    # sentinel field "_bgp_neighbor". Severities per schema.md Section 7.
+    # sentinel field "_bgp_neighbor". A neighbor on both sides whose fields
+    # differ is a per-field value_mismatch. Severities per schema.md Section 7.
     intent_bgp = intent["bgp_neighbors"]
     reality_bgp = reality["bgp_neighbors"]
 
@@ -177,5 +178,63 @@ def diff(intent, reality):
                 "detected_at": _now(),
             })
             continue
+
+        reality_peer = reality_bgp[peer_ip]
+
+        if intent_peer["remote_as"] != reality_peer["remote_as"]:
+            drifts.append({
+                "object": "bgp_neighbor:" + peer_ip,
+                "field": "remote_as",
+                "intent": intent_peer["remote_as"],
+                "reality": reality_peer["remote_as"],
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
+        if intent_peer["enabled"] != reality_peer["enabled"]:
+            drifts.append({
+                "object": "bgp_neighbor:" + peer_ip,
+                "field": "enabled",
+                "intent": intent_peer["enabled"],
+                "reality": reality_peer["enabled"],
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
+        if intent_peer["description"] != reality_peer["description"]:
+            drifts.append({
+                "object": "bgp_neighbor:" + peer_ip,
+                "field": "description",
+                "intent": intent_peer["description"],
+                "reality": reality_peer["description"],
+                "drift_kind": "value_mismatch",
+                "severity": "info",
+                "detected_at": _now(),
+            })
+
+        if intent_peer["session_state"] != reality_peer["session_state"]:
+            drifts.append({
+                "object": "bgp_neighbor:" + peer_ip,
+                "field": "session_state",
+                "intent": intent_peer["session_state"],
+                "reality": reality_peer["session_state"],
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
+    for peer_ip in reality_bgp:
+        if peer_ip not in intent_bgp:
+            drifts.append({
+                "object": "bgp_neighbor:" + peer_ip,
+                "field": "_bgp_neighbor",
+                "intent": "absent",
+                "reality": "present",
+                "drift_kind": "missing_in_intent",
+                "severity": "info",
+                "detected_at": _now(),
+            })
 
     return drifts
