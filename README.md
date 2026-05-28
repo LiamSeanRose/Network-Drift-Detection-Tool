@@ -81,11 +81,11 @@ npm run dev      # starts Vite at http://localhost:5173
 ```
 
 The dashboard fetches `/drifts` from the FastAPI service. In dev, Vite proxies
-`/drifts` to `http://localhost:8000` (see [`frontend/vite.config.js`](frontend/vite.config.js)),
+`/drifts` to `http://localhost:8001` (see [`frontend/vite.config.js`](frontend/vite.config.js)),
 so the API must also be running:
 
 ```bash
-uvicorn netdrift.api.app:app --reload
+uvicorn netdrift.api.app:app --reload --port 8001
 ```
 
 Frontend tests use Vitest:
