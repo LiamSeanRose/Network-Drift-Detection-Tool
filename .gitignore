@@ -11,3 +11,4 @@ clab-netdrift-lab/
 dist/
 build/
 devices.yml
+CLAUDE.md
