@@ -10,7 +10,7 @@ Both take a Session (from storage.database.get_sessionmaker) so the caller
 controls the transaction boundary and tests can pass a throwaway session.
 """
 
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 
 from netdrift.storage.models import DriftEvent
 
@@ -51,6 +51,51 @@ def save_drifts(session, drifts):
         events.append(event)
     session.flush()  # send INSERTs now so each event.id is populated
     return events
+
+
+def get_drift_history(session, hours=24, device=None):
+    """Return drift counts grouped into 5-minute buckets, oldest first.
+
+    Each entry is a dict:
+        {"detected_at": ISO str, "device": str, "count": int,
+         "critical": int, "warning": int, "info": int}
+
+    Grouping is done in Python so the function works identically on SQLite
+    (used in tests) and Postgres (production). The trade-off is that all raw
+    events in the window are fetched first — acceptable for the lab scale and
+    for history windows of up to a day or two.
+    """
+    cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours)
+    query = (
+        session.query(DriftEvent)
+        .filter(DriftEvent.detected_at >= cutoff)
+        .order_by(DriftEvent.detected_at)
+    )
+    if device is not None:
+        query = query.filter(DriftEvent.device == device)
+
+    buckets = {}
+    for e in query.all():
+        dt = e.detected_at
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        # Round down to the nearest 5-minute boundary.
+        bucket_dt = dt.replace(minute=(dt.minute // 5) * 5, second=0, microsecond=0)
+        key = (bucket_dt.isoformat(), e.device)
+        if key not in buckets:
+            buckets[key] = {
+                "detected_at": bucket_dt.isoformat(),
+                "device": e.device,
+                "count": 0,
+                "critical": 0,
+                "warning": 0,
+                "info": 0,
+            }
+        buckets[key]["count"] += 1
+        if e.severity in buckets[key]:
+            buckets[key][e.severity] += 1
+
+    return sorted(buckets.values(), key=lambda x: (x["detected_at"], x["device"]))
 
 
 def get_drifts(session, device=None, limit=None):

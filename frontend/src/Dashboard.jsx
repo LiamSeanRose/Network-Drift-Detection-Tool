@@ -1,24 +1,20 @@
-// Dashboard.jsx — the drift events page.
+// Dashboard.jsx — drift events page with history panel.
 //
-// Calls GET /drifts on mount, shows a loading state while the request is in
-// flight, an error state if it fails, a table of events when it succeeds.
-// Vite proxies /drifts to FastAPI in dev (see vite.config.js).
+// Fetches /drifts (event table) and /drifts/history (trend chart) in parallel
+// on mount and on each Refresh. The history panel renders above the table when
+// the API returns at least one bucket; it is hidden when history is empty.
 
 import { useState, useEffect, useCallback } from 'react'
 import './Dashboard.css'
 
 export default function Dashboard() {
-  // Three pieces of state, one per possible UI condition:
-  //   drifts  — the list of events once they've loaded (null = not loaded yet)
-  //   error   — a string describing what went wrong, or null if nothing did
-  //   loading — true while the fetch is in flight
   const [drifts, setDrifts] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // The fetch is wrapped in useCallback so it has a stable identity across
-  // renders and can be reused by both the initial useEffect and the Refresh
-  // button without redefining it each time.
+  const [history, setHistory] = useState(null)
+  const [historyError, setHistoryError] = useState(null)
+
   const loadDrifts = useCallback(() => {
     setLoading(true)
     setError(null)
@@ -40,11 +36,29 @@ export default function Dashboard() {
       })
   }, [])
 
-  // useEffect runs after the component first appears on screen. The empty
-  // array [] means "only run once on mount" — what we want for an initial fetch.
+  const loadHistory = useCallback(() => {
+    setHistoryError(null)
+
+    return fetch('/drifts/history')
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`API returned ${response.status}`)
+        }
+        return response.json()
+      })
+      .then((data) => setHistory(data))
+      .catch((err) => setHistoryError(err.message))
+  }, [])
+
   useEffect(() => {
     loadDrifts()
-  }, [loadDrifts])
+    loadHistory()
+  }, [loadDrifts, loadHistory])
+
+  const handleRefresh = useCallback(() => {
+    loadDrifts()
+    loadHistory()
+  }, [loadDrifts, loadHistory])
 
   return (
     <div className="dashboard">
@@ -61,12 +75,22 @@ export default function Dashboard() {
         <button
           type="button"
           className="dashboard__refresh"
-          onClick={loadDrifts}
+          onClick={handleRefresh}
           disabled={loading}
         >
           {loading ? 'Refreshing…' : 'Refresh'}
         </button>
       </header>
+
+      {history && history.length > 0 && (
+        <HistoryPanel history={history} />
+      )}
+
+      {historyError && (
+        <p className="dashboard__state dashboard__state--error">
+          History unavailable: {historyError}
+        </p>
+      )}
 
       {loading && !drifts && (
         <p className="dashboard__state">Loading…</p>
@@ -116,8 +140,77 @@ export default function Dashboard() {
   )
 }
 
+// HistoryPanel — one sparkline row per device over the last 24 hours.
+//
+// `history` is the array from GET /drifts/history:
+//   [{detected_at, device, count, critical, warning, info}, ...]
+//
+// Bars within each device row are scaled relative to the highest count seen
+// across *all* devices so that the severity of one device can be compared
+// visually against another.
+function HistoryPanel({ history }) {
+  // Group buckets by device, preserving arrival order (already oldest-first).
+  const deviceMap = {}
+  for (const entry of history) {
+    if (!deviceMap[entry.device]) deviceMap[entry.device] = []
+    deviceMap[entry.device].push(entry)
+  }
+
+  const devices = Object.keys(deviceMap).sort()
+  const maxCount = Math.max(...history.map((h) => h.count), 1)
+
+  return (
+    <section className="history-panel">
+      <h2 className="history-panel__heading">drift history · last 24 h</h2>
+      <div className="history-panel__devices">
+        {devices.map((device) => (
+          <DeviceHistory
+            key={device}
+            device={device}
+            buckets={deviceMap[device]}
+            maxCount={maxCount}
+          />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// DeviceHistory — device name + bar sparkline + current count.
+function DeviceHistory({ device, buckets, maxCount }) {
+  const latest = buckets[buckets.length - 1]
+  const currentCount = latest ? latest.count : 0
+
+  return (
+    <div className="device-history">
+      <span className="device-history__name">{device}</span>
+      <div
+        className="device-history__bars"
+        role="img"
+        aria-label={`drift history for ${device}`}
+      >
+        {buckets.map((b) => (
+          <div
+            key={b.detected_at}
+            className={`history-bar history-bar--${worstSeverity(b)}`}
+            style={{ height: `${Math.max((b.count / maxCount) * 100, 4)}%` }}
+            title={`${b.detected_at}: ${b.count} drift(s)`}
+          />
+        ))}
+      </div>
+      <span className="device-history__count">{currentCount}</span>
+    </div>
+  )
+}
+
+// Return the worst severity present in a history bucket.
+function worstSeverity(bucket) {
+  if (bucket.critical > 0) return 'critical'
+  if (bucket.warning > 0) return 'warning'
+  return 'info'
+}
+
 // Helper: intent/reality can be strings, numbers, bools, lists, or null.
-// Stringify so the table cell always shows something readable.
 function formatValue(v) {
   if (v === null || v === undefined) return '—'
   if (Array.isArray(v)) return v.join(', ')
