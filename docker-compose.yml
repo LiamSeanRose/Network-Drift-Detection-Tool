@@ -96,6 +96,11 @@ services:
       NETBOX_TOKEN: ${NETBOX_TOKEN:-}
     volumes:
       - ./devices.yml:/usr/local/lib/python3.11/devices.yml:ro
+    ports:
+      # Devices send syslog to host port 514 (standard); docker maps it to the
+      # internal listener on 1514 (no root required to bind inside the container).
+      # Configure lab devices to send syslog to this host on UDP 514.
+      - "514:1514/udp"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
