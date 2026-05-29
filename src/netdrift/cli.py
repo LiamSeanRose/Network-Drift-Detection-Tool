@@ -17,7 +17,7 @@ from pathlib import Path
 import yaml
 
 from netdrift import netbox_client, differ
-from netdrift.collectors import arista, nokia
+from netdrift.collectors import arista, cisco, nokia
 
 # devices.yml lives at the repo root, two levels up from this file
 # (src/netdrift/cli.py -> src/netdrift -> src -> repo root).
@@ -28,6 +28,7 @@ DEVICES_FILE = Path(__file__).resolve().parents[2] / "devices.yml"
 # adding its collector here.
 COLLECTORS = {
     "arista_eos": arista.get_reality,
+    "cisco_iosxe": cisco.get_reality,
     "nokia_srlinux": nokia.get_reality,
 }
 
