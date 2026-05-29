@@ -9,8 +9,6 @@ the background poll threads _on_message spawns, avoiding fragile sleeps.
 import threading
 import time
 
-import pytest
-
 from netdrift.syslog_receiver import SyslogReceiver
 
 DEVICES = {
