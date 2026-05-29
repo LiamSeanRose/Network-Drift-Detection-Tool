@@ -22,7 +22,7 @@ Public function:
 import os
 
 from netdrift import differ, netbox_client
-from netdrift.collectors import arista, nokia
+from netdrift.collectors import arista, cisco, nokia
 from netdrift.storage.database import get_sessionmaker
 from netdrift.storage.repository import save_drifts
 
@@ -31,6 +31,7 @@ from netdrift.storage.repository import save_drifts
 # adding its collector here.
 COLLECTORS = {
     "arista_eos": arista.get_reality,
+    "cisco_iosxe": cisco.get_reality,
     "nokia_srlinux": nokia.get_reality,
 }
 

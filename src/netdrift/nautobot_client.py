@@ -37,6 +37,8 @@ import pynautobot
 PLATFORM_MAP = {
     "arista-eos": "arista_eos",
     "eos": "arista_eos",
+    "cisco-ios-xe": "cisco_iosxe",
+    "ios-xe": "cisco_iosxe",
     "nokia-srlinux": "nokia_srlinux",
     "srlinux": "nokia_srlinux",
 }

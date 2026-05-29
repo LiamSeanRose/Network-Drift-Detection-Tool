@@ -159,6 +159,32 @@ NOKIA_DEVICE_TYPE = "SR Linux"
 NOKIA_PLATFORM = "Nokia SRLinux"   # NetBox platform; slug "nokia-srlinux"
 NOKIA_SITE = "Lab-Nokia"
 
+# --- Cisco side (v0.3) -------------------------------------------------------
+# Physical Catalyst 3850 at 192.168.5.50. GigabitEthernet0/0 is the dedicated
+# management port at the back of the chassis; this is the only interface
+# configured in the lab today. No VLANs, BGP, or OSPF seeded yet — the switch
+# is newly added and has no routing/L2 config beyond management access.
+# When lab configs are pushed to the 3850 (e.g. access ports, routing), add the
+# interfaces and routing intent here in the same shape as the Arista entries.
+
+CISCO_DEVICES = [
+    {
+        "name": "cisco-sw-01",
+        "interfaces": [
+            {"name": "GigabitEthernet0/0", "ip": "192.168.5.50/24"},
+        ],
+        "bgp_neighbors": [],
+        "ospf_adjacencies": [],
+    },
+]
+
+CISCO_VLANS = []   # no VLANs configured on the 3850 yet
+
+CISCO_MANUFACTURER = "Cisco"
+CISCO_DEVICE_TYPE = "Catalyst 3850"
+CISCO_PLATFORM = "Cisco IOS-XE"   # NetBox platform; slug "cisco-ios-xe"
+CISCO_SITE = "Lab-Cisco"
+
 
 def slugify(text):
     """NetBox requires a URL-safe 'slug' for many objects. Lowercase, dashes."""
@@ -399,6 +425,12 @@ def main():
     seed_vendor(
         nb, NOKIA_MANUFACTURER, NOKIA_DEVICE_TYPE, NOKIA_PLATFORM, device_role,
         NOKIA_SITE, NOKIA_VLANS, NOKIA_DEVICES
+    )
+
+    # Cisco vendor (its own site "Lab-Cisco").
+    seed_vendor(
+        nb, CISCO_MANUFACTURER, CISCO_DEVICE_TYPE, CISCO_PLATFORM, device_role,
+        CISCO_SITE, CISCO_VLANS, CISCO_DEVICES
     )
 
     print("\nDone. NetBox now mirrors the Containerlab topology.")
