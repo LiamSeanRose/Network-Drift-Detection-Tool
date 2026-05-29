@@ -7,6 +7,7 @@ tests), so the API is exercised end-to-end with zero infrastructure.
 """
 
 import pytest
+from datetime import datetime, timezone
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -90,3 +91,83 @@ def test_drifts_filters_by_device(client):
 def test_drifts_respects_limit(client):
     response = client.get("/drifts?limit=1")
     assert len(response.json()) == 1
+
+
+# ---------------------------------------------------------------------------
+# GET /drifts/history tests
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def history_client():
+    """TestClient seeded with recent drift events (within the 24-hour window).
+
+    The main `client` fixture uses 2026-05-26 timestamps, which are outside a
+    24-hour window. This fixture seeds three events timestamped now so the
+    history endpoint actually returns data.
+    """
+    now = datetime.now(tz=timezone.utc).isoformat()
+
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    TestingSession = sessionmaker(bind=engine)
+
+    with TestingSession() as s:
+        save_drifts(s, [
+            {"device": "core-sw-01", "object": "interface:Ethernet1",
+             "field": "enabled", "intent": True, "reality": False,
+             "drift_kind": "value_mismatch", "severity": "critical",
+             "detected_at": now},
+            {"device": "core-sw-01", "object": "interface:Ethernet2",
+             "field": "description", "intent": "uplink", "reality": "old",
+             "drift_kind": "value_mismatch", "severity": "warning",
+             "detected_at": now},
+            {"device": "core-sw-02", "object": "vlan:10",
+             "field": "name", "intent": "users", "reality": "Users",
+             "drift_kind": "value_mismatch", "severity": "info",
+             "detected_at": now},
+        ])
+        s.commit()
+
+    def override_get_session():
+        with TestingSession() as s:
+            yield s
+
+    app.dependency_overrides[get_session] = override_get_session
+    yield TestClient(app)
+    app.dependency_overrides.clear()
+
+
+def test_history_returns_ok(history_client):
+    response = history_client.get("/drifts/history")
+    assert response.status_code == 200
+
+
+def test_history_response_structure(history_client):
+    response = history_client.get("/drifts/history")
+    data = response.json()
+    assert isinstance(data, list)
+    # Two devices in the same bucket → 2 entries.
+    assert len(data) == 2
+    entry = next(e for e in data if e["device"] == "core-sw-01")
+    assert entry["count"] == 2
+    assert entry["critical"] == 1
+    assert entry["warning"] == 1
+    assert "detected_at" in entry
+
+
+def test_history_filters_by_device(history_client):
+    response = history_client.get("/drifts/history?device=core-sw-01")
+    data = response.json()
+    assert all(e["device"] == "core-sw-01" for e in data)
+    assert len(data) == 1
+
+
+def test_history_empty_outside_window(client):
+    # The main client fixture seeds events from 2026-05-26 (>24 h ago).
+    response = client.get("/drifts/history")
+    assert response.status_code == 200
+    assert response.json() == []

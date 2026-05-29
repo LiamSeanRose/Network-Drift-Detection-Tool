@@ -17,7 +17,7 @@ from fastapi import Depends, FastAPI
 from sqlalchemy.orm import Session
 
 from netdrift.storage.database import get_sessionmaker
-from netdrift.storage.repository import get_drifts
+from netdrift.storage.repository import get_drifts, get_drift_history
 
 app = FastAPI(title="netdrift API", version="0.2.0")
 
@@ -55,6 +55,18 @@ def get_session():
 def health():
     """Liveness check — proves the API is up. No database involved."""
     return {"status": "ok"}
+
+
+@app.get("/drifts/history")
+def list_drift_history(device: str | None = None, hours: int = 24,
+                       session: Session = Depends(get_session)):
+    """Return drift counts bucketed into 5-minute intervals, oldest first.
+
+    Query parameters:
+      device — only events for this device, e.g. /drifts/history?device=core-sw-01
+      hours  — lookback window (default 24)
+    """
+    return get_drift_history(session, hours=hours, device=device)
 
 
 @app.get("/drifts")

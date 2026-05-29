@@ -23,6 +23,18 @@ function mockFetchOk(body) {
   )
 }
 
+// A fetch stub that routes /drifts and /drifts/history to separate payloads.
+function mockFetchRouted(drifts, history) {
+  return vi.fn((url) => {
+    const body = url === '/drifts/history' ? history : drifts
+    return Promise.resolve({
+      ok: true,
+      status: 200,
+      json: () => Promise.resolve(body),
+    })
+  })
+}
+
 describe('Dashboard', () => {
   beforeEach(() => {
     // Reset any fetch stub before each test so tests don't leak into each other.
@@ -47,7 +59,9 @@ describe('Dashboard', () => {
         detected_at: '2026-05-26T12:00:00+00:00',
       },
     ]
-    globalThis.fetch = mockFetchOk(sample)
+    // Empty history so the history panel does not render and 'core-sw-01'
+    // only appears once (in the drift table).
+    globalThis.fetch = mockFetchRouted(sample, [])
 
     render(<Dashboard />)
 
@@ -69,17 +83,53 @@ describe('Dashboard', () => {
     expect(screen.getByText(/loading/i)).toBeInTheDocument()
   })
 
+  it('shows the history panel when history data is returned', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-28T10:00:00+00:00',
+      },
+    ]
+    const history = [
+      {
+        detected_at: '2026-05-28T10:00:00+00:00',
+        device: 'core-sw-01',
+        count: 3,
+        critical: 1,
+        warning: 1,
+        info: 1,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, history)
+
+    render(<Dashboard />)
+
+    // The history panel heading should appear once data loads.
+    expect(await screen.findByText(/drift history/i)).toBeInTheDocument()
+    // The device name appears in the history panel.
+    expect(screen.getAllByText('core-sw-01').length).toBeGreaterThan(0)
+  })
+
+  it('does not show the history panel when history is empty', async () => {
+    globalThis.fetch = mockFetchRouted([], [])
+
+    render(<Dashboard />)
+
+    await screen.findByText(/no drift events/i)
+    expect(screen.queryByText(/drift history/i)).not.toBeInTheDocument()
+  })
+
   it('shows an error message when the fetch fails', async () => {
-    // A fetch that resolves but returns ok: false — what happens when the
-    // backend returns 4xx/5xx (e.g. when FastAPI isn't reachable through
-    // the Vite proxy, like the 502 we saw earlier).
-    globalThis.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: false,
-        status: 500,
-        json: () => Promise.resolve({}),
-      })
-    )
+    // /drifts returns 500; /drifts/history returns empty so only one "500"
+    // is in the document (avoiding a `getByText` ambiguity).
+    globalThis.fetch = vi.fn((url) => {
+      if (url === '/drifts/history') {
+        return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve([]) })
+      }
+      return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({}) })
+    })
 
     render(<Dashboard />)
 

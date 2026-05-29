@@ -104,6 +104,78 @@
   color: var(--sev-critical);
 }
 
+/* ---- History panel ----------------------------------------------- */
+
+.history-panel {
+  margin-bottom: 1.75rem;
+  padding: 1rem 1.25rem 1.25rem;
+  background: var(--bg-panel);
+  border: 1px solid var(--border);
+}
+
+.history-panel__heading {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-muted);
+  font-weight: 400;
+  margin: 0 0 1rem;
+}
+
+.history-panel__devices {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.device-history {
+  display: grid;
+  grid-template-columns: 14ch 1fr 3ch;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.device-history__name {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-bottom: 0.2rem;
+}
+
+.device-history__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 40px;
+}
+
+.history-bar {
+  flex: 1;
+  min-width: 3px;
+  border-radius: 1px 1px 0 0;
+  transition: opacity 80ms ease;
+}
+
+.history-bar:hover {
+  opacity: 0.75;
+}
+
+.history-bar--info     { background: var(--sev-info); }
+.history-bar--warning  { background: var(--sev-warning); }
+.history-bar--critical { background: var(--sev-critical); }
+
+.device-history__count {
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+  text-align: right;
+  padding-bottom: 0.2rem;
+}
+
 /* ---- Table ------------------------------------------------------- */
 
 .drift-table {
