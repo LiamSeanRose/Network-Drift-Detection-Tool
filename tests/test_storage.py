@@ -10,8 +10,10 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
+from datetime import datetime, timedelta, timezone
+
 from netdrift.storage.models import Base
-from netdrift.storage.repository import save_drifts, get_drifts
+from netdrift.storage.repository import save_drifts, get_drifts, get_drift_history
 
 
 @pytest.fixture
@@ -120,3 +122,87 @@ def test_limit_caps_row_count(session):
     session.commit()
     rows = get_drifts(session, limit=2)
     assert len(rows) == 2
+
+
+# ---------------------------------------------------------------------------
+# get_drift_history tests
+# These tests use datetime.now() for detected_at so the events always fall
+# inside the 24-hour window regardless of when the suite runs.
+# ---------------------------------------------------------------------------
+
+def _now_str():
+    return datetime.now(tz=timezone.utc).isoformat()
+
+
+def test_history_groups_same_bucket_into_one(session):
+    """Two events in the same 5-minute bucket produce one entry with count=2."""
+    now = _now_str()
+    save_drifts(session, [_drift(detected_at=now), _drift(detected_at=now)])
+    session.commit()
+    history = get_drift_history(session)
+    assert len(history) == 1
+    assert history[0]["count"] == 2
+    assert history[0]["device"] == "core-sw-01"
+
+
+def test_history_separates_different_buckets(session):
+    """Events 10 minutes apart land in different 5-minute buckets."""
+    now = datetime.now(tz=timezone.utc)
+    earlier = (now - timedelta(minutes=10)).isoformat()
+    save_drifts(session, [
+        _drift(detected_at=now.isoformat()),
+        _drift(detected_at=earlier),
+    ])
+    session.commit()
+    history = get_drift_history(session)
+    assert len(history) == 2
+
+
+def test_history_separates_different_devices(session):
+    """Same bucket, different devices → two entries."""
+    now = _now_str()
+    save_drifts(session, [
+        _drift(device="core-sw-01", detected_at=now),
+        _drift(device="core-sw-02", detected_at=now),
+    ])
+    session.commit()
+    history = get_drift_history(session)
+    assert len(history) == 2
+
+
+def test_history_excludes_events_older_than_window(session):
+    """Events outside the hours window are not returned."""
+    old = (datetime.now(tz=timezone.utc) - timedelta(hours=25)).isoformat()
+    save_drifts(session, [_drift(detected_at=old)])
+    session.commit()
+    assert get_drift_history(session) == []
+
+
+def test_history_severity_breakdown(session):
+    """Each bucket reports per-severity counts."""
+    now = _now_str()
+    save_drifts(session, [
+        _drift(severity="critical", detected_at=now),
+        _drift(severity="warning", detected_at=now),
+        _drift(severity="info", detected_at=now),
+    ])
+    session.commit()
+    history = get_drift_history(session)
+    assert len(history) == 1
+    assert history[0]["count"] == 3
+    assert history[0]["critical"] == 1
+    assert history[0]["warning"] == 1
+    assert history[0]["info"] == 1
+
+
+def test_history_filters_by_device(session):
+    """device= kwarg limits results to one device."""
+    now = _now_str()
+    save_drifts(session, [
+        _drift(device="core-sw-01", detected_at=now),
+        _drift(device="core-sw-02", detected_at=now),
+    ])
+    session.commit()
+    history = get_drift_history(session, device="core-sw-01")
+    assert len(history) == 1
+    assert history[0]["device"] == "core-sw-01"
