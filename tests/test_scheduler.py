@@ -8,7 +8,7 @@ callable is injected in place of the real pipeline.
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from netdrift.scheduler import schedule_drift_checks
+from netdrift.scheduler import schedule_drift_checks, start_syslog_receiver
 
 DEVICES = {
     "core-sw-01": {"hostname": "172.20.20.11", "username": "admin", "password": "x"},
@@ -50,3 +50,40 @@ def test_empty_inventory_registers_no_jobs():
     ids = schedule_drift_checks(sched, {}, check=lambda dev: None)
     assert ids == []
     assert sched.get_jobs() == []
+
+
+# ---------------------------------------------------------------------------
+# start_syslog_receiver tests
+# ---------------------------------------------------------------------------
+
+def test_start_syslog_receiver_passes_devices_and_port():
+    """start_syslog_receiver builds the receiver with the right devices and port."""
+    captured = {}
+
+    class FakeReceiver:
+        def __init__(self, devices, *, check, port, **_):
+            captured["devices"] = devices
+            captured["port"] = port
+
+        def start(self):
+            pass
+
+    start_syslog_receiver(DEVICES, check=lambda d: None, port=9514,
+                          _factory=FakeReceiver)
+    assert "core-sw-01" in captured["devices"]
+    assert captured["port"] == 9514
+
+
+def test_start_syslog_receiver_returns_receiver():
+    """start_syslog_receiver returns the receiver object."""
+
+    class FakeReceiver:
+        def __init__(self, *_, **__):
+            pass
+
+        def start(self):
+            pass
+
+    result = start_syslog_receiver(DEVICES, check=lambda d: None,
+                                   _factory=FakeReceiver)
+    assert isinstance(result, FakeReceiver)
