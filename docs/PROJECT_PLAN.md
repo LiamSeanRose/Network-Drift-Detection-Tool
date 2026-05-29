@@ -321,6 +321,7 @@ Person B — "logic and out": differ.py, the Postgres schema, FastAPI, the sched
 They meet at the normalized schema. Agree it first, write it in docs/schema.md, treat changes as a joint decision. While the schema holds, neither blocks the other: A builds collectors against the spec, B builds the differ against hand-written sample dicts in tests/fixtures/.
 Two rules:
 This is primary ownership, not a wall. Read each other's merge requests — even after merge — so neither person becomes the only one who understands a half of the system. Reviewing before merge is not required; staying aware of what merged is.
+Per-item ownership from v1.0 on. The layer split (A/B above) remains the default, but it is not enough on its own: a task that sits on the seam (e.g. the syslog receiver, which both partners built independently in v0.3 before discovering the collision at push time) can look unowned to both. So from v1.0, every Definition-of-Done item also gets a single named owner agreed up front, recorded in the v1.0 Ownership table in §15. No item sits in an unassigned "remaining" pile.
 
 For v2 (knowledge base + signature matching), drop the split and pair. It is the hard, original part — two brains beats two halves.
 One person should act as informal release shepherd: decides when a version meets its Definition of Done and tags the release.
@@ -332,8 +333,9 @@ One branch per ticket: feat/arista-collector, fix/vlan-sort, etc.
 Every change goes through a merge request with a meaningful description. Reviewing the other person's merge request before merge is encouraged but not required — given differing time availability, the author may self-merge once CI passes, but MUST post a description on the MR and alert the partner (e.g. by text) so they can review after the fact and comment on the closed MR.
 Write meaningful commit messages — the history is part of the project's story.
 Issue tracking.
-Use GitLab issues. Label every issue with its version (v0.1, v0.2, …).
+Use GitHub Issues. Label every issue with its version (v0.1, v0.2, …).
 Assign an owner. Keep a simple board: To Do / In Progress / Review / Done.
+Claim before you build. Every DoD item is a GitHub Issue, version-labelled, with an owner self-assigned BEFORE any branch is created — and mirrored in the §15 ownership table so the assignment survives outside GitHub. Before creating any branch, run `git fetch --prune && git branch -r` and scan the open issues; if the item is not your self-assigned issue, do not start it. This is what stops two people silently building the same feature (as happened with the v0.3 syslog receiver). CI cannot catch that duplication — only an up-front claim can.
 Cadence.
 One short weekly sync: what's blocked, what's next, any schema changes.
 Don't let a branch live longer than ~a week — merge small and often.
@@ -426,15 +428,31 @@ v0.2
 [x] docker compose up brings up the whole stack.
 v0.3
 [x] BGP neighbor + OSPF adjacency drift detected.
-[ ] UI shows drift history/trends.
-[ ] Cisco IOS-XE drift is validated against physical hardware (3850).
-[ ] Syslog receiver triggers an immediate targeted poll.
-[ ] Nautobot works as an alternative to NetBox.
+[x] UI shows drift history/trends.
+[x] Cisco IOS-XE drift is validated against physical hardware (3850).
+[x] Syslog receiver triggers an immediate targeted poll.
+[x] Nautobot works as an alternative to NetBox.
 v1.0
 [ ] Running-config vs intended-config drift works.
 [ ] A third vendor is supported via the plugin architecture.
 [ ] A new vendor can be added without modifying core code.
 [ ] Documentation site is published; Helm chart deploys to Kubernetes.
+
+v1.0 Ownership
+From v1.0 on, every Definition-of-Done item has a named owner agreed up front (see §10). The four v1.0 DoD items break into five work streams:
+
+| v1.0 work stream | Owner | Notes |
+|---|---|---|
+| Running-config collection from devices (reality side, per vendor) | Liam (A) | adds a new `running_config` field on the reality dict |
+| Intended-config rendering from NetBox + the config diff | Matthew (B) | `running_config` on the intent side; extends `differ.py` |
+| Plugin architecture — `collectors/base.py` + entry-point discovery so a vendor needs no core edits | Liam (A) | touches the shared dispatch seam `pipeline.COLLECTORS` / `cli.COLLECTORS` — coordinate |
+| Third vendor via the plugin architecture | Liam (A) | data-in |
+| Documentation site + Helm chart (Kubernetes deploy) | Matthew (B) | logic-out / deployment |
+
+Paired seams (joint sign-off, owned by neither alone):
+- The new `running_config` field in `docs/schema.md` — schema changes already require both partners. Agree the field shape before either side builds against it. This is the single seam where the running-config split meets.
+- The collector dispatch seam, when the plugin architecture changes how vendors register.
+
 v1.5
 [ ] Each drift event shows a list of likely causes.
 [ ] At least ~30 diagnosis rules covering common drift.
