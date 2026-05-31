@@ -30,8 +30,16 @@ from netdrift.collectors.cisco import (
 # FakeNapalmConn — stands in for the NAPALM IOS driver connection object
 # ---------------------------------------------------------------------------
 
+# Canned running config the fake's get_config() returns; get_reality copies it
+# verbatim into the reality dict's `running_config`.
+RUNNING_CONFIG = (
+    "hostname cisco-sw-01\n!\ninterface GigabitEthernet1/0/1\n"
+    " description Uplink\n!\nend\n"
+)
+
+
 class FakeNapalmConn:
-    """Answers all five get_reality() calls from canned data. No socket opened."""
+    """Answers all get_reality() calls from canned data. No socket opened."""
 
     def __init__(self, interfaces, interfaces_ip, bgp_neighbors, vlans, cli_results):
         self._interfaces = interfaces
@@ -47,6 +55,8 @@ class FakeNapalmConn:
     def get_bgp_neighbors(self): return self._bgp_neighbors
     def get_vlans(self): return self._vlans
     def cli(self, commands): return self._cli_results
+    def get_config(self, retrieve="running"):
+        return {"running": RUNNING_CONFIG, "startup": "", "candidate": ""}
 
 
 # ---------------------------------------------------------------------------
@@ -484,8 +494,13 @@ def test_get_reality_top_level_shape():
     assert result["platform"] == "cisco_iosxe"
     assert set(result.keys()) == {
         "device", "platform", "collected_at", "interfaces", "vlans",
-        "bgp_neighbors", "ospf",
+        "bgp_neighbors", "ospf", "running_config",
     }
+
+
+def test_get_reality_includes_running_config():
+    result = _run_get_reality()
+    assert result["running_config"] == RUNNING_CONFIG
 
 
 def test_get_reality_collected_at_is_utc_iso():

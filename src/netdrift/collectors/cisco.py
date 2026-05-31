@@ -264,6 +264,10 @@ def get_reality(device):
             "show ip ospf neighbor detail",
             "show interfaces switchport",
         ])
+        # v1.0: full running config as text, for config-level drift (schema
+        # `running_config`). NAPALM's get_config returns a dict keyed by
+        # running/startup/candidate; we keep the running config only.
+        running_config = conn.get_config(retrieve="running")["running"]
     finally:
         conn.close()
 
@@ -299,4 +303,5 @@ def get_reality(device):
                 cli_output.get("show ip ospf neighbor detail", "")
             ),
         },
+        "running_config": running_config,
     }
