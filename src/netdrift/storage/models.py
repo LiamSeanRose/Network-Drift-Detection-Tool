@@ -67,3 +67,27 @@ class DriftEvent(Base):
             f"object={self.object_ref!r} field={self.field!r} "
             f"severity={self.severity!r}>"
         )
+
+
+class KnownIssue(Base):
+    """A stored known-issue record — one row per unique drift fingerprint.
+
+    When an engineer records a cause and fix for a drift event, a row is
+    inserted here keyed by the event's fingerprint. On subsequent polls, any
+    drift event whose fingerprint matches a row here surfaces the stored fix
+    automatically.
+    """
+
+    __tablename__ = "known_issues"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # Unique key: object_type|field|drift_kind — strips device and identifier.
+    fingerprint: Mapped[str] = mapped_column(String, unique=True, index=True)
+    cause: Mapped[str] = mapped_column(String)
+    fix: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # Incremented each time an engineer confirms this fix resolved the drift.
+    confirmed_count: Mapped[int] = mapped_column(Integer, default=1)
+
+    def __repr__(self):
+        return f"<KnownIssue id={self.id} fingerprint={self.fingerprint!r}>"

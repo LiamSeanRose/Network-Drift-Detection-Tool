@@ -14,13 +14,36 @@ Alembic use), e.g.
 """
 
 from fastapi import Depends, FastAPI
+from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from netdrift.diagnose import diagnose
+from netdrift.fingerprint import fingerprint as make_fingerprint
 from netdrift.storage.database import get_sessionmaker
-from netdrift.storage.repository import get_drifts, get_drift_history
+from netdrift.storage.repository import (
+    get_drifts,
+    get_drift_history,
+    list_known_issues,
+    save_known_issue,
+)
 
 app = FastAPI(title="netdrift API", version="0.2.0")
+
+
+class KnownIssueIn(BaseModel):
+    """Request body for POST /known-issues."""
+    object: str   # e.g. "interface:Ethernet1" or "bgp_neighbor:10.0.0.1"
+    field: str
+    drift_kind: str
+    cause: str
+    fix: str
+
+
+def _known_fix_dict(issue):
+    """Return {cause, fix} dict for a KnownIssue row, or None."""
+    if issue is None:
+        return None
+    return {"cause": issue.cause, "fix": issue.fix}
 
 # The sessionmaker is built lazily on first use, NOT at import time. Building
 # it reads DATABASE_URL, and importing this module must not require a database
@@ -83,7 +106,7 @@ def list_drifts(device: str | None = None, limit: int = 100,
     never passes it; the dependency opens and closes it around the request.
     """
     events = get_drifts(session, device=device, limit=limit)
-    # Translate each ORM object into a plain dict FastAPI serializes to JSON.
+    known = {i.fingerprint: i for i in list_known_issues(session)}
     return [
         {
             "id": e.id,
@@ -100,6 +123,41 @@ def list_drifts(device: str | None = None, limit: int = 100,
                 "field": e.field,
                 "drift_kind": e.drift_kind,
             }),
+            "known_fix": _known_fix_dict(known.get(
+                make_fingerprint({"object": e.object_ref, "field": e.field, "drift_kind": e.drift_kind})
+            )),
         }
         for e in events
+    ]
+
+
+@app.post("/known-issues")
+def create_known_issue(body: KnownIssueIn, session: Session = Depends(get_session)):
+    """Record a cause and fix for a drift pattern identified by its fingerprint."""
+    fp = make_fingerprint({"object": body.object, "field": body.field, "drift_kind": body.drift_kind})
+    issue = save_known_issue(session, fp, body.cause, body.fix)
+    session.commit()
+    return {
+        "id": issue.id,
+        "fingerprint": issue.fingerprint,
+        "cause": issue.cause,
+        "fix": issue.fix,
+        "created_at": issue.created_at.isoformat(),
+        "confirmed_count": issue.confirmed_count,
+    }
+
+
+@app.get("/known-issues")
+def get_all_known_issues(session: Session = Depends(get_session)):
+    """Return all stored known issues, oldest first."""
+    return [
+        {
+            "id": i.id,
+            "fingerprint": i.fingerprint,
+            "cause": i.cause,
+            "fix": i.fix,
+            "created_at": i.created_at.isoformat(),
+            "confirmed_count": i.confirmed_count,
+        }
+        for i in list_known_issues(session)
     ]
