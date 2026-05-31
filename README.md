@@ -5,10 +5,9 @@ Open-source network drift detection. Compares the *intended* state of a network
 surfaces the differences ("drift").
 
 The open-source alternative to NetBox Assurance.
-**Status:** v0.2 — adds Postgres-backed drift history, a FastAPI service, a
-React dashboard, an APScheduler that polls devices on a 1–5 minute interval,
-Nokia SR Linux as a second vendor (alongside Arista cEOS), and `docker compose
-up` to run the whole stack. See [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md)
+**Status:** v1.0 — config-level drift (running config vs NetBox-rendered intended
+config), plugin collector registry (add vendors without editing core dispatch),
+and a published documentation site. See [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md)
 for the full roadmap.
 
 ## Architecture
@@ -101,10 +100,12 @@ talks to the containerized API.
 
 ## Documentation
 
-The canonical project documents live in [`docs/`](docs/):
+Full documentation is published at the project's GitHub Pages site. The source
+lives in [`docs/`](docs/):
 
-- [`PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) — the full master plan and roadmap.
 - [`schema.md`](docs/schema.md) — the normalized schema (the core data contract).
+- [`PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) — the full master plan and roadmap.
+- [`lab.md`](docs/lab.md) — lab environment setup.
 
 ## License
 
