@@ -22,15 +22,17 @@ def iface(**overrides):
     return base
 
 
-def state(interfaces=None, vlans=None, bgp_neighbors=None, ospf=None):
+def state(interfaces=None, vlans=None, bgp_neighbors=None, ospf=None, running_config=""):
     """A schema-complete device-state object wrapping the given interfaces
     and vlans (both default to empty). v0.3 adds bgp_neighbors and ospf;
-    both default to the "no routing on this device" empty shape."""
+    both default to the "no routing on this device" empty shape. v1.0 adds
+    running_config; defaults to "" (no template / no config collected)."""
     return {
         "interfaces": interfaces or {},
         "vlans": vlans or {},
         "bgp_neighbors": bgp_neighbors or {},
         "ospf": ospf or {"adjacencies": {}},
+        "running_config": running_config,
     }
 
 
@@ -172,3 +174,44 @@ def test_vlan_name_mismatch_is_info():
     assert result[0]["reality"] == "Voice-VLAN"
     assert result[0]["drift_kind"] == "value_mismatch"
     assert result[0]["severity"] == "info"
+
+
+# --- v1.0 running_config field ----------------------------------------------
+
+CONFIG_A = "hostname core-sw-01\nip routing\n"
+CONFIG_B = "hostname core-sw-01\nip routing\nno ip routing\n"
+
+
+def test_config_match_produces_no_drift():
+    intent = state(running_config=CONFIG_A)
+    reality = state(running_config=CONFIG_A)
+    assert diff(intent, reality) == []
+
+
+def test_config_mismatch_produces_one_drift_record():
+    intent = state(running_config=CONFIG_A)
+    reality = state(running_config=CONFIG_B)
+    result = diff(intent, reality)
+    assert len(result) == 1
+    assert result[0]["object"] == "config"
+    assert result[0]["field"] == "running_config"
+    assert result[0]["drift_kind"] == "value_mismatch"
+    assert result[0]["severity"] == "warning"
+
+
+def test_config_drift_skipped_when_intent_empty():
+    intent = state(running_config="")
+    reality = state(running_config=CONFIG_A)
+    assert diff(intent, reality) == []
+
+
+def test_config_drift_skipped_when_reality_empty():
+    intent = state(running_config=CONFIG_A)
+    reality = state(running_config="")
+    assert diff(intent, reality) == []
+
+
+def test_config_normalization_strips_trailing_whitespace():
+    intent = state(running_config="hostname core-sw-01  \nip routing\n")
+    reality = state(running_config="hostname core-sw-01\nip routing\n")
+    assert diff(intent, reality) == []

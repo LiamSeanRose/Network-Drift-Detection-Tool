@@ -132,6 +132,23 @@ def _interface_vlan_fields(nb_iface):
     }
 
 
+def _fetch_rendered_config(nb, device):
+    """Call the NetBox Render Config API for this device and return the text.
+
+    Returns "" if the device has no Config Template assigned (404) or if the
+    request fails for any reason. An empty string on the intent side means
+    "no template — skip config diff" (schema.md Section 10, Decision 2).
+    """
+    url = f"{nb.base_url}dcim/devices/{device.id}/render-config/"
+    try:
+        response = nb.http_session.get(url)
+        if response.status_code == 200:
+            return response.json().get("content", "")
+    except Exception:
+        pass
+    return ""
+
+
 def _build_routing_from_context(device):
     """Extract routing intent (BGP + OSPF) from a NetBox device's config context.
 
@@ -203,6 +220,7 @@ def get_intent(device_name):
         "vlans": _build_vlans(nb, device.site.id),
         "bgp_neighbors": bgp_neighbors,
         "ospf": ospf,
+        "running_config": _fetch_rendered_config(nb, device),
     }
 
 if __name__ == "__main__":

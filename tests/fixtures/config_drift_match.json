@@ -1,0 +1,23 @@
+{
+    "intent": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-31T10:00:00Z",
+        "interfaces": {},
+        "vlans": {},
+        "bgp_neighbors": {},
+        "ospf": {"adjacencies": {}},
+        "running_config": "hostname core-sw-01\nip routing\n"
+    },
+    "reality": {
+        "device": "core-sw-01",
+        "platform": "arista_eos",
+        "collected_at": "2026-05-31T10:00:03Z",
+        "interfaces": {},
+        "vlans": {},
+        "bgp_neighbors": {},
+        "ospf": {"adjacencies": {}},
+        "running_config": "hostname core-sw-01\nip routing\n"
+    },
+    "expected_drifts": []
+}
