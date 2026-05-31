@@ -8,9 +8,9 @@
 > **Rule: any change to this file is a merge request that BOTH partners review and
 > approve.** Do not change the schema unilaterally.
 >
-> **Status:** v0.3. Routing-state fields (BGP neighbors, OSPF adjacencies) added
-> 2026-05-26 (see the change log). Further changes require a merge request both
-> partners approve.
+> **Status:** v1.0. Config-level drift field (`running_config`) added 2026-05-31
+> (see the change log). Further changes require a merge request both partners
+> approve.
 
 ---
 ## 1. Why this exists
@@ -31,7 +31,7 @@ contract.
 
 ---
 
-## 2. The device-state object (v0.3)
+## 2. The device-state object (v1.0)
 
 This is what `get_intent(device_name)` and `get_reality(device)` both return.
 
@@ -92,6 +92,9 @@ This is what `get_intent(device_name)` and `get_reality(device)` both return.
             },
         },
     },
+
+    # --- v1.0 addition ---
+    "running_config": "",   # str — full device running config as text, "" if unavailable
 }
 ```
 
@@ -121,6 +124,7 @@ This is what `get_intent(device_name)` and `get_reality(device)` both return.
 | `ospf.adjacencies[].area` | `str`    | OSPF area in dotted-decimal form (`"0.0.0.0"`), never the bare-integer form. |
 | `ospf.adjacencies[].interface` | `str` | Canonical full interface name the adjacency is formed on.     |
 | `ospf.adjacencies[].adjacency_state` | `str` | Operational OSPF adjacency state, lower-cased (`full`, `2-way`, `init`, `exstart`, `exchange`, `loading`, `down`). See Rule 10. |
+| `running_config`       | `str`       | The device's full running configuration as plain text. On the **reality** side: output of `show running-config` (or equivalent). On the **intent** side: config rendered from a NetBox Config Template (`GET /api/dcim/devices/{id}/render-config/`). Empty string `""` when unavailable or no template exists — never `None`, per Rule 4. |
 
 ---
 
@@ -239,8 +243,8 @@ device) and returns a `list` of drift records. Each record is one difference.
 | Field         | Type   | Meaning                                                          |
 |---------------|--------|------------------------------------------------------------------|
 | `device`      | `str`  | Device the drift was found on.                                   |
-| `object`      | `str`  | `"<type>:<identifier>"`. Types: `interface` (e.g. `interface:Ethernet1`), `vlan` (e.g. `vlan:20`), `bgp_neighbor` (e.g. `bgp_neighbor:10.0.0.2`), and `ospf_adjacency` (e.g. `ospf_adjacency:2.2.2.2`). |
-| `field`       | `str`  | Which field drifted: `description`, `enabled`, `ip_addresses`, `mode`, `untagged_vlan`, `tagged_vlans`, `name`, `remote_as`, `session_state`, `area`, `interface`, `adjacency_state`, or a sentinel (`_interface`, `_vlan`, `_bgp_neighbor`, `_ospf_adjacency`). |
+| `object`      | `str`  | `"<type>:<identifier>"` for all types except config. Types: `interface` (e.g. `interface:Ethernet1`), `vlan` (e.g. `vlan:20`), `bgp_neighbor` (e.g. `bgp_neighbor:10.0.0.2`), `ospf_adjacency` (e.g. `ospf_adjacency:2.2.2.2`), and `config` (no identifier suffix — there is only one running config per device). |
+| `field`       | `str`  | Which field drifted: `description`, `enabled`, `ip_addresses`, `mode`, `untagged_vlan`, `tagged_vlans`, `name`, `remote_as`, `session_state`, `area`, `interface`, `adjacency_state`, `running_config`, or a sentinel (`_interface`, `_vlan`, `_bgp_neighbor`, `_ospf_adjacency`). |
 | `intent`      | varies | The value NetBox says it should be. Type matches the field.      |
 | `reality`     | varies | The value the device actually reports.                          |
 | `drift_kind`  | `str`  | Category of difference. See Section 6.                           |
@@ -285,6 +289,13 @@ the other is one drift record with `object = "ospf_adjacency:<router-id>"`,
 `object = "ospf_adjacency:<router-id>"`, `field` one of `area` / `interface` /
 `adjacency_state`, `drift_kind = value_mismatch`.
 
+**How this maps to running config:** there is exactly one running config per
+device. If the normalized intent config and the normalized reality config differ,
+the diff engine emits **one** drift record with `object = "config"`,
+`field = "running_config"`, `drift_kind = value_mismatch`. No record is emitted
+if either side is `""` (see Section 10, Decision 4). The `intent` and `reality`
+values in the record are the full normalized config strings.
+
 ---
 
 ## 7. `severity` guidance
@@ -316,6 +327,7 @@ refine as you learn:
 | OSPF adjacency missing in intent (undocumented)      | `info`     |
 | OSPF `area` mismatch                                 | `warning`  |
 | OSPF `adjacency_state` mismatch                      | `warning`  |
+| Config text mismatch (`running_config`)              | `warning`  |
 
 These are defaults. In a later version, severity becomes configurable per site/role.
 
@@ -421,16 +433,8 @@ These are defaults. In a later version, severity becomes configurable per site/r
 Listed here so both partners can see where it's going and avoid design choices that
 would block these. **Only the fields in Section 2 are in scope right now.**
 
-### v1.0 — config-level drift
-
-Add a top-level key:
-
-```python
-"running_config": "....."   # str, the device's full running config as text
-```
-
-Compared against a NetBox-rendered intended config. This introduces config-text
-diffing and the semantic-equivalence problem — out of scope until v1.0.
+No further schema fields are planned at this time. v1.0 (`running_config`) is
+current. Post-v1.0 changes require a new proposal and joint sign-off.
 
 ---
 
@@ -544,6 +548,45 @@ The v0.3 routing-state additions. Settled jointly from the v0.3 proposal
     missing-object drift, following the existing `_interface` / `_vlan` pattern.
     See Sections 5 and 6. **Confirmed.**
 
+### v1.0 schema call (2026-05-31)
+
+The v1.0 config-level drift addition. Settled jointly from the v1.0 proposal
+(`docs/schema-v1.0-proposal.md`, PR #55).
+
+20. **`running_config` field type is `str`, not a structured dict.** Parsing the
+    config into a structured representation is the semantic-equivalence problem —
+    deep, vendor-specific, and deferred. v1.0 diff is text-level only.
+    **Confirmed.**
+
+21. **Intent side: NetBox Config Templates (Render Config API).** When a device
+    has a template assigned, `get_intent()` calls
+    `GET /api/dcim/devices/{id}/render-config/` and returns the rendered text. If
+    no template is assigned, it returns `running_config: ""`. **Confirmed.**
+
+22. **Reality side: `show running-config` (or equivalent).** Each collector adds
+    one new operation to capture the full running config text. The exact
+    command/API is each collector's implementation choice. **Confirmed.**
+
+23. **Skip the diff if either side is `""`.** If `running_config` is `""` on
+    either side, the diff engine produces no drift records for this field. An
+    empty intent means "no template — nothing to compare." An empty reality means
+    the collector could not retrieve the config. Neither is drift. **Confirmed.**
+
+24. **Minimal normalization only.** Before comparing, both sides strip trailing
+    whitespace from each line and normalize line endings to `\n`. No semantic
+    equivalence. Known false positives (timestamps in comments, section ordering)
+    are accepted at v1.0. **Confirmed.**
+
+25. **One drift record per device, not per line.** A config mismatch emits exactly
+    one record. Per-line records would produce dozens of events for one mismatch,
+    overwhelming the severity signal. The full text in `intent`/`reality` carries
+    enough for a human or future UI feature to display a line diff. **Confirmed.**
+
+26. **`"config"` as the object type, no identifier suffix.** Existing types follow
+    `"<type>:<identifier>"`. Config drift uses the bare string `"config"` — there
+    is only one running config per device. Deliberate exception to the pattern.
+    **Confirmed.**
+
 ---
 
 ## 11. Change log for this document
@@ -559,6 +602,7 @@ Keep a running log so both partners can see how the contract evolved.
 | 2026-05-25 | Roadmap change: v0.2 second/third vendors are Juniper (vJunos-switch) then Cisco (IOS-XE), replacing Nokia SR Linux / FRR. SR Linux and FRR deferred to a later version. Joint decision A + B. | A + B |
 | 2026-05-25 | Roadmap revert: v0.2 second vendor is Nokia SR Linux (was Juniper vJunos-switch). vJunos-switch is a QEMU VM and cannot run nested inside the lab VM. Cisco IOS-XE stays v0.3. Joint decision A + B. | A + B |
 | 2026-05-26 | v0.3 routing-state fields added: top-level `bgp_neighbors` and `ospf`. Rule 10 added (operational state in scope, lower-cased values, area normalization). New `bgp_neighbor` / `ospf_adjacency` drift object types and `_bgp_neighbor` / `_ospf_adjacency` sentinels. Section 10 items 15–19. Routing intent stored via NetBox config contexts. | A + B |
+| 2026-05-31 | v1.0 config-level drift: top-level `running_config` field added. `"config"` object type added (Section 6). Config severity row added (Section 7). Section 9 updated. Section 10 items 20–26. | A + B |
 
 ---
 
