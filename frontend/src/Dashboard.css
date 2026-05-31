@@ -239,3 +239,50 @@
   color: var(--fg-muted);
   font-size: 0.78rem;
 }
+
+.drift-table td.col-expand {
+  width: 2ch;
+  text-align: center;
+  color: var(--fg-muted);
+  font-size: 0.75rem;
+  user-select: none;
+}
+
+.drift-table tbody tr.expandable {
+  cursor: pointer;
+}
+
+.drift-table tbody tr.expandable:hover {
+  background: #1e2130;
+}
+
+/* Causes sub-row */
+.causes-row td {
+  background: #131620;
+  border-bottom: 1px solid var(--border);
+  padding: 0.6rem 1rem 0.75rem 2rem;
+}
+
+.causes-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.causes-list li {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--fg-muted);
+  padding-left: 1rem;
+  position: relative;
+}
+
+.causes-list li::before {
+  content: '·';
+  position: absolute;
+  left: 0;
+  color: var(--fg-muted);
+}
