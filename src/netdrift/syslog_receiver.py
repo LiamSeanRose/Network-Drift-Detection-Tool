@@ -98,10 +98,12 @@ class SyslogReceiver:
                 return
             self._last_triggered[name] = now
 
-        threading.Thread(
+        t = threading.Thread(
             target=self._check,
             args=[device],
             daemon=True,
             name=f"syslog-poll:{name}",
-        ).start()
+        )
+        t.start()
         print(f"Syslog from {src_ip} ({name}): triggered immediate drift check.")
+        return t

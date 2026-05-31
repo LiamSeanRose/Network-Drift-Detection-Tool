@@ -66,19 +66,21 @@ def test_unknown_ip_does_not_trigger():
 def test_cooldown_blocks_repeat_trigger():
     """A second syslog from the same device within the cooldown is ignored."""
     triggered = []
-    first_done = threading.Event()
 
     def fake_check(device):
         triggered.append(device["name"])
-        first_done.set()
 
     receiver = SyslogReceiver(DEVICES, check=fake_check, cooldown=60)
-    receiver._on_message("172.20.20.11")
-    assert _wait(first_done, timeout=5.0), "first poll thread did not run within timeout"
 
-    # Second message — still inside the 60-second cooldown.
-    receiver._on_message("172.20.20.11")
-    time.sleep(0.05)
+    # First message — should spawn a thread and trigger a poll.
+    t = receiver._on_message("172.20.20.11")
+    assert t is not None
+    t.join(timeout=5.0)
+    assert not t.is_alive(), "poll thread did not finish within 5 s"
+    assert triggered == ["core-sw-01"]
+
+    # Second message — still inside the 60-second cooldown; no thread spawned.
+    assert receiver._on_message("172.20.20.11") is None
     assert len(triggered) == 1
 
 
