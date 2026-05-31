@@ -4,7 +4,7 @@
 // on mount and on each Refresh. The history panel renders above the table when
 // the API returns at least one bucket; it is hidden when history is empty.
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Fragment } from 'react'
 import './Dashboard.css'
 
 export default function Dashboard() {
@@ -14,6 +14,7 @@ export default function Dashboard() {
 
   const [history, setHistory] = useState(null)
   const [historyError, setHistoryError] = useState(null)
+  const [expandedId, setExpandedId] = useState(null)
 
   const loadDrifts = useCallback(() => {
     setLoading(true)
@@ -118,21 +119,45 @@ export default function Dashboard() {
               <th>Kind</th>
               <th>Severity</th>
               <th>Detected at</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
-            {drifts.map((d) => (
-              <tr key={d.id} className={`sev-${d.severity}`}>
-                <td>{d.device}</td>
-                <td>{d.object}</td>
-                <td>{d.field}</td>
-                <td className="col-intent">{formatValue(d.intent)}</td>
-                <td className="col-reality">{formatValue(d.reality)}</td>
-                <td>{d.drift_kind}</td>
-                <td className="col-severity">{d.severity}</td>
-                <td className="col-detected">{d.detected_at}</td>
-              </tr>
-            ))}
+            {drifts.map((d) => {
+              const causes = d.causes || []
+              const isExpanded = expandedId === d.id
+              return (
+                <Fragment key={d.id}>
+                  <tr
+                    className={`sev-${d.severity} expandable`}
+                    onClick={() => setExpandedId(isExpanded ? null : d.id)}
+                  >
+                    <td>{d.device}</td>
+                    <td>{d.object}</td>
+                    <td>{d.field}</td>
+                    <td className="col-intent">{formatValue(d.intent)}</td>
+                    <td className="col-reality">{formatValue(d.reality)}</td>
+                    <td>{d.drift_kind}</td>
+                    <td className="col-severity">{d.severity}</td>
+                    <td className="col-detected">{d.detected_at}</td>
+                    <td className="col-expand">
+                      {causes.length > 0 ? (isExpanded ? '▾' : '▸') : ''}
+                    </td>
+                  </tr>
+                  {isExpanded && causes.length > 0 && (
+                    <tr className="causes-row">
+                      <td colSpan={9}>
+                        <ul className="causes-list">
+                          {causes.map((c, i) => (
+                            <li key={i}>{c}</li>
+                          ))}
+                        </ul>
+                      </td>
+                    </tr>
+                  )}
+                </Fragment>
+              )
+            })}
           </tbody>
         </table>
       )}
