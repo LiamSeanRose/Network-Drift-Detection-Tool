@@ -524,8 +524,16 @@ def test_get_reality_top_level_shape():
     assert result["platform"] == "nokia_srlinux"
     assert set(result.keys()) == {
         "device", "platform", "collected_at", "interfaces", "vlans",
-        "bgp_neighbors", "ospf",
+        "bgp_neighbors", "ospf", "running_config",
     }
+
+
+def test_get_reality_running_config_is_empty_by_design():
+    # SR Linux exposes no text running-config that would match a NetBox
+    # text-rendered intent; the collector returns "" so the differ skips the
+    # config diff (schema allows "" when unavailable).
+    result = _run_get_reality()
+    assert result["running_config"] == ""
 
 
 def test_get_reality_collected_at_is_utc_iso():
