@@ -74,7 +74,7 @@ def test_cooldown_blocks_repeat_trigger():
 
     receiver = SyslogReceiver(DEVICES, check=fake_check, cooldown=60)
     receiver._on_message("172.20.20.11")
-    _wait(first_done)
+    assert _wait(first_done, timeout=5.0), "first poll thread did not run within timeout"
 
     # Second message — still inside the 60-second cooldown.
     receiver._on_message("172.20.20.11")
