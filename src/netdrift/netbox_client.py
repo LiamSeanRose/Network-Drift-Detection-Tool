@@ -22,6 +22,7 @@ Requires two environment variables:
     NETBOX_TOKEN  a NetBox API token (read access is enough)
 """
 
+import json
 import os
 from datetime import datetime, timezone
 
@@ -34,10 +35,13 @@ import pynetbox
 # unset). We map NetBox's slug to the canonical schema value here. For v0.1
 # there is one vendor; this table grows as vendors are added.
 
-# Maps a NetBox platform slug to the schema's canonical platform string
-# (schema.md Section 4). Each vendor's seed_netbox.py creates a platform
-# object whose slug appears here.
-PLATFORM_MAP = {
+# Slug -> canonical platform now comes from the collector registry: each
+# collector declares its own NetBox slugs (collectors/base.py), so adding a
+# vendor needs no edit here. The literal below is a fallback used only when the
+# registry yields nothing (e.g. collectors failed to import). Operator overrides
+# (NETDRIFT_PLATFORM_SLUGS, a JSON object) layer on top for nonstandard or
+# Nautobot slugging.
+_FALLBACK_PLATFORM_MAP = {
     "arista-eos": "arista_eos",
     "eos": "arista_eos",
     "cisco-ios-xe": "cisco_iosxe",
@@ -45,6 +49,25 @@ PLATFORM_MAP = {
     "nokia-srlinux": "nokia_srlinux",
     "srlinux": "nokia_srlinux",
 }
+
+
+def _platform_overrides():
+    """Optional operator slug overrides from NETDRIFT_PLATFORM_SLUGS (JSON object)."""
+    raw = os.environ.get("NETDRIFT_PLATFORM_SLUGS")
+    if not raw:
+        return {}
+    try:
+        return json.loads(raw)
+    except (ValueError, TypeError):
+        return {}
+
+
+def _platform_map():
+    """Effective slug -> platform map: registry (or fallback) + operator overrides."""
+    from netdrift.collectors import registry
+    mapping = dict(registry.build_platform_map() or _FALLBACK_PLATFORM_MAP)
+    mapping.update(_platform_overrides())
+    return mapping
 
 
 def _utc_now_iso():
@@ -68,7 +91,7 @@ def _normalize_platform(device):
     Map a NetBox device's platform to a canonical schema platform string.
 
     Raises ValueError if the device has no platform set, or its platform
-    slug is not in PLATFORM_MAP. This is deliberately loud: a v0.1 fallback
+    slug is not in the platform map. This is deliberately loud: a v0.1 fallback
     used to assume Arista, which silently mislabelled non-Arista devices and
     sent them to the wrong collector. With a second vendor that shortcut is
     unsafe — an unknown platform must fail clearly, not guess.
@@ -79,12 +102,13 @@ def _normalize_platform(device):
             f"Set its platform (seed_netbox.py assigns one per device)."
         )
     slug = device.platform.slug
-    if slug not in PLATFORM_MAP:
+    platform_map = _platform_map()
+    if slug not in platform_map:
         raise ValueError(
             f"Device '{device.name}' has unknown platform slug '{slug}'. "
-            f"Known slugs: {', '.join(sorted(PLATFORM_MAP))}."
+            f"Known slugs: {', '.join(sorted(platform_map))}."
         )
-    return PLATFORM_MAP[slug]
+    return platform_map[slug]
 
 def _build_vlans(nb, site_id):
     """Build the schema's top-level `vlans` block from NetBox.

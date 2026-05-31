@@ -17,20 +17,16 @@ from pathlib import Path
 import yaml
 
 from netdrift import netbox_client, differ
-from netdrift.collectors import arista, cisco, nokia
+from netdrift.collectors import registry
 
 # devices.yml lives at the repo root, two levels up from this file
 # (src/netdrift/cli.py -> src/netdrift -> src -> repo root).
 DEVICES_FILE = Path(__file__).resolve().parents[2] / "devices.yml"
 
-# Maps a normalized platform string (from NetBox intent, see schema.md
-# Section 4) to the collector that handles that vendor. Adding a vendor =
-# adding its collector here.
-COLLECTORS = {
-    "arista_eos": arista.get_reality,
-    "cisco_iosxe": cisco.get_reality,
-    "nokia_srlinux": nokia.get_reality,
-}
+# Single source of truth for vendor dispatch: the collector registry, shared
+# with pipeline.py. Adding a vendor is a new self-registering collector module
+# (collectors/base.py) — no edit here.
+COLLECTORS = registry.build_collectors()
 
 def _resolve_intent_fn():
     """Return the get_intent callable for the configured source of truth.
@@ -78,13 +74,21 @@ def print_drift(device_name, drift):
         print()
 
 
-def main():
+def main(argv=None, collectors=None):
+    """Run a one-shot drift check for one device.
+
+    `collectors` defaults to the registry-backed COLLECTORS table; tests inject
+    a fake dict. `argv` defaults to sys.argv; tests pass an explicit list.
+    """
+    if collectors is None:
+        collectors = COLLECTORS
+
     parser = argparse.ArgumentParser(
         prog="driftcheck",
         description="Compare a device's intended state (NetBox) against its real state.",
     )
     parser.add_argument("device", help="device name (must match NetBox and devices.yml)")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     device_name = args.device
 
     devices = load_devices()
@@ -105,11 +109,11 @@ def main():
         sys.exit(f"Error fetching intent from {source_label}: {e}")
 
     platform = intent["platform"]
-    get_reality = COLLECTORS.get(platform)
+    get_reality = collectors.get(platform)
     if get_reality is None:
         sys.exit(
             f"Error: no collector for platform '{platform}' (device "
-            f"{device_name}). Known platforms: {', '.join(sorted(COLLECTORS))}"
+            f"{device_name}). Known platforms: {', '.join(sorted(collectors))}"
         )
 
     try:
