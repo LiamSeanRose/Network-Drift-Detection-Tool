@@ -1,28 +1,22 @@
-"""storage/repository.py — saving and querying drift events (v0.2).
+"""storage/repository.py — saving and querying drift events (v0.2 / v2.5).
 
-The bridge between the diff engine's plain dicts and the database. Two public
-functions:
+The bridge between the diff engine's plain dicts and the database.
 
-    save_drifts(session, drifts)  -> store a list of drift-record dicts
-    get_drifts(session, ...)      -> read drift events back, newest first
-
-Both take a Session (from storage.database.get_sessionmaker) so the caller
-controls the transaction boundary and tests can pass a throwaway session.
+v2.5 additions:
+- save_drifts stores the optional "platform" field from each drift record.
+- save_known_issue accepts a remediation payload; confirmed_count removed.
+- confirmed_count() derives the success count from remediation_events.
+- get_known_issue_by_id, update_known_issue_remediation, set_auto_apply_enabled.
+- save_remediation_event, get_remediation_events (append-only audit log).
 """
 
 from datetime import datetime, timedelta, timezone
 
-from netdrift.storage.models import DriftEvent, KnownIssue
+from netdrift.storage.models import DriftEvent, KnownIssue, RemediationEvent
 
 
 def _parse_detected_at(value):
-    """Convert the differ's ISO-8601 'Z' string into a real datetime.
-
-    The differ emits e.g. "2026-05-20T14:32:00Z" (schema Rule 2). Python's
-    fromisoformat handles the offset form "+00:00" but historically choked on
-    a trailing "Z", so we swap Z -> +00:00 before parsing. The result is a
-    timezone-aware datetime, which is what the detected_at column expects.
-    """
+    """Convert the differ's ISO-8601 'Z' string into a real datetime."""
     if isinstance(value, datetime):
         return value
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -31,9 +25,7 @@ def _parse_detected_at(value):
 def save_drifts(session, drifts):
     """Persist a list of drift-record dicts as DriftEvent rows.
 
-    Returns the list of created DriftEvent objects (now carrying their
-    database-assigned ids). Does NOT commit — the caller owns the transaction,
-    so several saves can be grouped, or rolled back together on error.
+    Returns the list of created DriftEvent objects. Does NOT commit.
     """
     events = []
     for record in drifts:
@@ -46,25 +38,16 @@ def save_drifts(session, drifts):
             drift_kind=record["drift_kind"],
             severity=record["severity"],
             detected_at=_parse_detected_at(record["detected_at"]),
+            platform=record.get("platform"),  # v2.5: may be absent in old records
         )
         session.add(event)
         events.append(event)
-    session.flush()  # send INSERTs now so each event.id is populated
+    session.flush()
     return events
 
 
 def get_drift_history(session, hours=24, device=None):
-    """Return drift counts grouped into 5-minute buckets, oldest first.
-
-    Each entry is a dict:
-        {"detected_at": ISO str, "device": str, "count": int,
-         "critical": int, "warning": int, "info": int}
-
-    Grouping is done in Python so the function works identically on SQLite
-    (used in tests) and Postgres (production). The trade-off is that all raw
-    events in the window are fetched first — acceptable for the lab scale and
-    for history windows of up to a day or two.
-    """
+    """Return drift counts grouped into 5-minute buckets, oldest first."""
     cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=hours)
     query = (
         session.query(DriftEvent)
@@ -79,7 +62,6 @@ def get_drift_history(session, hours=24, device=None):
         dt = e.detected_at
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=timezone.utc)
-        # Round down to the nearest 5-minute boundary.
         bucket_dt = dt.replace(minute=(dt.minute // 5) * 5, second=0, microsecond=0)
         key = (bucket_dt.isoformat(), e.device)
         if key not in buckets:
@@ -99,12 +81,7 @@ def get_drift_history(session, hours=24, device=None):
 
 
 def get_drifts(session, device=None, limit=None):
-    """Return stored drift events, newest first.
-
-    Optional filters:
-      device — only events for this device name.
-      limit  — at most this many rows.
-    """
+    """Return stored drift events, newest first."""
     query = session.query(DriftEvent).order_by(DriftEvent.detected_at.desc())
     if device is not None:
         query = query.filter(DriftEvent.device == device)
@@ -113,18 +90,28 @@ def get_drifts(session, device=None, limit=None):
     return query.all()
 
 
-def save_known_issue(session, fingerprint, cause, fix):
+def get_drift_event(session, event_id):
+    """Return a single DriftEvent by primary key, or None."""
+    return session.query(DriftEvent).filter(DriftEvent.id == event_id).one_or_none()
+
+
+# ---------------------------------------------------------------------------
+# known_issues
+# ---------------------------------------------------------------------------
+
+def save_known_issue(session, fingerprint, cause, fix, remediation=None):
     """Insert a new KnownIssue row.
 
-    Does NOT commit — the caller owns the transaction. Raises on duplicate
-    fingerprint (the unique constraint enforces one record per pattern).
+    Does NOT commit. Raises on duplicate fingerprint (unique constraint).
+    remediation defaults to None (diagnosis-only, no executable fix).
     """
     issue = KnownIssue(
         fingerprint=fingerprint,
         cause=cause,
         fix=fix,
         created_at=datetime.now(tz=timezone.utc),
-        confirmed_count=1,
+        remediation=remediation,
+        auto_apply_enabled=False,
     )
     session.add(issue)
     session.flush()
@@ -132,7 +119,7 @@ def save_known_issue(session, fingerprint, cause, fix):
 
 
 def get_known_issue(session, fingerprint):
-    """Return the KnownIssue for this fingerprint, or None if not found."""
+    """Return the KnownIssue for this fingerprint, or None."""
     return (
         session.query(KnownIssue)
         .filter(KnownIssue.fingerprint == fingerprint)
@@ -140,6 +127,98 @@ def get_known_issue(session, fingerprint):
     )
 
 
+def get_known_issue_by_id(session, issue_id):
+    """Return a KnownIssue by primary key, or None."""
+    return session.query(KnownIssue).filter(KnownIssue.id == issue_id).one_or_none()
+
+
 def list_known_issues(session):
     """Return all KnownIssue rows, oldest first."""
     return session.query(KnownIssue).order_by(KnownIssue.created_at).all()
+
+
+def update_known_issue_remediation(session, issue_id, remediation):
+    """Set the remediation payload on an existing KnownIssue.
+
+    Returns the updated row, or None if not found.
+    """
+    issue = get_known_issue_by_id(session, issue_id)
+    if issue is None:
+        return None
+    issue.remediation = remediation
+    session.flush()
+    return issue
+
+
+def set_auto_apply_enabled(session, issue_id, enabled):
+    """Flip auto_apply_enabled on a KnownIssue.
+
+    Caller is responsible for enforcing business rules (kind check, threshold,
+    global kill-switch) before calling this. Returns the updated row or None.
+    """
+    issue = get_known_issue_by_id(session, issue_id)
+    if issue is None:
+        return None
+    issue.auto_apply_enabled = enabled
+    session.flush()
+    return issue
+
+
+# ---------------------------------------------------------------------------
+# v2.5 — remediation_events
+# ---------------------------------------------------------------------------
+
+def confirmed_count(session, known_issue_id):
+    """Count successful remediations for a known issue.
+
+    Derived as COUNT(*) WHERE result = 'success'. Never stored as a mutable
+    field — an append-only log cannot be manipulated to bypass the confirm-N gate.
+    """
+    return (
+        session.query(RemediationEvent)
+        .filter(
+            RemediationEvent.known_issue_id == known_issue_id,
+            RemediationEvent.result == "success",
+        )
+        .count()
+    )
+
+
+def save_remediation_event(
+    session,
+    known_issue_id,
+    platform,
+    rendered_commands,
+    dry_run_diff,
+    result,
+    applied_by,
+    drift_event_id=None,
+):
+    """Insert a RemediationEvent row (append-only audit log).
+
+    Returns the created row with its database-assigned id. Does NOT commit.
+    result must be one of: "success", "failure", "dry_run_only".
+    """
+    event = RemediationEvent(
+        known_issue_id=known_issue_id,
+        drift_event_id=drift_event_id,
+        platform=platform,
+        rendered_commands=rendered_commands,
+        dry_run_diff=dry_run_diff,
+        result=result,
+        applied_by=applied_by,
+        applied_at=datetime.now(tz=timezone.utc),
+    )
+    session.add(event)
+    session.flush()
+    return event
+
+
+def get_remediation_events(session, known_issue_id):
+    """Return all RemediationEvents for a known issue, newest first."""
+    return (
+        session.query(RemediationEvent)
+        .filter(RemediationEvent.known_issue_id == known_issue_id)
+        .order_by(RemediationEvent.applied_at.desc())
+        .all()
+    )

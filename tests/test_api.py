@@ -198,7 +198,7 @@ def test_post_known_issue_creates_record(client):
     assert data["fingerprint"] == "interface|enabled|value_mismatch"
     assert data["cause"] == "Interface manually shut"
     assert data["fix"] == "Re-enable with 'no shutdown'"
-    assert data["confirmed_count"] == 1
+    assert data["confirmed_count"] == 0
 
 
 def test_get_known_issues_empty(client):
