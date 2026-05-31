@@ -25,16 +25,19 @@ Requires:
     NAUTOBOT_TOKEN  a Nautobot API token (read access is enough)
 """
 
+import json
 import os
 from datetime import datetime, timezone
 
 import pynautobot
 
 
-# Maps a Nautobot platform slug to the schema's canonical platform string
-# (schema.md Section 4). Mirrors netbox_client.PLATFORM_MAP — add slugs here
-# as Nautobot deployments use different naming conventions.
-PLATFORM_MAP = {
+# Slug -> canonical platform comes from the collector registry (each collector
+# declares its own slugs in collectors/base.py), so adding a vendor needs no
+# edit here. Mirrors netbox_client. The literal below is a fallback used only
+# when the registry yields nothing; operator overrides (NETDRIFT_PLATFORM_SLUGS,
+# a JSON object) layer on top for nonstandard Nautobot slugging.
+_FALLBACK_PLATFORM_MAP = {
     "arista-eos": "arista_eos",
     "eos": "arista_eos",
     "cisco-ios-xe": "cisco_iosxe",
@@ -42,6 +45,25 @@ PLATFORM_MAP = {
     "nokia-srlinux": "nokia_srlinux",
     "srlinux": "nokia_srlinux",
 }
+
+
+def _platform_overrides():
+    """Optional operator slug overrides from NETDRIFT_PLATFORM_SLUGS (JSON object)."""
+    raw = os.environ.get("NETDRIFT_PLATFORM_SLUGS")
+    if not raw:
+        return {}
+    try:
+        return json.loads(raw)
+    except (ValueError, TypeError):
+        return {}
+
+
+def _platform_map():
+    """Effective slug -> platform map: registry (or fallback) + operator overrides."""
+    from netdrift.collectors import registry
+    mapping = dict(registry.build_platform_map() or _FALLBACK_PLATFORM_MAP)
+    mapping.update(_platform_overrides())
+    return mapping
 
 
 def _utc_now_iso():
@@ -67,18 +89,19 @@ def _normalize_platform(device):
     Mirrors the same guard in netbox_client.py — an unknown platform must fail
     clearly rather than dispatching to the wrong collector.
     """
+    platform_map = _platform_map()
     if device.platform is None:
         raise ValueError(
             f"Device '{device.name}' has no platform set in Nautobot. "
-            f"Set its platform slug to one of: {', '.join(sorted(PLATFORM_MAP))}."
+            f"Set its platform slug to one of: {', '.join(sorted(platform_map))}."
         )
     slug = device.platform.slug
-    if slug not in PLATFORM_MAP:
+    if slug not in platform_map:
         raise ValueError(
             f"Device '{device.name}' has unknown platform slug '{slug}'. "
-            f"Known slugs: {', '.join(sorted(PLATFORM_MAP))}."
+            f"Known slugs: {', '.join(sorted(platform_map))}."
         )
-    return PLATFORM_MAP[slug]
+    return platform_map[slug]
 
 
 def _build_vlans(nb, site_id):
