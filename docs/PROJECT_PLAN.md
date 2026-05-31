@@ -491,7 +491,7 @@ the interface both sides build against, so either Claude session has the contrac
 
 v1.5
 [x] Each drift event shows a list of likely causes.
-[ ] At least ~30 diagnosis rules covering common drift.
+[x] At least ~30 diagnosis rules covering common drift.
 
 v1.5 Ownership
 All v1.5 work sits on the logic/out side and is owned by Matthew (B).
@@ -499,13 +499,26 @@ All v1.5 work sits on the logic/out side and is owned by Matthew (B).
 | v1.5 work stream | Owner | Notes |
 |---|---|---|
 | `diagnose.py` rules engine | Matthew (B) | Pure function: drift record → list of cause strings |
-| Diagnosis rules (~30 covering interfaces, VLANs, BGP, OSPF, config) | Matthew (B) | 23 rules shipped in v1.5 initial commit; expand to ~30 |
+| Diagnosis rules (30 covering interfaces, VLANs, BGP, OSPF, config) | Matthew (B) | 30 rules: 23 current-schema + 7 near-term schema extensions |
 | API: `causes` field in `/drifts` response | Matthew (B) | Computed on read; no DB schema change |
 | Frontend: expandable causes row in drift table | Matthew (B) | Click row to toggle causes sub-row |
+
 v2.0
-[ ] An engineer can record cause + fix for a drift event.
-[ ] A recurring drift pattern is matched to its stored known-issue, even on a different device/IP.
-[ ] The UI surfaces the known fix when a match is found.
+[x] An engineer can record cause + fix for a drift event.
+[x] A recurring drift pattern is matched to its stored known-issue, even on a different device/IP.
+[x] The UI surfaces the known fix when a match is found.
+
+v2.0 Ownership
+All v2.0 work sits on the logic/out side and is owned by Matthew (B). Liam's input on fingerprint design (vendor-specific field variance) welcomed via PR review.
+
+| v2.0 work stream | Owner | Notes |
+|---|---|---|
+| `fingerprint.py` — stable `object_type\|field\|drift_kind` key | Matthew (B) | Strips device, identifier, intent/reality values |
+| `known_issues` DB table + Alembic migration | Matthew (B) | `fingerprint` unique-indexed; `confirmed_count` for future confidence scoring |
+| Repository: `save_known_issue`, `get_known_issue`, `list_known_issues` | Matthew (B) | In-memory SQLite in tests; no Postgres required |
+| `POST /known-issues` + `GET /known-issues` API endpoints | Matthew (B) | POST generates fingerprint from submitted drift fields |
+| `GET /drifts` enriched with `known_fix` field | Matthew (B) | Matched by fingerprint on read; null when no match |
+| Frontend: known fix callout + Record fix modal | Matthew (B) | Modal scoped to pattern; Save disabled until both fields filled |
 v2.5
 [ ] Fixes are suggest-only by default.
 [ ] Auto-apply is per-issue opt-in and gated on N confirmations.
