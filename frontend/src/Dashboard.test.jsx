@@ -9,7 +9,7 @@
 // applied to the frontend.
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 import Dashboard from './Dashboard'
 
 // A small helper: build a fake `fetch` that responds with the given JSON.
@@ -119,6 +119,33 @@ describe('Dashboard', () => {
 
     await screen.findByText(/no drift events/i)
     expect(screen.queryByText(/drift history/i)).not.toBeInTheDocument()
+  })
+
+  it('shows causes when a row is clicked', async () => {
+    const drifts = [
+      {
+        id: 1,
+        device: 'core-sw-01',
+        object: 'interface:Ethernet1',
+        field: 'enabled',
+        intent: true,
+        reality: false,
+        drift_kind: 'value_mismatch',
+        severity: 'critical',
+        detected_at: '2026-05-26T12:00:00+00:00',
+        causes: ['Interface was manually shut on the device without updating NetBox.'],
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+
+    render(<Dashboard />)
+
+    await screen.findByText('core-sw-01')
+    expect(screen.queryByText(/manually shut/i)).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByText('core-sw-01'))
+
+    expect(screen.getByText(/manually shut/i)).toBeInTheDocument()
   })
 
   it('shows an error message when the fetch fails', async () => {

@@ -93,6 +93,13 @@ def test_drifts_respects_limit(client):
     assert len(response.json()) == 1
 
 
+def test_drifts_includes_causes(client):
+    response = client.get("/drifts")
+    for event in response.json():
+        assert "causes" in event
+        assert isinstance(event["causes"], list)
+
+
 # ---------------------------------------------------------------------------
 # GET /drifts/history tests
 # ---------------------------------------------------------------------------
