@@ -12,7 +12,7 @@ controls the transaction boundary and tests can pass a throwaway session.
 
 from datetime import datetime, timedelta, timezone
 
-from netdrift.storage.models import DriftEvent
+from netdrift.storage.models import DriftEvent, KnownIssue
 
 
 def _parse_detected_at(value):
@@ -111,3 +111,35 @@ def get_drifts(session, device=None, limit=None):
     if limit is not None:
         query = query.limit(limit)
     return query.all()
+
+
+def save_known_issue(session, fingerprint, cause, fix):
+    """Insert a new KnownIssue row.
+
+    Does NOT commit — the caller owns the transaction. Raises on duplicate
+    fingerprint (the unique constraint enforces one record per pattern).
+    """
+    issue = KnownIssue(
+        fingerprint=fingerprint,
+        cause=cause,
+        fix=fix,
+        created_at=datetime.now(tz=timezone.utc),
+        confirmed_count=1,
+    )
+    session.add(issue)
+    session.flush()
+    return issue
+
+
+def get_known_issue(session, fingerprint):
+    """Return the KnownIssue for this fingerprint, or None if not found."""
+    return (
+        session.query(KnownIssue)
+        .filter(KnownIssue.fingerprint == fingerprint)
+        .one_or_none()
+    )
+
+
+def list_known_issues(session):
+    """Return all KnownIssue rows, oldest first."""
+    return session.query(KnownIssue).order_by(KnownIssue.created_at).all()

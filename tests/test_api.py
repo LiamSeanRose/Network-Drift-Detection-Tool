@@ -178,3 +178,73 @@ def test_history_empty_outside_window(client):
     response = client.get("/drifts/history")
     assert response.status_code == 200
     assert response.json() == []
+
+
+# ---------------------------------------------------------------------------
+# POST /known-issues and GET /known-issues tests
+# ---------------------------------------------------------------------------
+
+def test_post_known_issue_creates_record(client):
+    payload = {
+        "object": "interface:Ethernet1",
+        "field": "enabled",
+        "drift_kind": "value_mismatch",
+        "cause": "Interface manually shut",
+        "fix": "Re-enable with 'no shutdown'",
+    }
+    response = client.post("/known-issues", json=payload)
+    assert response.status_code == 200
+    data = response.json()
+    assert data["fingerprint"] == "interface|enabled|value_mismatch"
+    assert data["cause"] == "Interface manually shut"
+    assert data["fix"] == "Re-enable with 'no shutdown'"
+    assert data["confirmed_count"] == 1
+
+
+def test_get_known_issues_empty(client):
+    response = client.get("/known-issues")
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_get_known_issues_returns_all(client):
+    client.post("/known-issues", json={
+        "object": "interface:Ethernet1", "field": "enabled",
+        "drift_kind": "value_mismatch", "cause": "Cause A", "fix": "Fix A",
+    })
+    client.post("/known-issues", json={
+        "object": "bgp_neighbor:10.0.0.1", "field": "session_state",
+        "drift_kind": "value_mismatch", "cause": "Cause B", "fix": "Fix B",
+    })
+    response = client.get("/known-issues")
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+def test_drifts_known_fix_null_when_no_match(client):
+    response = client.get("/drifts")
+    for event in response.json():
+        assert event["known_fix"] is None
+
+
+def test_drifts_includes_known_fix_when_match(client):
+    # Seed a known issue matching the first seeded drift event:
+    # interface:Ethernet2 + untagged_vlan + value_mismatch
+    # → fingerprint: interface|untagged_vlan|value_mismatch
+    client.post("/known-issues", json={
+        "object": "interface:Ethernet2",
+        "field": "untagged_vlan",
+        "drift_kind": "value_mismatch",
+        "cause": "VLAN changed on device",
+        "fix": "Update device VLAN or correct NetBox",
+    })
+    response = client.get("/drifts")
+    events = response.json()
+
+    matching = next(e for e in events if e["field"] == "untagged_vlan")
+    assert matching["known_fix"] is not None
+    assert matching["known_fix"]["cause"] == "VLAN changed on device"
+    assert matching["known_fix"]["fix"] == "Update device VLAN or correct NetBox"
+
+    non_matching = next(e for e in events if e["field"] == "name")
+    assert non_matching["known_fix"] is None
