@@ -1,0 +1,49 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "netdrift.fullname" . }}-scheduler
+  labels:
+    {{- include "netdrift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "netdrift.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: scheduler
+  template:
+    metadata:
+      labels:
+        {{- include "netdrift.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: scheduler
+    spec:
+      containers:
+        - name: scheduler
+          image: {{ include "netdrift.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - python
+            - -m
+            - netdrift.scheduler
+            - --interval
+            - {{ .Values.scheduler.interval | quote }}
+          ports:
+            - name: syslog-udp
+              containerPort: 1514
+              protocol: UDP
+          envFrom:
+            - secretRef:
+                name: {{ include "netdrift.fullname" . }}
+          {{- if .Values.devicesYaml }}
+          volumeMounts:
+            - name: devices
+              mountPath: /usr/local/lib/python3.11/devices.yml
+              subPath: devices.yml
+              readOnly: true
+          {{- end }}
+      {{- if .Values.devicesYaml }}
+      volumes:
+        - name: devices
+          secret:
+            secretName: {{ include "netdrift.fullname" . }}-devices
+      {{- end }}
