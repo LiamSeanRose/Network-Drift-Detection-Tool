@@ -292,4 +292,11 @@ def get_reality(device):
         "vlans": vlans,
         "bgp_neighbors": bgp_neighbors,
         "ospf": {"adjacencies": ospf_adjacencies},
+        # v1.0 config-level drift (schema `running_config`): SR Linux is
+        # gNMI/structured and exposes no Cisco-style text running-config that
+        # would match a NetBox text-rendered intent — comparing would emit
+        # constant false drift. Schema Rule allows "" when unavailable, and the
+        # differ skips the diff when either side is empty. Left "" by design;
+        # Nokia config-drift is deferred until an SR Linux intent render exists.
+        "running_config": "",
     }
