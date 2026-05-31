@@ -6,6 +6,16 @@ def _now():
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _normalize_config(text):
+    """Strip trailing whitespace per line and normalize line endings to \\n.
+
+    This is the minimal normalization agreed in the v1.0 schema call (Decision 5):
+    eliminates representation-only differences (CRLF vs LF, trailing spaces)
+    without attempting semantic equivalence.
+    """
+    return "\n".join(line.rstrip() for line in text.splitlines())
+
+
 def diff(intent, reality):
     drifts = []
 
@@ -304,6 +314,23 @@ def diff(intent, reality):
                 "reality": "present",
                 "drift_kind": "missing_in_intent",
                 "severity": "info",
+                "detected_at": _now(),
+            })
+
+    # v1.0 running config. Skip if either side is "" — no template means nothing
+    # to compare; empty reality means the collector could not retrieve the config.
+    # Neither is drift (schema.md Section 10, Decisions 3–4).
+    intent_config = intent.get("running_config", "")
+    reality_config = reality.get("running_config", "")
+    if intent_config and reality_config:
+        if _normalize_config(intent_config) != _normalize_config(reality_config):
+            drifts.append({
+                "object": "config",
+                "field": "running_config",
+                "intent": _normalize_config(intent_config),
+                "reality": _normalize_config(reality_config),
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
                 "detected_at": _now(),
             })
 
