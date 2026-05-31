@@ -44,3 +44,15 @@ def test_ospf_adjacency_state_mismatch():
 
 def test_config_drift():
     assert len(diagnose(_drift("config", "running_config", "value_mismatch"))) > 0
+
+
+def test_interface_mtu_mismatch():
+    assert len(diagnose(_drift("interface:Ethernet1", "mtu", "value_mismatch"))) > 0
+
+
+def test_bgp_password_mismatch():
+    assert len(diagnose(_drift("bgp_neighbor:10.0.0.1", "password", "value_mismatch"))) > 0
+
+
+def test_ospf_network_type_mismatch():
+    assert len(diagnose(_drift("ospf_adjacency:1.1.1.1", "network_type", "value_mismatch"))) > 0
