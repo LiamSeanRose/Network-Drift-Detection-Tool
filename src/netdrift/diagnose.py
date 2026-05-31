@@ -112,6 +112,52 @@ _RULES: dict[tuple[str, str, str], list[str]] = {
         "type mismatch or duplicate router IDs.",
     ],
 
+    # ── Interface — near-term schema extensions ───────────────────────────────
+    ("interface", "mtu", "value_mismatch"): [
+        "MTU mismatch between device and NetBox — can cause silent packet drops "
+        "for large frames; common on transit links between different vendors.",
+        "MTU was changed on one side of a link without updating the other end "
+        "or NetBox.",
+    ],
+    ("interface", "speed", "value_mismatch"): [
+        "Interface speed or duplex mismatch — check for auto-negotiation failures "
+        "between incompatible endpoints.",
+        "Speed was hardcoded on the device after a link flap without updating NetBox.",
+    ],
+
+    # ── BGP — near-term schema extensions ────────────────────────────────────
+    ("bgp_neighbor", "local_as", "value_mismatch"): [
+        "Wrong local AS configured for this peer session — the session will not "
+        "establish.",
+        "AS number changed (e.g. after a network renumbering) and the BGP config "
+        "was not fully updated.",
+    ],
+    ("bgp_neighbor", "password", "value_mismatch"): [
+        "BGP MD5 authentication password mismatch — session will fail to establish; "
+        "check both ends of the peering.",
+        "Password was rotated on one side without updating the peer or NetBox.",
+    ],
+    ("bgp_neighbor", "update_source", "value_mismatch"): [
+        "BGP update-source interface mismatch — device is using a different source "
+        "interface than documented in NetBox.",
+        "Loopback used for BGP peering may have been changed, or the device is "
+        "falling back to a physical interface.",
+    ],
+
+    # ── OSPF — near-term schema extensions ───────────────────────────────────
+    ("ospf_adjacency", "cost", "value_mismatch"): [
+        "OSPF interface cost mismatch between device and NetBox — affects traffic "
+        "engineering; check for manual cost overrides.",
+        "Auto-cost reference-bandwidth differs between devices, producing different "
+        "calculated costs for the same interface.",
+    ],
+    ("ospf_adjacency", "network_type", "value_mismatch"): [
+        "OSPF network type mismatch (e.g. point-to-point vs broadcast) — will "
+        "prevent adjacency formation or cause it to break intermittently.",
+        "Network type was changed on one end of a link without updating the "
+        "other end or NetBox.",
+    ],
+
     # ── Running config ────────────────────────────────────────────────────────
     ("config", "running_config", "value_mismatch"): [
         "Device running config differs from the NetBox-rendered intended config — "
