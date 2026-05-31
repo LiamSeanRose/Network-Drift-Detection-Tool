@@ -1,0 +1,29 @@
+Network Drift Detection Tool has been deployed.
+
+==> API
+
+{{- if .Values.ingress.enabled }}
+  The API is reachable at: http://{{ .Values.ingress.host }}/drifts
+{{- else }}
+  The API is not exposed externally. To access it locally:
+
+    kubectl port-forward svc/{{ include "netdrift.fullname" . }}-api 8001:{{ .Values.api.service.port }}
+
+  Then open: http://localhost:8001/drifts
+{{- end }}
+
+==> Syslog receiver (UDP)
+
+  Devices should send syslog to the node IP on the assigned NodePort:
+
+    kubectl get svc {{ include "netdrift.fullname" . }}-syslog
+
+==> Checking health
+
+    kubectl exec deploy/{{ include "netdrift.fullname" . }}-api \
+      -- wget -qO- http://localhost:8001/health
+
+==> Viewing logs
+
+    kubectl logs deploy/{{ include "netdrift.fullname" . }}-api
+    kubectl logs deploy/{{ include "netdrift.fullname" . }}-scheduler

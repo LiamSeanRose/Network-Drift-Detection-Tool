@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "netdrift.fullname" . }}-api
+  labels:
+    {{- include "netdrift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+spec:
+  replicas: {{ .Values.api.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "netdrift.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+  template:
+    metadata:
+      labels:
+        {{- include "netdrift.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+    spec:
+      containers:
+        - name: api
+          image: {{ include "netdrift.image" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command:
+            - uvicorn
+            - netdrift.api.app:app
+            - --host
+            - "0.0.0.0"
+            - --port
+            - "8001"
+          ports:
+            - name: http
+              containerPort: 8001
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: {{ include "netdrift.fullname" . }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          {{- if .Values.devicesYaml }}
+          volumeMounts:
+            - name: devices
+              mountPath: /usr/local/lib/python3.11/devices.yml
+              subPath: devices.yml
+              readOnly: true
+          {{- end }}
+      {{- if .Values.devicesYaml }}
+      volumes:
+        - name: devices
+          secret:
+            secretName: {{ include "netdrift.fullname" . }}-devices
+      {{- end }}
