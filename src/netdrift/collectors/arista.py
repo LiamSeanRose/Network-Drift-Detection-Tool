@@ -179,6 +179,10 @@ def get_reality(device):
             ],
             encoding="json",
         )
+        # v1.0: full running config as text, for config-level drift (schema
+        # `running_config`). NAPALM's get_config returns a dict keyed by
+        # running/startup/candidate; we keep the running config only.
+        running_config = conn.get_config(retrieve="running")["running"]
     finally:
         conn.close()
 
@@ -217,5 +221,6 @@ def get_reality(device):
         "vlans": _build_vlans(show_vlan_json),
         "bgp_neighbors": _build_bgp_neighbors(raw_bgp, bgp_summary_json),
         "ospf": {"adjacencies": _build_ospf_adjacencies(ospf_neighbor_json)},
+        "running_config": running_config,
     }
 
