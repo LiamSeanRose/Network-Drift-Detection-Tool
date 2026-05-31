@@ -151,6 +151,14 @@ def test_switchport_map_unknown_mode_raises():
 
 # --- get_reality (NAPALM connection mocked) ----------------------------------
 
+# Canned running config the fake's get_config() returns; get_reality copies it
+# verbatim into the reality dict's `running_config`.
+RUNNING_CONFIG = (
+    "hostname core-sw-01\n!\ninterface Ethernet1\n"
+    "   description Uplink to core\n!\nend\n"
+)
+
+
 class FakeNapalmDevice:
     """Stands in for conn.device — the pyeapi connection NAPALM's EOS driver
     holds. arista.py calls .device.run_commands([...], encoding="json")."""
@@ -190,6 +198,11 @@ class FakeNapalmConn:
 
     def get_bgp_neighbors(self):
         return self._bgp_neighbors
+
+    def get_config(self, retrieve="running"):
+        # NAPALM's get_config returns running/startup/candidate; get_reality
+        # keeps the running config only.
+        return {"running": RUNNING_CONFIG, "startup": "", "candidate": ""}
 
 
 # A consistent device: Ethernet1 is a routed uplink with an IP and an OSPF
@@ -296,8 +309,13 @@ def test_get_reality_top_level_shape():
     assert result["platform"] == "arista_eos"
     assert set(result.keys()) == {
         "device", "platform", "collected_at", "interfaces", "vlans",
-        "bgp_neighbors", "ospf",
+        "bgp_neighbors", "ospf", "running_config",
     }
+
+
+def test_get_reality_includes_running_config():
+    result = _run_get_reality()
+    assert result["running_config"] == RUNNING_CONFIG
 
 
 def test_get_reality_collected_at_is_utc_iso():
