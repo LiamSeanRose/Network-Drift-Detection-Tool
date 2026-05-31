@@ -16,6 +16,7 @@ Alembic use), e.g.
 from fastapi import Depends, FastAPI
 from sqlalchemy.orm import Session
 
+from netdrift.diagnose import diagnose
 from netdrift.storage.database import get_sessionmaker
 from netdrift.storage.repository import get_drifts, get_drift_history
 
@@ -94,6 +95,11 @@ def list_drifts(device: str | None = None, limit: int = 100,
             "drift_kind": e.drift_kind,
             "severity": e.severity,
             "detected_at": e.detected_at.isoformat(),
+            "causes": diagnose({
+                "object": e.object_ref,
+                "field": e.field,
+                "drift_kind": e.drift_kind,
+            }),
         }
         for e in events
     ]
