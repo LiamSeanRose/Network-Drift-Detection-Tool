@@ -433,10 +433,10 @@ v0.3
 [x] Syslog receiver triggers an immediate targeted poll.
 [x] Nautobot works as an alternative to NetBox.
 v1.0
-[ ] Running-config vs intended-config drift works.
-[ ] A third vendor is supported via the plugin architecture.
-[ ] A new vendor can be added without modifying core code.
-[ ] Documentation site is published; Helm chart deploys to Kubernetes.
+[x] Running-config vs intended-config drift works.
+[x] A third vendor is supported via the plugin architecture.
+[x] A new vendor can be added without modifying core code.
+[x] Documentation site is published; Helm chart deploys to Kubernetes.
 
 v1.0 Ownership
 From v1.0 on, every Definition-of-Done item has a named owner agreed up front (see §10). The four v1.0 DoD items break into five work streams:
@@ -490,8 +490,18 @@ the interface both sides build against, so either Claude session has the contrac
   platform string (collision = hard fail).
 
 v1.5
-[ ] Each drift event shows a list of likely causes.
+[x] Each drift event shows a list of likely causes.
 [ ] At least ~30 diagnosis rules covering common drift.
+
+v1.5 Ownership
+All v1.5 work sits on the logic/out side and is owned by Matthew (B).
+
+| v1.5 work stream | Owner | Notes |
+|---|---|---|
+| `diagnose.py` rules engine | Matthew (B) | Pure function: drift record → list of cause strings |
+| Diagnosis rules (~30 covering interfaces, VLANs, BGP, OSPF, config) | Matthew (B) | 23 rules shipped in v1.5 initial commit; expand to ~30 |
+| API: `causes` field in `/drifts` response | Matthew (B) | Computed on read; no DB schema change |
+| Frontend: expandable causes row in drift table | Matthew (B) | Click row to toggle causes sub-row |
 v2.0
 [ ] An engineer can record cause + fix for a drift event.
 [ ] A recurring drift pattern is matched to its stored known-issue, even on a different device/IP.
