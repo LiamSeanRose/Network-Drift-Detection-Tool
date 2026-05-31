@@ -1,0 +1,25 @@
+{{/*
+NodePort Service exposing the syslog receiver's UDP port externally.
+Devices send syslog to port 514 on the node IP; Kubernetes maps that to
+containerPort 1514 (no root required to bind inside the container).
+
+Configure your network devices to send syslog to <node-ip>:<nodePort>.
+The assigned nodePort is shown in `kubectl get svc`.
+*/}}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "netdrift.fullname" . }}-syslog
+  labels:
+    {{- include "netdrift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler
+spec:
+  type: NodePort
+  ports:
+    - port: 514
+      targetPort: syslog-udp
+      protocol: UDP
+      name: syslog-udp
+  selector:
+    {{- include "netdrift.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: scheduler

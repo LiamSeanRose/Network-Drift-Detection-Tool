@@ -1,0 +1,56 @@
+# Default values for netdrift.
+# Override these at install time:
+#   helm install netdrift ./helm/netdrift -f my-values.yaml
+
+image:
+  repository: ghcr.io/liamseanrose/network-drift-detection-tool
+  # Defaults to the chart's appVersion when blank.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+# -- API server
+api:
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 8001
+
+# -- Scheduler / worker
+scheduler:
+  # Minutes between scheduled drift polls.
+  interval: 5
+
+# -- Optional Ingress for the API
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  host: netdrift.local
+
+# -- NetBox connection details (required)
+netbox:
+  url: ""
+  token: ""
+
+# -- Device inventory — paste the full contents of your devices.yml here.
+# Stored as a Kubernetes Secret and mounted read-only into the containers.
+# Example:
+#   devicesYaml: |
+#     core-sw-01:
+#       hostname: 192.168.1.10
+#       platform: arista_eos
+#       username: admin
+#       password: secret
+devicesYaml: ""
+
+# -- Bitnami PostgreSQL subchart values.
+# https://github.com/bitnami/charts/tree/main/bitnami/postgresql
+postgresql:
+  auth:
+    database: netdrift
+    username: netdrift
+    # Set a strong password — do not leave this as the default in production.
+    password: "changeme"
+  primary:
+    persistence:
+      size: 5Gi
