@@ -50,6 +50,8 @@ from datetime import datetime, timezone
 
 from pygnmi.client import gNMIclient, gNMIException
 
+from netdrift.collectors.base import register
+
 GNMI_PORT = 57400
 
 
@@ -248,6 +250,7 @@ def _normalize_area(area_id):
     return f"{(n >> 24) & 0xFF}.{(n >> 16) & 0xFF}.{(n >> 8) & 0xFF}.{n & 0xFF}"
 
 
+@register("nokia_srlinux", netbox_slugs=("nokia-srlinux", "srlinux"))
 def get_reality(device):
     """Return the real state of an SR Linux device in the normalized schema."""
     host = (device["hostname"], GNMI_PORT)

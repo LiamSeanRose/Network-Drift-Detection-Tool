@@ -2,6 +2,8 @@ from datetime import datetime, timezone
 
 from napalm import get_network_driver
 
+from netdrift.collectors.base import register
+
 
 def _build_ip_list(ip_raw):
     
@@ -151,6 +153,7 @@ def _build_ospf_adjacencies(ospf_neighbor_json):
             }
     return adjacencies
 
+@register("arista_eos", netbox_slugs=("arista-eos", "eos"))
 def get_reality(device):
     driver = get_network_driver("eos")
     conn = driver(

@@ -445,13 +445,49 @@ From v1.0 on, every Definition-of-Done item has a named owner agreed up front (s
 |---|---|---|
 | Running-config collection from devices (reality side, per vendor) | Liam (A) | adds a new `running_config` field on the reality dict |
 | Intended-config rendering from NetBox + the config diff | Matthew (B) | `running_config` on the intent side; extends `differ.py` |
-| Plugin architecture — `collectors/base.py` + entry-point discovery so a vendor needs no core edits | Liam (A) | touches the shared dispatch seam `pipeline.COLLECTORS` / `cli.COLLECTORS` — coordinate |
+| Plugin architecture — `collectors/base.py` + in-tree registry so a vendor needs no core edits (out-of-tree entry-point discovery deferred, see below) | Liam (A) | touches the shared dispatch seam `pipeline.COLLECTORS` / `cli.COLLECTORS` — coordinate |
 | Third vendor via the plugin architecture | Liam (A) | data-in |
 | Documentation site + Helm chart (Kubernetes deploy) | Matthew (B) | logic-out / deployment |
 
 Paired seams (joint sign-off, owned by neither alone):
 - The new `running_config` field in `docs/schema.md` — schema changes already require both partners. Agree the field shape before either side builds against it. This is the single seam where the running-config split meets.
 - The collector dispatch seam, when the plugin architecture changes how vendors register.
+
+Plugin architecture — agreed design (2026-05-31, signed off by Liam + Matthew)
+Decided via design council; full rationale in the decision log (outside the repo, in Liam's
+`~/.claude/councils/2026-05-31-netdrift-plugin-architecture/`). Summary of what changes and
+the interface both sides build against, so either Claude session has the contract:
+
+- **Contract:** `collectors/base.py` defines a structural `typing.Protocol` `Collector` over
+  `get_reality(device: dict) -> dict` plus a `@register(platform, *, netbox_slugs=(...))`
+  decorator. Collectors stay plain functions — no ABC, no inheritance.
+- **Registry (new file, Liam-owned):** `collectors/registry.py` exposes
+  `build_collectors() -> dict[str, Callable]` and `build_platform_map() -> dict[str, str]`,
+  built lazily (not at import time) with per-collector `try/except` so one broken collector
+  logs-and-skips rather than killing dispatch.
+- **Dispatch seam (Matthew-owned consuming side):** the duplicated `COLLECTORS` dicts in
+  `pipeline.py` and `cli.py` are replaced by reads of `registry.build_collectors()`.
+  `run_drift_check(..., collectors=None)` keeps its fake-injection seam unchanged; `cli`
+  gains the **same** `collectors=None` injection seam (closing today's gap where cli reads
+  the module global directly). The loud `ValueError` on unknown platform is preserved.
+- **PLATFORM_MAP (Matthew-owned `netbox_client.py`):** each collector ships *default*
+  `NETBOX_SLUGS` (a list) as registration metadata; `netbox_client` derives the slug→platform
+  map from `registry.build_platform_map()`, **layered with operator overrides**
+  (`{**registry_defaults, **config_overrides}`) and retaining a fallback so existing tests
+  still inject a plain map via the `get_intent=` seam. This respects that slugs are
+  deployment-specific (Nautobot uses different slugs for the same collector) and adds a
+  `netbox_client → collectors.registry` import edge.
+- **Adding an in-tree vendor** then touches only the `collectors/` package (new module + its
+  `@register` decorator + one import line) — `pipeline.py`, `cli.py`, `netbox_client.py`
+  untouched. The canonical platform string still gets a one-line `docs/schema.md` §4 entry
+  (joint gate, unchanged). Registration metadata lives in `base.py`, NOT in `schema.md`.
+- **Deferred — out-of-tree entry-point discovery.** Not built now (YAGNI for in-tree
+  collectors; in-tree registry already satisfies the DoD and exercises the contract).
+  Revisit trigger: a real third party needs to ship a collector as a separate pip package.
+  When built it MUST be lazy + per-entry fault-isolated, allowlist-gated (opt-in
+  `enabled_collectors`, `load()` only for enabled), test-bypassable
+  (`NETDRIFT_DISABLE_ENTRY_POINTS=1`), and must never let a plugin override a built-in
+  platform string (collision = hard fail).
 
 v1.5
 [ ] Each drift event shows a list of likely causes.
