@@ -148,6 +148,68 @@ describe('Dashboard', () => {
     expect(screen.getByText(/manually shut/i)).toBeInTheDocument()
   })
 
+  it('shows known fix in expanded row when known_fix is present', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-31T12:00:00+00:00',
+        causes: [],
+        known_fix: { cause: 'Link went down unexpectedly', fix: 'Run no shutdown' },
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+
+    fireEvent.click(screen.getByText('core-sw-01'))
+    expect(screen.getByText(/link went down/i)).toBeInTheDocument()
+    expect(screen.getByText(/no shutdown/i)).toBeInTheDocument()
+  })
+
+  it('shows record fix button when known_fix is null', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-31T12:00:00+00:00',
+        causes: ['Interface was manually shut on the device without updating NetBox.'],
+        known_fix: null,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+
+    fireEvent.click(screen.getByText('core-sw-01'))
+    expect(screen.getByRole('button', { name: /record fix/i })).toBeInTheDocument()
+  })
+
+  it('opens record fix modal when button is clicked', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-31T12:00:00+00:00',
+        causes: ['Interface was manually shut on the device without updating NetBox.'],
+        known_fix: null,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+
+    fireEvent.click(screen.getByText('core-sw-01'))
+    fireEvent.click(screen.getByRole('button', { name: /record fix/i }))
+
+    expect(screen.getByRole('heading', { name: /record fix/i })).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/what caused this drift/i)).toBeInTheDocument()
+    expect(screen.getByPlaceholderText(/how was it resolved/i)).toBeInTheDocument()
+  })
+
   it('shows an error message when the fetch fails', async () => {
     // /drifts returns 500; /drifts/history returns empty so only one "500"
     // is in the document (avoiding a `getByText` ambiguity).
