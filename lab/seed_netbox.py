@@ -276,8 +276,13 @@ def seed_routing_intent(device, entry):
     print(f"  routing context: {n_bgp} BGP peer(s), {n_ospf} OSPF adjacency(ies)")
 
 
-def seed_devices(nb, devices, device_type, platform, role, site, vlan_objects):
-    """Get-or-create each device, its interfaces, their VLAN config and IPs."""
+def seed_devices(nb, devices, device_type, platform, role, site, vlan_objects,
+                 config_template=None):
+    """Get-or-create each device, its interfaces, their VLAN config and IPs.
+
+    `config_template`, when given, is assigned to each device so render-config
+    has a template to render (v1.0 config drift).
+    """
     for entry in devices:
         print(f"Device {entry['name']}:")
         device = get_or_create(
@@ -299,6 +304,18 @@ def seed_devices(nb, devices, device_type, platform, role, site, vlan_objects):
             device.platform = platform.id
             device.save()
             print(f"  set platform={platform.name}")
+
+        # Assign the Config Template so render-config has something to render.
+        # Reconciled explicitly for the same reason as platform: get_or_create
+        # only sets fields on creation, so a pre-existing device needs the
+        # assignment applied here.
+        if config_template is not None and (
+            device.config_template is None
+            or device.config_template.id != config_template.id
+        ):
+            device.config_template = config_template.id
+            device.save()
+            print(f"  set config_template={config_template.name}")
 
         for iface in entry["interfaces"]:
             print(f"  Interface {iface['name']}:")
@@ -352,10 +369,86 @@ def seed_devices(nb, devices, device_type, platform, role, site, vlan_objects):
         seed_routing_intent(device, entry)
 
 
+# --- v1.0 config-level drift: NetBox Config Templates ----------------------
+# render-config (dcim/devices/{id}/render-config/) renders the device's
+# assigned Config Template; netbox_client._fetch_rendered_config() returns that
+# text as the intent-side `running_config`. With no template assigned it returns
+# "", so config drift never fires. These templates give each device an intended
+# config to compare against `show running-config`.
+#
+# STARTER TEMPLATES — deliberately minimal. A NetBox-rendered template will not
+# match a full device running-config out of the box (the "semantic-equivalence
+# problem", schema.md Section 9), so expect the first lab run to show config
+# drift covering everything the device emits that these templates don't. Expand
+# them against real `show running-config` output, or scope the compared section,
+# once you can iterate on the lab. Nokia is intentionally omitted: its collector
+# returns running_config "" (SR Linux has no matching text config), so the
+# differ skips it regardless of intent.
+#
+# Context note: NetBox renders these with the device ORM object in scope, so
+# `device.interfaces.all()` and `interface.ip_addresses.all()` are available.
+
+ARISTA_CONFIG_TEMPLATE = """\
+hostname {{ device.name }}
+!
+{% for interface in device.interfaces.all() %}
+interface {{ interface.name }}
+{%- if interface.description %}
+   description {{ interface.description }}
+{%- endif %}
+{%- for ip in interface.ip_addresses.all() %}
+   ip address {{ ip.address }}
+{%- endfor %}
+!
+{% endfor %}
+end
+"""
+
+# IOS-XE uses a dotted-decimal mask (not CIDR), so IP lines are left out of this
+# starter to avoid emitting Arista-style addresses; descriptions are enough to
+# prove the path. Add IPs with proper mask conversion when tuning on the lab.
+CISCO_CONFIG_TEMPLATE = """\
+hostname {{ device.name }}
+!
+{% for interface in device.interfaces.all() %}
+interface {{ interface.name }}
+{%- if interface.description %}
+ description {{ interface.description }}
+{%- endif %}
+!
+{% endfor %}
+end
+"""
+
+
+def seed_config_template(nb, name, template_code):
+    """Get-or-create a NetBox Config Template, reconciling its body on re-runs.
+
+    Unlike most seeded objects, the template body is expected to change as it is
+    tuned against real device output, so an existing template's template_code is
+    updated when it differs (get_or_create alone only sets fields on creation).
+    """
+    print(f"Config template {name}:")
+    template = get_or_create(
+        nb.extras.config_templates,
+        lookup={"name": name},
+        defaults={"name": name, "template_code": template_code},
+    )
+    if template.template_code != template_code:
+        template.template_code = template_code
+        template.save()
+        print("  updated: template_code")
+    return template
+
+
 def seed_vendor(nb, manufacturer_name, device_type_name, platform_name, role,
-                site_name, vlans, devices):
+                site_name, vlans, devices, config_template_code=None):
     """Seed one vendor: manufacturer, device-type, platform, site, VLANs,
     devices. `role` is a NetBox device-role object, shared across vendors.
+
+    `config_template_code` is optional Jinja2 for a per-vendor Config Template
+    assigned to each of that vendor's devices (v1.0 config drift). When None
+    (e.g. Nokia), no template is created or assigned.
     """
     print(f"Manufacturer {manufacturer_name}:")
     manufacturer = get_or_create(
@@ -392,7 +485,14 @@ def seed_vendor(nb, manufacturer_name, device_type_name, platform_name, role,
     print("VLANs:")
     vlan_objects = seed_vlans(nb, site, vlans)
 
-    seed_devices(nb, devices, device_type, platform, role, site, vlan_objects)
+    config_template = None
+    if config_template_code:
+        config_template = seed_config_template(
+            nb, f"{platform_name} drift baseline", config_template_code
+        )
+
+    seed_devices(nb, devices, device_type, platform, role, site, vlan_objects,
+                 config_template)
 
 
 def main():
@@ -418,10 +518,11 @@ def main():
     # Arista vendor (site "Lab").
     seed_vendor(
         nb, MANUFACTURER, DEVICE_TYPE, PLATFORM, device_role,
-        SITE, VLANS, DEVICES
+        SITE, VLANS, DEVICES, config_template_code=ARISTA_CONFIG_TEMPLATE
     )
 
-    # Nokia vendor (its own site "Lab-Nokia").
+    # Nokia vendor (its own site "Lab-Nokia"). No config template: the Nokia
+    # collector returns running_config "" so config drift is skipped anyway.
     seed_vendor(
         nb, NOKIA_MANUFACTURER, NOKIA_DEVICE_TYPE, NOKIA_PLATFORM, device_role,
         NOKIA_SITE, NOKIA_VLANS, NOKIA_DEVICES
@@ -430,7 +531,8 @@ def main():
     # Cisco vendor (its own site "Lab-Cisco").
     seed_vendor(
         nb, CISCO_MANUFACTURER, CISCO_DEVICE_TYPE, CISCO_PLATFORM, device_role,
-        CISCO_SITE, CISCO_VLANS, CISCO_DEVICES
+        CISCO_SITE, CISCO_VLANS, CISCO_DEVICES,
+        config_template_code=CISCO_CONFIG_TEMPLATE
     )
 
     print("\nDone. NetBox now mirrors the Containerlab topology.")
