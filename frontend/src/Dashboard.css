@@ -434,3 +434,110 @@
   color: var(--fg);
   border-color: var(--fg-muted);
 }
+
+/* v2.5 — wide modal variant for dry-run diff display */
+.modal--wide {
+  width: min(720px, 92vw);
+}
+
+.modal__state {
+  font-family: var(--sans);
+  font-size: 0.83rem;
+  color: var(--fg-muted);
+  margin: 0;
+}
+
+.modal__state--error {
+  color: var(--sev-critical);
+}
+
+.modal__code {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+  padding: 0.6rem 0.75rem;
+  overflow-x: auto;
+  white-space: pre;
+  margin: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.modal__code--diff {
+  color: #a8d8a8;  /* soft green — diff lines */
+}
+
+/* v2.5 — remediation controls row inside known-fix callout */
+.remediation-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.dry-run-btn,
+.audit-log-btn {
+  background: transparent;
+  border: 1px solid var(--border);
+  padding: 0.25rem 0.6rem;
+  font-family: var(--sans);
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+
+.dry-run-btn { color: var(--accent); border-color: var(--accent); }
+.dry-run-btn:hover { background: rgba(111, 179, 255, 0.08); }
+
+.audit-log-btn { color: var(--fg-muted); }
+.audit-log-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.confirmed-count {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  color: var(--fg-muted);
+  margin-left: auto;
+}
+
+/* v2.5 — remediation audit log table */
+.audit-log {
+  margin-top: 0.6rem;
+  border-top: 1px solid var(--border);
+  padding-top: 0.5rem;
+}
+
+.audit-log__state {
+  font-size: 0.78rem;
+  color: var(--fg-muted);
+  margin: 0.4rem 0 0;
+}
+
+.audit-log__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.76rem;
+}
+
+.audit-log__table th {
+  color: var(--fg-muted);
+  text-align: left;
+  padding: 0.2rem 0.5rem;
+  text-transform: uppercase;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+}
+
+.audit-log__table td {
+  padding: 0.2rem 0.5rem;
+  font-family: var(--mono);
+  color: var(--fg);
+}
+
+.audit-row--success td { color: #7ec87e; }
+.audit-row--failure td { color: var(--sev-critical); }
+.audit-row--dry_run_only td { color: var(--fg-muted); }
