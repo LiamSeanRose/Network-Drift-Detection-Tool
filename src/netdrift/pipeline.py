@@ -22,18 +22,15 @@ Public function:
 import os
 
 from netdrift import differ, netbox_client
-from netdrift.collectors import arista, cisco, nokia
+from netdrift.collectors import registry
 from netdrift.storage.database import get_sessionmaker
 from netdrift.storage.repository import save_drifts
 
-# Maps a normalized platform string (from intent) to the collector that
-# handles that vendor — mirrors the dispatch in cli.py. Adding a vendor =
-# adding its collector here.
-COLLECTORS = {
-    "arista_eos": arista.get_reality,
-    "cisco_iosxe": cisco.get_reality,
-    "nokia_srlinux": nokia.get_reality,
-}
+# Single source of truth for vendor dispatch: the collector registry (shared
+# with cli.py). Adding a vendor is a new self-registering collector module
+# (collectors/base.py) — no edit here. Built once at import; run_drift_check
+# still takes a `collectors` override so tests can inject fakes.
+COLLECTORS = registry.build_collectors()
 
 
 def _resolve_intent_fn():
