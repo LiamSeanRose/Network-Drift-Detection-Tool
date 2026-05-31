@@ -8,9 +8,9 @@
 > **Rule: any change to this file is a merge request that BOTH partners review and
 > approve.** Do not change the schema unilaterally.
 >
-> **Status:** v1.0. Config-level drift field (`running_config`) added 2026-05-31
-> (see the change log). Further changes require a merge request both partners
-> approve.
+> **Status:** v1.0 / v2.5. Config-level drift (`running_config`) added 2026-05-31;
+> remediation payload (`known_issue.remediation`) added 2026-05-31 (see the change
+> log). Further changes require a merge request both partners approve.
 
 ---
 ## 1. Why this exists
@@ -428,17 +428,146 @@ These are defaults. In a later version, severity becomes configurable per site/r
 
 ---
 
-## 9. Planned schema growth (do NOT build yet)
+## 9. The `known_issue.remediation` field (v2.5)
 
-Listed here so both partners can see where it's going and avoid design choices that
-would block these. **Only the fields in Section 2 are in scope right now.**
+`remediation` is a JSONB field on the `known_issues` table. It holds the executable
+fix for a recurring drift pattern and is the seam between Person A's applier layer
+(`appliers/<vendor>.py`) and Person B's storage and orchestration layer.
 
-No further schema fields are planned at this time. v1.0 (`running_config`) is
-current. Post-v1.0 changes require a new proposal and joint sign-off.
+### Shape — discriminated union on `kind`
+
+```json
+// kind: "restore_intent" — auto-apply eligible; the primary path
+{
+  "kind": "restore_intent",
+  "schema_version": 1,
+  "object_type": "interface | vlan | bgp_neighbor | ospf_adjacency",
+  "field": "description | enabled | ip_addresses | mode | untagged_vlan | tagged_vlans | remote_as | ...",
+  "drift_kinds": ["value_mismatch", "missing_in_reality"]
+}
+
+// kind: "raw_snippet" — suggest-only forever; escape hatch for config-level drift
+{
+  "kind": "raw_snippet",
+  "schema_version": 1,
+  "by_platform": {
+    "arista_eos":    { "transport": "cli",  "body": "<EOS CLI text>" },
+    "cisco_iosxe":   { "transport": "cli",  "body": "<IOS-XE CLI text>" },
+    "nokia_srlinux": { "transport": "gnmi", "updates": [{"path": "...", "val": "..."}] }
+  }
+}
+
+// kind: null — diagnosis recorded, no executable fix
+```
+
+### `kind: "restore_intent"` rules
+
+- Stores a **policy grant**, not commands and not a frozen intent value.
+  Intent is read live from the drift record at apply time (the differ already
+  carries `intent` from NetBox — nothing device-specific is stored, so the
+  payload survives the fingerprint abstraction by construction).
+- `object_type` must match the prefix of the drift record's `object` field.
+- `field` must be a schema-modeled field name (Sections 2 and 5).
+- `drift_kinds` lists the `drift_kind` values this grant covers for this fingerprint.
+- The only kind eligible for `auto_apply_enabled: true`.
+
+### `kind: "raw_snippet"` rules
+
+- For config-level / `running_config` drift that the schema does not model
+  field-by-field (the C2 constraint — "must have a story for this").
+- `by_platform` is keyed by canonical platform string (Section 4). At apply time,
+  the applier uses only its own platform's entry — never a cross-platform entry.
+- Nokia must use `"transport": "gnmi"` with `{path, val}` update tuples. Prefer
+  `update` semantics. Never `replace` on a parent gNMI container — it silently
+  deletes unlisted siblings and causes an outage.
+- `auto_apply_enabled: true` is **code-level forbidden** for any record with
+  this kind, regardless of confirmed count.
+- API enforces write-time validation: body/updates length caps, deny-list patterns.
+
+### `kind: null` rules
+
+- No executable payload. Use for diagnosis-only records and for any issue where
+  an executable fix is not yet known.
+- Required for operational-symptom fields (`session_state`, `adjacency_state`) —
+  these are symptoms, not settings, and are never directly configurable.
+
+### `auto_apply_enabled` field on `known_issues`
+
+A separate boolean field (default `false`). Rules:
+
+- **Forbidden** when `remediation.kind` is `"raw_snippet"` or `null` — enforced
+  in code, not merely by policy.
+- Flipping it is a first-class audit event (actor + timestamp); it is a separate
+  write scope from the record-fix API.
+- A global `auto_remediation_enabled` kill-switch (default `false`) overrides all
+  per-issue settings.
+- Only eligible once `confirmed_count` reaches the threshold (default: 3).
+
+### `remediation_events` table
+
+Records each apply attempt. Append-only — never updated or deleted.
+
+| Column              | Type | Meaning                                                      |
+|---------------------|------|--------------------------------------------------------------|
+| `id`                | int  | Primary key.                                                 |
+| `known_issue_id`    | int  | FK → `known_issues.id`.                                      |
+| `drift_event_id`    | int  | FK → `drift_events.id` — the drift that triggered this.      |
+| `platform`          | str  | Platform slug at apply time.                                 |
+| `rendered_commands` | str  | Exact commands / gNMI updates sent to the device.            |
+| `dry_run_diff`      | str  | Candidate diff from the live dry-run.                        |
+| `result`            | str  | `"success"` / `"failure"` / `"dry_run_only"`.               |
+| `applied_by`        | str  | Actor (`"user:<id>"`, `"scheduler"`, `"api"`).               |
+| `applied_at`        | str  | ISO 8601 UTC.                                                |
+
+`confirmed_count` on `known_issues` is **derived** as
+`COUNT(*) WHERE known_issue_id = ? AND result = 'success'`. It is not a stored
+mutable field — an append-only log cannot be manipulated to bypass the gate.
+
+### Hard do-not-auto-apply list
+
+Enforced at the applier layer for every kind. The applier must refuse to execute
+if the drift record's `object` or `field` matches any of:
+
+1. The management / transport interface the tool connects over.
+2. AAA / credentials: TACACS+, RADIUS, enable secrets, local user passwords.
+3. Operational-symptom fields: `session_state`, `adjacency_state`.
+4. Reachability / identity: hostname, NTP, DNS, management routing.
+5. Any drift where `drift_kind = "missing_in_intent"` and `intent` is null or
+   `""` — "undocumented" is not authorization to delete.
+
+### Dry-run API contract
+
+`POST /known-issues/{id}/remediate/dry-run`
+
+```json
+{
+  "platform": "arista_eos",
+  "transport": "cli",
+  "rendered_diff": "<candidate diff text>",
+  "would_apply": true
+}
+```
+
+The diff is produced by a live applier call — never from the stored payload.
+NAPALM-based platforms (Arista, Cisco): `load_merge_candidate` → `compare_config`.
+Nokia gNMI: applier synthesizes a diff from current read-back state vs intended
+update. Person B exposes the endpoint; Person A implements the applier that
+produces the diff.
 
 ---
 
-## 10. Resolved questions
+## 10. Planned schema growth
+
+Listed here so both partners can see where it's going and avoid design choices that
+would block these.
+
+No further schema fields are planned at this time. v2.5 (`remediation` payload,
+`remediation_events`) is current. Post-v2.5 changes require a new proposal and
+joint sign-off.
+
+---
+
+## 11. Resolved questions
 
 ### v0.1 schema call (2026-05-21)
 
@@ -587,9 +716,48 @@ The v1.0 config-level drift addition. Settled jointly from the v1.0 proposal
     is only one running config per device. Deliberate exception to the pattern.
     **Confirmed.**
 
+### v2.5 schema call (2026-05-31)
+
+The v2.5 auto-remediation payload. Settled jointly from the design council
+decision log
+(`~/.claude/councils/2026-05-31-netdrift-v2.5-remediation-payload/log.md`).
+
+27. **`remediation` is a discriminated union on `kind`.** A flat command blob was
+    rejected: it cannot survive the fingerprint abstraction (breaks C1) and cannot
+    be vendor-agnostic. The union gives structured intent a clean primary path and
+    a walled escape hatch for config-level drift. **Confirmed.**
+
+28. **`restore_intent` stores a policy grant, not commands or frozen values.** The
+    intent value already exists in the live drift record at apply time — the differ
+    carries it from NetBox. Storing it again creates staleness risk and
+    re-introduces device-specificity the fingerprint abstraction was designed to
+    eliminate. **Confirmed.**
+
+29. **`raw_snippet` is permanently suggest-only; `auto_apply_enabled` is
+    code-level forbidden for it.** Raw-text blast radius is unbounded; Nokia
+    cannot text-apply at all; one auto-apply outage ends OSS adoption faster than
+    any coverage gap. C2 is satisfied by "suggest + generated commands + human
+    confirm" — it does not require auto-apply. Revisit only after
+    `restore_intent` auto-apply has a clean field record and a per-snippet
+    review/sign-off mechanism exists. **Confirmed.**
+
+30. **`kind: null` is the required resting state for operational-symptom drift.**
+    `session_state` and `adjacency_state` are symptoms, not settings. A fix that
+    re-configures neighbors to "resolve" a down session risks simultaneous flaps
+    across every matched device. **Confirmed.**
+
+31. **`confirmed_count` is derived from `remediation_events`, not a mutable
+    counter.** An append-only log cannot be manipulated to bypass the confirm-N
+    gate; a mutable counter can. **Confirmed.**
+
+32. **Confirmation diff comes from a live dry-run, not the stored payload.** The
+    stored payload may be months old; the live diff reflects what would actually
+    change on the device today. The dry-run endpoint lives on Person B's API but
+    delegates rendering to Person A's applier. **Confirmed.**
+
 ---
 
-## 11. Change log for this document
+## 12. Change log for this document
 
 Keep a running log so both partners can see how the contract evolved.
 
@@ -602,7 +770,8 @@ Keep a running log so both partners can see how the contract evolved.
 | 2026-05-25 | Roadmap change: v0.2 second/third vendors are Juniper (vJunos-switch) then Cisco (IOS-XE), replacing Nokia SR Linux / FRR. SR Linux and FRR deferred to a later version. Joint decision A + B. | A + B |
 | 2026-05-25 | Roadmap revert: v0.2 second vendor is Nokia SR Linux (was Juniper vJunos-switch). vJunos-switch is a QEMU VM and cannot run nested inside the lab VM. Cisco IOS-XE stays v0.3. Joint decision A + B. | A + B |
 | 2026-05-26 | v0.3 routing-state fields added: top-level `bgp_neighbors` and `ospf`. Rule 10 added (operational state in scope, lower-cased values, area normalization). New `bgp_neighbor` / `ospf_adjacency` drift object types and `_bgp_neighbor` / `_ospf_adjacency` sentinels. Section 10 items 15–19. Routing intent stored via NetBox config contexts. | A + B |
-| 2026-05-31 | v1.0 config-level drift: top-level `running_config` field added. `"config"` object type added (Section 6). Config severity row added (Section 7). Section 9 updated. Section 10 items 20–26. | A + B |
+| 2026-05-31 | v1.0 config-level drift: top-level `running_config` field added. `"config"` object type added (Section 6). Config severity row added (Section 7). Section 11 items 20–26. | A + B |
+| 2026-05-31 | v2.5 remediation payload: Section 9 added — `known_issue.remediation` discriminated union (`restore_intent`, `raw_snippet`, `null`), `auto_apply_enabled`, `remediation_events` table, hard do-not-auto-apply list, dry-run API contract. Section 11 items 27–32. Sections renumbered (old 9→10, 10→11, 11→12). | A + B |
 
 ---
 
