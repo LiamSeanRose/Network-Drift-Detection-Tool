@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [history, setHistory] = useState(null)
   const [historyError, setHistoryError] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
+  const [recordingFor, setRecordingFor] = useState(null)
 
   const loadDrifts = useCallback(() => {
     setLoading(true)
@@ -60,6 +61,23 @@ export default function Dashboard() {
     loadDrifts()
     loadHistory()
   }, [loadDrifts, loadHistory])
+
+  const handleSubmitFix = useCallback((drift, cause, fix) => {
+    fetch('/known-issues', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        object: drift.object,
+        field: drift.field,
+        drift_kind: drift.drift_kind,
+        cause,
+        fix,
+      }),
+    })
+      .then((r) => { if (!r.ok) throw new Error(`API returned ${r.status}`) })
+      .then(() => { setRecordingFor(null); loadDrifts() })
+      .catch(() => setRecordingFor(null))
+  }, [loadDrifts])
 
   return (
     <div className="dashboard">
@@ -125,6 +143,7 @@ export default function Dashboard() {
           <tbody>
             {drifts.map((d) => {
               const causes = d.causes || []
+              const hasContent = causes.length > 0 || !!d.known_fix
               const isExpanded = expandedId === d.id
               return (
                 <Fragment key={d.id}>
@@ -141,17 +160,39 @@ export default function Dashboard() {
                     <td className="col-severity">{d.severity}</td>
                     <td className="col-detected">{d.detected_at}</td>
                     <td className="col-expand">
-                      {causes.length > 0 ? (isExpanded ? '▾' : '▸') : ''}
+                      {hasContent ? (isExpanded ? '▾' : '▸') : ''}
                     </td>
                   </tr>
-                  {isExpanded && causes.length > 0 && (
+                  {isExpanded && hasContent && (
                     <tr className="causes-row">
                       <td colSpan={9}>
-                        <ul className="causes-list">
-                          {causes.map((c, i) => (
-                            <li key={i}>{c}</li>
-                          ))}
-                        </ul>
+                        {d.known_fix && (
+                          <div className="known-fix">
+                            <span className="known-fix__label">known fix</span>
+                            <p className="known-fix__text">
+                              <strong>Cause:</strong> {d.known_fix.cause}
+                            </p>
+                            <p className="known-fix__text">
+                              <strong>Fix:</strong> {d.known_fix.fix}
+                            </p>
+                          </div>
+                        )}
+                        {causes.length > 0 && (
+                          <ul className="causes-list">
+                            {causes.map((c, i) => (
+                              <li key={i}>{c}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {!d.known_fix && (
+                          <button
+                            type="button"
+                            className="record-fix-btn"
+                            onClick={(e) => { e.stopPropagation(); setRecordingFor(d) }}
+                          >
+                            Record fix
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )}
@@ -161,6 +202,63 @@ export default function Dashboard() {
           </tbody>
         </table>
       )}
+
+      {recordingFor && (
+        <RecordFixModal
+          drift={recordingFor}
+          onSubmit={(cause, fix) => handleSubmitFix(recordingFor, cause, fix)}
+          onCancel={() => setRecordingFor(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// RecordFixModal — overlay form for recording a cause and fix for a drift pattern.
+function RecordFixModal({ drift, onSubmit, onCancel }) {
+  const [cause, setCause] = useState('')
+  const [fix, setFix] = useState('')
+  const pattern = `${drift.object.split(':')[0]} · ${drift.field} · ${drift.drift_kind}`
+
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <h2 className="modal__title">Record fix</h2>
+        <p className="modal__pattern">{pattern}</p>
+        <label className="modal__label">
+          Cause
+          <textarea
+            className="modal__textarea"
+            value={cause}
+            onChange={(e) => setCause(e.target.value)}
+            placeholder="What caused this drift?"
+            rows={3}
+          />
+        </label>
+        <label className="modal__label">
+          Fix
+          <textarea
+            className="modal__textarea"
+            value={fix}
+            onChange={(e) => setFix(e.target.value)}
+            placeholder="How was it resolved?"
+            rows={3}
+          />
+        </label>
+        <div className="modal__actions">
+          <button
+            type="button"
+            className="modal__submit"
+            onClick={() => onSubmit(cause, fix)}
+            disabled={!cause.trim() || !fix.trim()}
+          >
+            Save
+          </button>
+          <button type="button" className="modal__cancel" onClick={onCancel}>
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
