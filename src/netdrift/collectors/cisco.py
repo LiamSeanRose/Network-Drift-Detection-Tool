@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 
 from napalm import get_network_driver
 
+from netdrift.collectors.base import register
+
 
 def _build_ip_list(ip_raw):
     """Shape NAPALM get_interfaces_ip() value into sorted CIDR list."""
@@ -242,6 +244,7 @@ def _parse_ospf_neighbors(ospf_detail_text):
     return adjacencies
 
 
+@register("cisco_iosxe", netbox_slugs=("cisco-ios-xe", "ios-xe"))
 def get_reality(device):
     driver = get_network_driver("ios")
     conn = driver(
