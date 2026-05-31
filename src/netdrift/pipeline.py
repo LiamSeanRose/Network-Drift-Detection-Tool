@@ -92,12 +92,14 @@ def run_drift_check(device, *, get_intent=None,
 
     drifts = differ.diff(intent, reality)
 
-    # differ.diff produces records without a "device" field (it only compares
-    # two states; it doesn't know whose they are). save_drifts / the schema
-    # require one, and the pipeline is the layer that knows the device name —
-    # so stamp it onto each record here before persisting.
+    # differ.diff produces records without "device" or "platform". The pipeline
+    # knows both (device from its argument; platform from the intent dict), so
+    # stamp them onto each record before persisting. platform is stored so that
+    # the remediate API endpoints can dispatch to the correct applier without
+    # calling NetBox again.
     for record in drifts:
         record["device"] = device_name
+        record["platform"] = platform
 
     with session_factory() as session:
         save_drifts(session, drifts)

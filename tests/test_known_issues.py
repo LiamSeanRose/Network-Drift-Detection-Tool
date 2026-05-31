@@ -9,9 +9,10 @@ from sqlalchemy.orm import sessionmaker
 
 from netdrift.storage.models import Base
 from netdrift.storage.repository import (
-    save_known_issue,
+    confirmed_count,
     get_known_issue,
     list_known_issues,
+    save_known_issue,
 )
 
 
@@ -32,7 +33,8 @@ def test_save_and_retrieve(session):
     assert result is not None
     assert result.cause == "Manual shutdown"
     assert result.fix == "Re-enable the interface"
-    assert result.confirmed_count == 1
+    # confirmed_count is derived from remediation_events, not stored; starts at 0.
+    assert confirmed_count(session, result.id) == 0
 
 
 def test_get_returns_none_for_unknown(session):
