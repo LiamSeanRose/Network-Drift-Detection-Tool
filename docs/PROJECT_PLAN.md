@@ -524,6 +524,32 @@ v2.5
 [ ] Auto-apply is per-issue opt-in and gated on N confirmations.
 [ ] Every applied fix shows a confirmation diff, is logged, and is verified on the next poll.
 
+v2.5 Ownership
+Payload shape decided by design council 2026-05-31; full decision log at
+`~/.claude/councils/2026-05-31-netdrift-v2.5-remediation-payload/log.md`.
+Contract written into `docs/schema.md` §9 (merged, joint sign-off).
+
+| v2.5 work stream | Owner | Notes |
+|---|---|---|
+| `appliers/base.py` — `@register` decorator + lazy fault-isolated registry (mirrors `collectors/base.py`) | Liam (A) | `get_applier(platform)` is the dispatch entry point |
+| `appliers/arista.py` — `restore_intent` + `raw_snippet` via NAPALM merge; dry-run via `compare_config` | Liam (A) | EOS config sessions = clean rollback |
+| `appliers/cisco.py` — `restore_intent` + `raw_snippet` via NAPALM merge; dry-run via `compare_config` | Liam (A) | `configure replace` weaker than EOS; applier must verify + rollback on failure |
+| `appliers/nokia.py` — `restore_intent` via gNMI `update`; dry-run synthesized; config-level always suggest-only | Liam (A) | Never `replace` on a parent container; Nokia config drift is suggest-only forever |
+| Hard do-not-auto-apply enforcement (management iface, AAA, symptom fields, identity, undocumented deletes) | Liam (A) | Enforced in applier base layer for all kinds |
+| `remediation` JSONB column on `known_issues` + Alembic migration | Matthew (B) | Discriminated union per `docs/schema.md` §9 |
+| `remediation_events` table + Alembic migration | Matthew (B) | Append-only audit log; `confirmed_count` derived from this, never stored |
+| `auto_apply_enabled` field + separate write scope | Matthew (B) | First-class audit event on flip; code-level forbidden for `raw_snippet`/`null` kinds |
+| `POST /known-issues/{id}/remediate/dry-run` + `/apply` endpoints | Matthew (B) | Delegates rendering to Liam's applier via `get_applier(platform)` |
+| Confirm-N derivation (default threshold: 3) + global `auto_remediation_enabled` kill-switch | Matthew (B) | Kill-switch default `false` |
+| Post-apply verification re-poll (≤60s, auto-rollback on failure) | Matthew (B) | Scheduler-side |
+| Frontend: suggest/apply UI, dry-run diff display, audit log | Matthew (B) | |
+
+Paired seam (joint sign-off, owned by neither alone):
+- `docs/schema.md` §9 — already merged ✓
+- Applier dispatch interface: `get_applier(platform)` returns a callable with the same
+  lazy+fault-isolated contract as `collectors/registry.py`. Liam defines the interface;
+  Matthew's orchestration calls it. Agree the exact signature before either builds against it.
+
 16. Glossary
 Intent / intended state — what the network should be, documented in NetBox.
 Reality / operational state — what a device actually reports right now.
