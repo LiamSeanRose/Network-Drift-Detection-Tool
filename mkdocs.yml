@@ -1,0 +1,45 @@
+site_name: Network Drift Detection Tool
+site_description: Open-source network drift detection — the self-hosted alternative to NetBox Assurance.
+repo_url: https://github.com/LiamSeanRose/Network-Drift-Detection-Tool
+repo_name: LiamSeanRose/Network-Drift-Detection-Tool
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.top
+    - search.highlight
+    - content.code.copy
+
+nav:
+  - Home: index.md
+  - Getting Started: lab.md
+  - Schema Reference: schema.md
+  - Roadmap: PROJECT_PLAN.md
+  - Contributing: contributing.md
+
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
