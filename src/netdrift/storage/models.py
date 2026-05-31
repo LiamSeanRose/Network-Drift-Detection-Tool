@@ -1,34 +1,24 @@
-"""storage/models.py — SQLAlchemy models for the drift database (v0.2).
+"""storage/models.py — SQLAlchemy models for the drift database (v0.2 / v2.5).
 
-Defines the `drift_events` table as a Python class. The diff engine
-(differ.py) produces drift records as plain dicts (schema.md Section 5);
-this module is where one of those dicts becomes a persistent database row.
+Defines the tables as Python classes. The diff engine (differ.py) produces
+drift records as plain dicts (schema.md Section 5); this module is where
+one of those dicts becomes a persistent database row.
 
-The mapping is one column per drift-record field, plus an auto-assigned
-`id` primary key the dict does not carry:
-
-    drift record dict           ->  DriftEvent column
-    --------------------------------------------------
-    (none)                      ->  id            (auto)
-    device                      ->  device
-    object                      ->  object_ref    (renamed: see note)
-    field                       ->  field
-    intent                      ->  intent        (JSON: value type varies)
-    reality                     ->  reality       (JSON: value type varies)
-    drift_kind                  ->  drift_kind
-    severity                    ->  severity
-    detected_at (ISO str)       ->  detected_at   (real timestamp)
+v2.5 additions:
+- DriftEvent: platform column (nullable for backward compat with existing rows)
+- KnownIssue: remediation JSON, auto_apply_enabled bool; confirmed_count removed
+  (now derived from RemediationEvent as COUNT(*) WHERE result='success')
+- RemediationEvent: append-only audit log for every dry-run and apply attempt
 """
 
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, Integer, String
+from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
 class Base(DeclarativeBase):
-    """Base class all models inherit from. SQLAlchemy collects every table
-    defined on this Base so tools (and Alembic) can discover them."""
+    """Base class all models inherit from."""
 
 
 class DriftEvent(Base):
@@ -36,30 +26,18 @@ class DriftEvent(Base):
 
     __tablename__ = "drift_events"
 
-    # Auto-incrementing primary key. The database assigns it; we never set it.
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-
-    # Plain string columns — direct copies of the drift-record fields.
     device: Mapped[str] = mapped_column(String)
-    # `object` is a Python builtin, so the attribute is object_ref; the actual
-    # database column is still named "object" to match the schema's field name.
     object_ref: Mapped[str] = mapped_column("object", String)
     field: Mapped[str] = mapped_column(String)
     drift_kind: Mapped[str] = mapped_column(String)
     severity: Mapped[str] = mapped_column(String)
-
-    # intent / reality hold values whose type varies by field (list, bool,
-    # int, str, None). The generic JSON type stores each value preserving its
-    # real JSON shape (a list stays a list, a bool stays a bool). SQLAlchemy
-    # renders it as JSONB on Postgres and as JSON-text on SQLite, so the same
-    # model runs against the production database and the in-memory test one.
     intent: Mapped[object] = mapped_column(JSON, nullable=True)
     reality: Mapped[object] = mapped_column(JSON, nullable=True)
-
-    # A real timestamp, not text — so history queries can sort and filter by
-    # time. The differ emits an ISO string; the storage layer converts it to a
-    # datetime before this column ever sees it (see storage.save).
     detected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # v2.5: platform stored so remediate endpoints can dispatch without calling NetBox.
+    # Nullable for backward compat — rows created before v2.5 have no platform.
+    platform: Mapped[str | None] = mapped_column(String, nullable=True)
 
     def __repr__(self):
         return (
@@ -76,18 +54,57 @@ class KnownIssue(Base):
     inserted here keyed by the event's fingerprint. On subsequent polls, any
     drift event whose fingerprint matches a row here surfaces the stored fix
     automatically.
+
+    v2.5: confirmed_count is no longer a stored column. It is derived as
+    COUNT(*) WHERE known_issue_id = ? AND result = 'success' on the
+    remediation_events table. An append-only log cannot be manipulated to
+    bypass the confirm-N gate; a mutable counter can.
     """
 
     __tablename__ = "known_issues"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    # Unique key: object_type|field|drift_kind — strips device and identifier.
     fingerprint: Mapped[str] = mapped_column(String, unique=True, index=True)
     cause: Mapped[str] = mapped_column(String)
     fix: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    # Incremented each time an engineer confirms this fix resolved the drift.
-    confirmed_count: Mapped[int] = mapped_column(Integer, default=1)
+    # Discriminated union per schema.md §9: restore_intent | raw_snippet | null.
+    # null means diagnosis-only (no executable fix recorded yet).
+    remediation: Mapped[object] = mapped_column(JSON, nullable=True)
+    # Per-issue opt-in auto-apply gate. Forbidden for raw_snippet/null kinds;
+    # requires confirmed_count >= CONFIRM_THRESHOLD; respects global kill-switch.
+    auto_apply_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
 
     def __repr__(self):
         return f"<KnownIssue id={self.id} fingerprint={self.fingerprint!r}>"
+
+
+class RemediationEvent(Base):
+    """One apply or dry-run attempt — one row in the remediation_events table.
+
+    Append-only. Never updated or deleted. confirmed_count on KnownIssue is
+    derived as COUNT(*) WHERE known_issue_id = ? AND result = 'success'.
+    """
+
+    __tablename__ = "remediation_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    known_issue_id: Mapped[int] = mapped_column(Integer, ForeignKey("known_issues.id"))
+    # null when the apply was triggered without a specific drift event reference
+    drift_event_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("drift_events.id"), nullable=True
+    )
+    platform: Mapped[str] = mapped_column(String)
+    rendered_commands: Mapped[str] = mapped_column(String)
+    dry_run_diff: Mapped[str] = mapped_column(String)
+    # "success" | "failure" | "dry_run_only"
+    result: Mapped[str] = mapped_column(String)
+    # "user:<id>" | "scheduler" | "api"
+    applied_by: Mapped[str] = mapped_column(String)
+    applied_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    def __repr__(self):
+        return (
+            f"<RemediationEvent id={self.id} known_issue_id={self.known_issue_id} "
+            f"result={self.result!r}>"
+        )
