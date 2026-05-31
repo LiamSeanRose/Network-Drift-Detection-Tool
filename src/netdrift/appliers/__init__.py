@@ -11,4 +11,4 @@ stays cheap and does not pull in napalm/pygnmi; the heavy imports happen when
 registry.py loads each module on demand.
 """
 
-APPLIER_MODULES: tuple[str, ...] = ("arista",)
+APPLIER_MODULES: tuple[str, ...] = ("arista", "cisco")
