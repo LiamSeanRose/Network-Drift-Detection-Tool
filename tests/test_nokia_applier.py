@@ -138,6 +138,12 @@ def test_block_mgmt_interface_raises_for_mgmt0():
         _block_mgmt_interface(drift)
 
 
+def test_block_mgmt_interface_raises_for_mgmt0_subinterface():
+    drift = {"object": "interface:mgmt0.0", "field": "description", "intent": "mgmt"}
+    with pytest.raises(RemediationBlockedError, match="mgmt0.0"):
+        _block_mgmt_interface(drift)
+
+
 def test_block_mgmt_interface_allows_ethernet():
     drift = {"object": "interface:ethernet-1/1", "field": "description", "intent": "uplink"}
     _block_mgmt_interface(drift)  # must not raise
