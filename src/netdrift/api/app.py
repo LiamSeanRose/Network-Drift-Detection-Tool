@@ -51,6 +51,7 @@ from netdrift.storage.repository import (
     get_remediation_events,
     get_drifts,
     get_drift_history,
+    is_acknowledged,
     list_known_issues,
     save_known_issue,
     save_remediation_event,
@@ -365,6 +366,7 @@ def list_drifts(request: Request, response: Response,
                 "drift_kind": e.drift_kind,
             }),
             "known_fix": _known_fix_dict(issue, counts.get(issue.id, 0) if issue else 0),
+            "acknowledged": is_acknowledged(session, e.device, fp),
         })
 
     # A full page implies there may be more; point at the next one.
