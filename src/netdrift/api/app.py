@@ -45,6 +45,7 @@ from netdrift.storage.repository import (
     save_known_issue,
     save_remediation_event,
     set_auto_apply_enabled,
+    set_device_paused,
     update_known_issue_remediation,
 )
 
@@ -116,6 +117,12 @@ class AutoApplyIn(BaseModel):
 class RemediateRequest(BaseModel):
     """Request body for dry-run and apply endpoints."""
     drift_event_id: int
+
+
+class DeviceAutoApplyIn(BaseModel):
+    """Request body for PATCH /devices/{name}/auto-apply."""
+    paused: bool
+    reason: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -335,6 +342,43 @@ def patch_auto_apply(issue_id: int, body: AutoApplyIn,
         issue_id,
     )
     return _issue_dict(updated, confirmed_count(session, issue_id))
+
+
+# ---------------------------------------------------------------------------
+# Routes — per-device auto-apply kill-switch
+# ---------------------------------------------------------------------------
+
+def _device_setting_dict(setting) -> dict:
+    return {
+        "device_name": setting.device_name,
+        "auto_remediation_paused": setting.auto_remediation_paused,
+        "paused_at": setting.paused_at.isoformat() if setting.paused_at else None,
+        "paused_reason": setting.paused_reason,
+    }
+
+
+@app.patch("/devices/{device_name}/auto-apply")
+def patch_device_auto_apply(device_name: str, body: DeviceAutoApplyIn,
+                            session: Session = Depends(get_session)):
+    """Pause or resume auto-apply for one device — the per-device runtime
+    kill-switch.
+
+    Unlike the global AUTO_REMEDIATION_ENABLED env var (which needs a process
+    restart), this takes effect on the next poll cycle: run_auto_apply consults
+    is_device_paused() before dispatching any apply for the device. Use it to
+    stop auto-remediation on a device that auto-apply is actively harming.
+
+    404 if the device is not in devices.yml. API-only in v3.0; the dashboard
+    toggle is added in v3.5.
+    """
+    _get_device(device_name)  # 404 if the device is unknown
+    setting = set_device_paused(session, device_name, body.paused, body.reason)
+    session.commit()
+    logger.info(
+        "auto_remediation_paused set to %s for device=%r (applied_by=api)",
+        body.paused, device_name,
+    )
+    return _device_setting_dict(setting)
 
 
 # ---------------------------------------------------------------------------
