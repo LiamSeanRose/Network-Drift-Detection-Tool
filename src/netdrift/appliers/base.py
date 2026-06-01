@@ -8,6 +8,7 @@ What lives here:
     ApplyResult              — NamedTuple returned by every applier.
     Applier                  — typing.Protocol describing the callable shape.
     RemediationBlockedError  — raised when drift hits the do-not-auto-apply list.
+    ApplyVerificationError   — raised when a committed apply did not converge.
     DuplicatePlatformError   — raised when two appliers claim one platform.
     check_blocked()          — enforces the hard do-not-auto-apply list.
     register(...)            — decorator each applier applies to its apply fn.
@@ -58,6 +59,17 @@ class RemediationBlockedError(Exception):
     Raised by check_blocked() before any vendor code runs. Catching this at the
     orchestration layer is the expected pattern — it is not a crash, it is a
     deliberate refusal to proceed.
+    """
+
+
+class ApplyVerificationError(Exception):
+    """A live apply was committed but the device did not converge.
+
+    Raised by an applier when post-commit verification still shows a non-empty
+    diff (e.g. cisco_iosxe, which has no atomic config-session rollback). The
+    commit was issued and a rollback was attempted, but the device is not in the
+    intended state. The orchestration layer must treat this as a failed apply —
+    it must NOT be recorded as a success or counted toward confirmed_count.
     """
 
 

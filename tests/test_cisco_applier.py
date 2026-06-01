@@ -15,7 +15,11 @@ from netdrift.appliers.cisco import (
     _render_restore_intent,
     apply,
 )
-from netdrift.appliers.base import ApplyResult, RemediationBlockedError
+from netdrift.appliers.base import (
+    ApplyResult,
+    ApplyVerificationError,
+    RemediationBlockedError,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -268,15 +272,19 @@ def test_apply_post_commit_mismatch_logs_warning_and_attempts_rollback(
              "intent": "Uplink", "drift_kind": "value_mismatch"}
 
     with caplog.at_level(logging.WARNING, logger="netdrift.appliers.cisco"):
-        result = apply(remediation, drift, DEVICE, dry_run=False)
+        with pytest.raises(ApplyVerificationError):
+            apply(remediation, drift, DEVICE, dry_run=False)
 
-    assert result.applied is True
+    # A non-converged commit must NOT be reported as a success — it raises so the
+    # orchestration layer records a failure and does not bump confirmed_count.
     assert fake.rolled_back is True
     assert "Post-commit diff is non-empty" in caplog.text
 
 
-def test_apply_post_commit_rollback_failure_logs_warning(monkeypatch, caplog):
-    """Rollback failure is swallowed and logged — must not propagate."""
+def test_apply_post_commit_rollback_failure_raises_verification_error(monkeypatch, caplog):
+    """A failed rollback is swallowed and logged, but the non-converged apply still
+    surfaces as an ApplyVerificationError (the rollback's own error must not be what
+    propagates)."""
     fake = FakeNapalmCiscoConn(post_diff="+ some residual diff")
     monkeypatch.setattr("netdrift.appliers.cisco._napalm_conn", lambda device: fake)
 
@@ -292,9 +300,9 @@ def test_apply_post_commit_rollback_failure_logs_warning(monkeypatch, caplog):
              "intent": "Uplink", "drift_kind": "value_mismatch"}
 
     with caplog.at_level(logging.WARNING, logger="netdrift.appliers.cisco"):
-        result = apply(remediation, drift, DEVICE, dry_run=False)  # must not raise
+        with pytest.raises(ApplyVerificationError):
+            apply(remediation, drift, DEVICE, dry_run=False)
 
-    assert result.applied is True
     assert "rollback() failed" in caplog.text
 
 
