@@ -417,11 +417,13 @@ class FakeGNMIClient:
     returns an empty notification, the same as a real node with no data.
     """
 
-    def __init__(self, interface=None, network_instance=None, bgp=None, ospf=None):
+    def __init__(self, interface=None, network_instance=None, bgp=None, ospf=None,
+                 software_version="v22.11.2-32-g5c4e0cfa69"):
         self._interface = interface
         self._network_instance = network_instance
         self._bgp = bgp
         self._ospf = ospf
+        self._software_version = software_version
 
     def __enter__(self):
         return self
@@ -439,6 +441,8 @@ class FakeGNMIClient:
             return gnmi_response(self._bgp)
         if "ospf/instance" in key and self._ospf is not None:
             return gnmi_response(self._ospf)
+        if "software-version" in key and self._software_version is not None:
+            return gnmi_response(self._software_version)
         return {"notification": []}
 
 
@@ -528,8 +532,24 @@ def test_get_reality_top_level_shape():
     assert result["platform"] == "nokia_srlinux"
     assert set(result.keys()) == {
         "device", "platform", "collected_at", "interfaces", "vlans",
-        "bgp_neighbors", "ospf", "running_config",
+        "bgp_neighbors", "ospf", "running_config", "software_version",
     }
+
+
+def test_get_reality_software_version():
+    result = _run_get_reality()
+    assert result["software_version"] == "v22.11.2-32-g5c4e0cfa69"
+
+
+def test_get_reality_software_version_empty_when_path_absent():
+    fake = FakeGNMIClient(
+        interface=INTERFACE_PAYLOAD,
+        network_instance=NETWORK_INSTANCE_PAYLOAD,
+        software_version=None,
+    )
+    with patch("netdrift.collectors.nokia.gNMIclient", return_value=fake):
+        result = get_reality(DEVICE)
+    assert result["software_version"] == ""
 
 
 def test_get_reality_running_config_is_empty_by_design():

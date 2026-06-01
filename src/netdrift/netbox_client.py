@@ -240,6 +240,8 @@ def get_intent(device_name):
         }
 
     bgp_neighbors, ospf = _build_routing_from_context(device)
+    context = device.local_context_data or {}
+    software_version = context.get("software_version", "") or ""
 
     return {
         "device": device.name,
@@ -250,6 +252,7 @@ def get_intent(device_name):
         "bgp_neighbors": bgp_neighbors,
         "ospf": ospf,
         "running_config": _fetch_rendered_config(nb, device),
+        "software_version": software_version,
     }
 
 if __name__ == "__main__":

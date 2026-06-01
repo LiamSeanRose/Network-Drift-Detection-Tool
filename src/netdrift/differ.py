@@ -334,4 +334,21 @@ def diff(intent, reality):
                 "detected_at": _now(),
             })
 
+    # software_version drift. Skip if either side is "" — no intent means the
+    # operator has not pinned the version; empty reality means the collector
+    # could not retrieve it. Neither is drift.
+    intent_ver = intent.get("software_version", "")
+    reality_ver = reality.get("software_version", "")
+    if intent_ver and reality_ver:
+        if intent_ver != reality_ver:
+            drifts.append({
+                "object": "device",
+                "field": "software_version",
+                "intent": intent_ver,
+                "reality": reality_ver,
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
     return drifts
