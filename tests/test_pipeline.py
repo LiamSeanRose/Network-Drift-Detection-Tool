@@ -16,7 +16,7 @@ from sqlalchemy.pool import StaticPool
 
 from netdrift.pipeline import run_drift_check
 from netdrift.storage.models import Base
-from netdrift.storage.repository import get_drifts, set_device_paused
+from netdrift.storage.repository import device_last_collected, get_drifts, set_device_paused
 
 
 def _state(interfaces=None, vlans=None, bgp_neighbors=None, ospf=None, platform="arista_eos"):
@@ -89,6 +89,23 @@ def test_pipeline_saves_drift_when_intent_and_reality_differ(session_factory):
         rows = get_drifts(s)
     assert len(rows) == 1
     assert rows[0].field == "enabled"
+
+
+def test_pipeline_records_successful_collection(session_factory):
+    """A completed run_drift_check stamps last_collected_at for the device —
+    the signal device_unreachable detection relies on."""
+    device = {"name": "core-sw-01"}
+    state = _state({"Ethernet1": _iface(enabled=True)})
+
+    run_drift_check(
+        device,
+        get_intent=lambda name: state,
+        collectors={"arista_eos": lambda dev: state},
+        session_factory=session_factory,
+    )
+
+    with session_factory._Session() as s:
+        assert device_last_collected(s, "core-sw-01") is not None
 
 
 def test_pipeline_saves_nothing_when_states_match(session_factory):
