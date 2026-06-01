@@ -111,3 +111,18 @@ def test_acknowledge_requires_api_key(ctx):
                        json={"acknowledged_until": None},
                        headers={"X-API-Key": ""})
     assert resp.status_code == 401
+
+
+def test_get_drifts_acknowledged_false_before_ack(ctx):
+    client, _, _ = ctx
+    rows = client.get("/drifts").json()
+    assert rows  # the fixture seeded one event
+    assert all(r["acknowledged"] is False for r in rows)
+
+
+def test_get_drifts_marks_acknowledged_after_ack(ctx):
+    client, _, event_id = ctx
+    client.post(f"/drifts/{event_id}/acknowledge", json={"acknowledged_until": None})
+    rows = client.get("/drifts").json()
+    matching = [r for r in rows if r["id"] == event_id]
+    assert matching and matching[0]["acknowledged"] is True
