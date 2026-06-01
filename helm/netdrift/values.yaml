@@ -14,11 +14,27 @@ api:
   service:
     type: ClusterIP
     port: 8001
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
 
 # -- Scheduler / worker
 scheduler:
   # Minutes between scheduled drift polls.
   interval: 5
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      # Higher than the API: the scheduler opens NAPALM/gNMI connections and
+      # runs the diff + auto-apply loop for every device on each poll cycle.
+      memory: 512Mi
 
 # -- Optional Ingress for the API
 ingress:
@@ -26,6 +42,12 @@ ingress:
   className: ""
   annotations: {}
   host: netdrift.local
+  # TLS is required for any internet-facing deployment. Set enabled=true and
+  # provide a secretName pointing to a TLS Secret (e.g. from cert-manager).
+  # Do not expose the API over plain HTTP on an untrusted network.
+  tls:
+    enabled: false
+    secretName: ""
 
 # -- NetBox connection details (required)
 netbox:
