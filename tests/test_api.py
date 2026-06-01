@@ -81,6 +81,12 @@ def test_drifts_preserves_json_types(client):
     assert isinstance(vlan_event["intent"], int)
 
 
+def test_drifts_includes_platform_field(client):
+    response = client.get("/drifts")
+    for event in response.json():
+        assert "platform" in event
+
+
 def test_drifts_filters_by_device(client):
     response = client.get("/drifts?device=core-sw-02")
     events = response.json()

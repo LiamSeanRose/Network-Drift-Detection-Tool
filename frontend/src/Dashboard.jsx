@@ -96,7 +96,7 @@ export default function Dashboard() {
     setAuditLogFor(issueId)
     setAuditLogLoading(true)
     fetch(`/known-issues/${issueId}/remediation-events`)
-      .then((r) => r.json())
+      .then((r) => { if (!r.ok) throw new Error(`API returned ${r.status}`); return r.json() })
       .then((data) => { setAuditLog(data); setAuditLogLoading(false) })
       .catch(() => { setAuditLog([]); setAuditLogLoading(false) })
   }, [auditLogFor])
