@@ -36,8 +36,9 @@ _log = logging.getLogger(__name__)
 
 GNMI_PORT = 57400
 
-# SR Linux out-of-band management interface.
-_MGMT_INTERFACES = frozenset({"mgmt0"})
+# SR Linux out-of-band management interfaces.  The prefix check catches mgmt0
+# and its logical sub-interface mgmt0.0 (used in some gNMI path contexts).
+_MGMT_INTERFACES = frozenset({"mgmt0", "mgmt0.0"})
 
 
 def _block_mgmt_interface(drift: dict) -> None:
@@ -45,7 +46,7 @@ def _block_mgmt_interface(drift: dict) -> None:
     obj = drift.get("object", "")
     if obj.startswith("interface:"):
         iface = obj.split(":", 1)[1]
-        if iface in _MGMT_INTERFACES:
+        if iface in _MGMT_INTERFACES or iface.startswith("mgmt"):
             raise RemediationBlockedError(
                 f"Interface '{iface}' is a management interface; "
                 "remediation of management interfaces is prohibited."
