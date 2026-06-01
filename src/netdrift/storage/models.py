@@ -79,6 +79,34 @@ class KnownIssue(Base):
         return f"<KnownIssue id={self.id} fingerprint={self.fingerprint!r}>"
 
 
+class DeviceSetting(Base):
+    """Per-device operational settings — one row per device, keyed by name.
+
+    Backs the per-device auto-apply kill-switch (v3.0 Feature 3). The key,
+    ``device_name``, is the device's name in devices.yml (the same value
+    pipeline.run_drift_check passes as ``device["name"]``), not the NetBox slug
+    — confirmed against auto_apply.run_auto_apply's is_device_paused_fn seam.
+
+    Absence of a row means "not paused": the safe default. A row is created
+    lazily the first time a device is paused.
+    """
+
+    __tablename__ = "device_settings"
+
+    device_name: Mapped[str] = mapped_column(String, primary_key=True)
+    auto_remediation_paused: Mapped[bool] = mapped_column(Boolean, default=False)
+    paused_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    paused_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+
+    def __repr__(self):
+        return (
+            f"<DeviceSetting device_name={self.device_name!r} "
+            f"paused={self.auto_remediation_paused}>"
+        )
+
+
 class RemediationEvent(Base):
     """One apply or dry-run attempt — one row in the remediation_events table.
 
