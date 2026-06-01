@@ -22,7 +22,7 @@ v2.5 environment variables:
 
 import logging
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
@@ -39,6 +39,7 @@ from netdrift.storage.database import get_sessionmaker
 from netdrift.webhook import WebhookDispatcher
 from netdrift.storage.repository import (
     confirmed_count,
+    create_acknowledgement,
     create_api_key,
     delete_api_key,
     get_drift_event,
@@ -68,6 +69,10 @@ AUTO_REMEDIATION_ENABLED: bool = (
     os.environ.get("AUTO_REMEDIATION_ENABLED", "false").lower() == "true"
 )
 CONFIRM_THRESHOLD: int = int(os.environ.get("CONFIRM_THRESHOLD", "3"))
+
+# v3.5: the longest an acknowledgement may suppress alerting. A drift silenced
+# forever by accident is a liability, so an explicit expiry is capped.
+MAX_ACK_DAYS: int = 90
 
 # devices.yml lives at the repo root (three package levels up from this file).
 _DEVICES_FILE = Path(__file__).resolve().parents[3] / "devices.yml"
@@ -136,6 +141,11 @@ class ApiKeyIn(BaseModel):
     """Request body for POST /api-keys."""
     name: str
     expires_at: datetime | None = None  # null = never expires
+
+
+class AcknowledgeIn(BaseModel):
+    """Request body for POST /drifts/{id}/acknowledge."""
+    acknowledged_until: datetime | None = None  # null = permanent
 
 
 # ---------------------------------------------------------------------------
@@ -330,6 +340,61 @@ def list_drifts(device: str | None = None, limit: int = 100,
             "known_fix": _known_fix_dict(issue, counts.get(issue.id, 0) if issue else 0),
         })
     return rows
+
+
+def _ack_dict(ack) -> dict:
+    """Serialize an Acknowledgement row to a response dict."""
+    return {
+        "id": ack.id,
+        "device": ack.device,
+        "fingerprint": ack.fingerprint,
+        "acknowledged_until": (
+            ack.acknowledged_until.isoformat() if ack.acknowledged_until else None
+        ),
+        "created_at": ack.created_at.isoformat(),
+    }
+
+
+@app.post("/drifts/{event_id}/acknowledge")
+def acknowledge_drift(event_id: int, body: AcknowledgeIn,
+                      session: Session = Depends(get_session)):
+    """Acknowledge a drift event — "this is intentional, stop alerting".
+
+    Recorded against the event's (device, fingerprint), not its row id, so the
+    acknowledgement persists across poll cycles. An active acknowledgement
+    suppresses webhook dispatch, SLA evaluation, and auto-apply for the matching
+    drift pattern. acknowledged_until=null is permanent; a past date or a window
+    longer than MAX_ACK_DAYS (90) is rejected with 422.
+    """
+    event = get_drift_event(session, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail=f"Drift event {event_id} not found.")
+
+    until = body.acknowledged_until
+    if until is not None:
+        if until.tzinfo is None:
+            until = until.replace(tzinfo=timezone.utc)
+        now = datetime.now(tz=timezone.utc)
+        if until <= now:
+            raise HTTPException(
+                status_code=422, detail="acknowledged_until must be in the future."
+            )
+        if until > now + timedelta(days=MAX_ACK_DAYS):
+            raise HTTPException(
+                status_code=422,
+                detail=f"acknowledged_until may be at most {MAX_ACK_DAYS} days in the future.",
+            )
+
+    fp = make_fingerprint({
+        "object": event.object_ref, "field": event.field, "drift_kind": event.drift_kind,
+    })
+    ack = create_acknowledgement(session, event.device, fp, acknowledged_until=until)
+    session.commit()
+    logger.info(
+        "drift acknowledged: device=%r fingerprint=%r until=%s (applied_by=api)",
+        event.device, fp, until.isoformat() if until else "permanent",
+    )
+    return _ack_dict(ack)
 
 
 # ---------------------------------------------------------------------------

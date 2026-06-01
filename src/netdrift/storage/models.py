@@ -139,6 +139,38 @@ class ApiKey(Base):
         return f"<ApiKey id={self.id} name={self.name!r} hint={self.key_hint!r}>"
 
 
+class Acknowledgement(Base):
+    """One drift acknowledgement — "this drift is intentional, stop alerting".
+
+    Keyed by (device, fingerprint) rather than a drift_event id: DriftEvent rows
+    are immutable and recreated on every poll cycle, so an ack tied to a row id
+    would be silently lost on the next poll. The fingerprint is the same v2.0
+    signature (object_type|field|drift_kind) used for known-issue matching, so an
+    ack persists across cycles and follows the drift pattern, not a single row.
+
+    An ack is *active* when ``acknowledged_until`` is null (permanent) or in the
+    future. Active acks suppress webhook dispatch, SLA evaluation, and auto-apply
+    for the matching (device, fingerprint).
+    """
+
+    __tablename__ = "acknowledgements"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    device: Mapped[str] = mapped_column(String, index=True)
+    fingerprint: Mapped[str] = mapped_column(String, index=True)
+    # null = permanent (never expires).
+    acknowledged_until: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    def __repr__(self):
+        return (
+            f"<Acknowledgement id={self.id} device={self.device!r} "
+            f"fingerprint={self.fingerprint!r} until={self.acknowledged_until}>"
+        )
+
+
 class RemediationEvent(Base):
     """One apply or dry-run attempt — one row in the remediation_events table.
 
