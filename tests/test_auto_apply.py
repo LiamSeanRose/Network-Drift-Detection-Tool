@@ -16,7 +16,7 @@ from netdrift.appliers.base import ApplyResult, RemediationBlockedError
 from netdrift.auto_apply import FAILURE_THRESHOLD, AutoApplyOutcome, run_auto_apply
 from netdrift.storage.database import create_all, get_sessionmaker
 from netdrift.storage.models import KnownIssue
-from netdrift.storage.repository import save_known_issue, set_auto_apply_enabled
+from netdrift.storage.repository import save_known_issue, set_auto_apply_enabled, set_device_paused
 
 
 # ---------------------------------------------------------------------------
@@ -133,6 +133,19 @@ def test_kill_switch_false_returns_empty(monkeypatch, session_factory):
 def test_empty_drifts_returns_empty(monkeypatch, session_factory):
     monkeypatch.setenv("AUTO_REMEDIATION_ENABLED", "true")
     result = run_auto_apply([], DEVICE, session_factory,
+                            applier_fn=_success_applier_fn)
+    assert result == []
+
+
+def test_per_device_pause_via_real_repository(monkeypatch, session_factory):
+    # Verify the default is_device_paused_fn actually consults device_settings.
+    monkeypatch.setenv("AUTO_REMEDIATION_ENABLED", "true")
+    _make_issue(session_factory)
+    with session_factory() as session:
+        set_device_paused(session, "core-sw-01", True, reason="test")
+        session.commit()
+    # No applier_fn override — uses the real _default_is_device_paused.
+    result = run_auto_apply([DRIFT], DEVICE, session_factory,
                             applier_fn=_success_applier_fn)
     assert result == []
 
