@@ -388,6 +388,71 @@ def test_apply_records_failure_event_on_applier_error(client, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# v3.0 — API-path webhook dispatch on apply results
+# ---------------------------------------------------------------------------
+
+class _FakeDispatcher:
+    """Records fire() calls regardless of WEBHOOK_URL, so the test can assert
+    dispatch happened without standing up a real receiver."""
+
+    def __init__(self):
+        self.fired = []
+
+    def fire(self, event_type, payload):
+        self.fired.append((event_type, payload))
+
+
+_RESTORE_INTENT = {
+    "kind": "restore_intent", "schema_version": 1,
+    "object_type": "interface", "field": "enabled", "drift_kinds": ["value_mismatch"],
+}
+
+
+def test_apply_success_fires_apply_success_webhook(client, monkeypatch):
+    fake = _FakeDispatcher()
+    monkeypatch.setattr("netdrift.api.app._webhook_dispatcher", fake)
+
+    issue_id = _create_known_issue(client, remediation=_RESTORE_INTENT).json()["id"]
+    drift_id = client.get("/drifts").json()[0]["id"]
+    resp = client.post(
+        f"/known-issues/{issue_id}/remediate/apply",
+        json={"drift_event_id": drift_id},
+    )
+    assert resp.status_code == 200
+
+    # TestClient runs BackgroundTasks synchronously after the response.
+    events = [e for e, _ in fake.fired]
+    assert "apply_success" in events
+    payload = next(p for e, p in fake.fired if e == "apply_success")
+    assert payload["device"] == "core-sw-01"
+    assert "timestamp" in payload and "detail" in payload
+
+
+def test_apply_failure_fires_apply_failure_webhook(client, monkeypatch):
+    def failing_apply(remediation, drift, device, *, dry_run=False):
+        raise RuntimeError("NAPALM connection refused")
+
+    applier_base._reset_registry()
+    applier_registry._reset()
+    applier_base.register("arista_eos")(failing_apply)
+
+    fake = _FakeDispatcher()
+    monkeypatch.setattr("netdrift.api.app._webhook_dispatcher", fake)
+
+    issue_id = _create_known_issue(client, remediation=_RESTORE_INTENT).json()["id"]
+    drift_id = client.get("/drifts").json()[0]["id"]
+    resp = client.post(
+        f"/known-issues/{issue_id}/remediate/apply",
+        json={"drift_event_id": drift_id},
+    )
+    assert resp.status_code == 502  # failure still surfaces as 502
+
+    # Failure fires directly (the 502 short-circuits BackgroundTasks).
+    events = [e for e, _ in fake.fired]
+    assert "apply_failure" in events
+
+
+# ---------------------------------------------------------------------------
 # GET /known-issues/{id}/remediation-events
 # ---------------------------------------------------------------------------
 
