@@ -39,12 +39,14 @@ services:
   postgres:
     image: postgres:16
     environment:
-      POSTGRES_PASSWORD: devpassword
+      # No default: compose aborts if POSTGRES_PASSWORD is unset (see .env.example).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env (see .env.example)}
       POSTGRES_DB: netdrift
     ports:
-      # Expose Postgres on the host too, so you can still connect from the
-      # laptop (psql, the smoke tests) at localhost:5432.
-      - "5432:5432"
+      # Bound to localhost only — the database must not be reachable from off-host
+      # even if the compose stack runs on an internet-facing machine. You can
+      # still connect from the laptop (psql, the smoke tests) at localhost:5432.
+      - "127.0.0.1:5432:5432"
     volumes:
       # Persist the database across `docker compose down`/`up` so drift history
       # is not lost when the stack restarts.
@@ -59,7 +61,7 @@ services:
     build: .
     command: alembic upgrade head
     environment:
-      DATABASE_URL: postgresql+psycopg://postgres:devpassword@postgres:5432/netdrift
+      DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@postgres:5432/netdrift
     depends_on:
       postgres:
         condition: service_healthy
@@ -68,7 +70,7 @@ services:
     command: uvicorn netdrift.api.app:app --host 0.0.0.0 --port 8001
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg://postgres:devpassword@postgres:5432/netdrift
+      DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@postgres:5432/netdrift
       NETBOX_URL: ${NETBOX_URL:-}
       NETBOX_TOKEN: ${NETBOX_TOKEN:-}
       # v2.5/v3.0 auto-remediation + webhooks. See .env.example for meanings.
@@ -98,7 +100,7 @@ services:
     command: python -m netdrift.scheduler --interval 5
     restart: unless-stopped
     environment:
-      DATABASE_URL: postgresql+psycopg://postgres:devpassword@postgres:5432/netdrift
+      DATABASE_URL: postgresql+psycopg://postgres:${POSTGRES_PASSWORD}@postgres:5432/netdrift
       NETBOX_URL: ${NETBOX_URL:-}
       NETBOX_TOKEN: ${NETBOX_TOKEN:-}
       # v2.5/v3.0 auto-remediation + webhooks. See .env.example for meanings.

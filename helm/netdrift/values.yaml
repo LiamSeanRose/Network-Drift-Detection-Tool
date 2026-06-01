@@ -49,8 +49,10 @@ postgresql:
   auth:
     database: netdrift
     username: netdrift
-    # Set a strong password — do not leave this as the default in production.
-    password: "changeme"
+    # No default password. You MUST set this at install time, e.g.
+    #   helm install netdrift ./helm/netdrift --set postgresql.auth.password=<strong>
+    # The chart fails to render if it is left empty (see _helpers.tpl).
+    password: ""
   primary:
     persistence:
       size: 5Gi
