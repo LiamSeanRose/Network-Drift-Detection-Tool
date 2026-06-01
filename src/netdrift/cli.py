@@ -19,6 +19,8 @@ import yaml
 from netdrift import differ
 from netdrift.collectors import registry
 from netdrift.pipeline import _resolve_intent_fn
+from netdrift.storage.database import get_sessionmaker
+from netdrift.storage.repository import create_api_key as _create_api_key_in_db
 
 # devices.yml lives at the repo root, two levels up from this file
 # (src/netdrift/cli.py -> src/netdrift -> src -> repo root).
@@ -59,12 +61,48 @@ def print_drift(device_name, drift):
         print()
 
 
+def _cmd_create_api_key(argv, session_factory=None):
+    """Bootstrap a new API key and print it once to stdout."""
+    parser = argparse.ArgumentParser(
+        prog="driftcheck create-api-key",
+        description=(
+            "Create an API key and print it once. "
+            "Store it somewhere safe — it is never shown again."
+        ),
+    )
+    parser.add_argument("--name", required=True, help="human label for this key (e.g. 'admin')")
+    args = parser.parse_args(argv)
+
+    if session_factory is None:
+        try:
+            session_factory = get_sessionmaker()
+        except RuntimeError as e:
+            sys.exit(f"Error: {e}")
+
+    try:
+        with session_factory() as session:
+            raw_key, _ = _create_api_key_in_db(session, args.name)
+            session.commit()
+    except Exception as e:
+        sys.exit(f"Error creating API key: {e}")
+
+    print(raw_key)
+
+
 def main(argv=None, collectors=None):
     """Run a one-shot drift check for one device.
 
     `collectors` defaults to the registry-backed COLLECTORS table; tests inject
     a fake dict. `argv` defaults to sys.argv; tests pass an explicit list.
     """
+    # Materialize argv so we can inspect it before the drift-check parser runs.
+    if argv is None:
+        argv = sys.argv[1:]
+
+    if argv and argv[0] == "create-api-key":
+        _cmd_create_api_key(argv[1:])
+        return
+
     if collectors is None:
         collectors = COLLECTORS
 
