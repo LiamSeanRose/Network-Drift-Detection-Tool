@@ -48,9 +48,12 @@ Five decisions made by design council that differ from the original rough outlin
 | v3.75 | Juniper JunOS support | 1 — Liam parallel track | 3 weeks (Liam only) |
 | v4.0 | Community pattern library | 2 — Grows project reach | 4–6 weeks |
 | v4.5 | Advanced SLA + Juniper advanced | 2 — Grows project reach | 6–8 weeks |
+| v4.75 | Tunnel/VPN/GRE/MPLS drift | 2 — Liam parallel track | 3–4 weeks (Liam only) |
 | v5.0 | Fuzzy/semantic fingerprint matching | 3 — Genuinely novel | 3–4 months (after corpus) |
+| `netmap` | Network discovery + topology (separate tool) | 3 — Separate repo | TBD |
 
 v3.75 runs in parallel with v3.0–v3.5. It targets merge before v4.0 opens.
+v4.75 runs in parallel with v4.5. It targets merge before v5.0 opens.
 
 ---
 
@@ -504,6 +507,7 @@ to `docs/schema.md`. This is deferred to a post-v4.0 schema call with joint sign
 | Arista-specific patterns (MLAG, EOS defaults, etc.) | Liam | |
 | `patterns/README.md` — YAML field reference | Matthew | Required before `CONTRIBUTING.md` links to it |
 | `CONTRIBUTING.md` — pattern submission section | Matthew (draft) + Liam (vendor section) | Must merge before release tag |
+| Device status card grid in dashboard | Matthew | Cards per known device: drift count by severity, last-checked, "in NetBox?" indicator, click → slide-out detail panel. Uses existing `/drifts?device=`, zero schema change. (Design council 2026-06-01) |
 | README + CHANGELOG.md v4.0 + `docs/PROJECT_PLAN.md §15` | Matthew (release shepherd) | |
 
 #### Paired Seams
@@ -542,6 +546,55 @@ v3.5 and v3.75 are tagged and both partners have agreed on scope.)*
 - `sla_resolved` webhook event when drift clears after an SLA breach was fired
 - JunOS IRB→VLAN mapping if deferred from v3.75 (Liam)
 - QFX-specific datacenter features if there is demand (Liam)
+
+---
+
+### v4.75 — Tunnel / VPN / GRE / MPLS Drift (parallel Liam track)
+
+**Theme:** Extend drift detection to overlay protocols — GRE, VTI, IPsec tunnels, MPLS LDP
+sessions. Same pattern as v3.75: Liam-only, runs in parallel with v4.5, targets merge
+before v5.0 opens.
+
+**Dependency gate:**
+- v4.0 tagged (community patterns stabilised — tunnel YAML patterns can be included in the
+  bundle from day one)
+- Joint schema sign-off on the `tunnels` block shape before any branch opens (one call,
+  analogous to the `software_version` verbal agreement)
+
+**Design decisions (from design council 2026-06-01):**
+- The `tunnels` key is **optional at the top level**, same convention as `bgp_neighbors`
+  and `ospf`. Absent key = feature not enabled on this device = no diff noise.
+- **No NAPALM tunnel getter exists.** This is per-vendor CLI/gNMI parsing:
+  - Arista EOS: `show interfaces tunnel` / `show ip gre` via eAPI
+  - Cisco IOS-XE: `show crypto ipsec sa` / `show interfaces tunnel` / `show mpls ldp neighbor` via NAPALM CLI
+  - Juniper JunOS: NETCONF RPC or CLI (confirm best path in lab)
+  - Nokia SR Linux: openconfig paths via pygnmi (confirm path in lab)
+- Severity: tunnel-down when intent says up → `critical`; config mismatch (mode, peer) → `warning`.
+
+#### v4.75 Ownership Table
+
+| Work stream | Owner |
+|---|---|
+| `tunnels` schema block design | Joint sign-off (one call before branch opens) |
+| `collectors/arista.py` — tunnel reality | Liam |
+| `collectors/cisco.py` — tunnel reality | Liam |
+| `collectors/junos.py` — tunnel reality | Liam |
+| `collectors/nokia.py` — tunnel reality | Liam |
+| `netbox_client.py` — tunnel intent from `local_context_data` | Liam |
+| `differ.py` — tunnel diff rules | Matthew |
+| `tests/test_differ.py` + collector tests | Both (pattern follows `software_version`) |
+| `docs/schema.md` Section 2 update | Joint sign-off |
+| Initial tunnel patterns in `patterns/` | Liam (vendor section) + Matthew (diff rules) |
+| README vendor capability table update | Liam |
+
+#### v4.75 Definition of Done
+
+- [ ] `collectors/<vendor>.py` returns schema-valid `tunnels` block (or absent key) for all 4 vendors. Verified by fixture tests.
+- [ ] `differ.py` produces `critical` drift when a tunnel is down that intent says should be up; `warning` for config mismatches.
+- [ ] Devices without tunnels produce zero diff noise. Verified in test.
+- [ ] `docs/schema.md` Section 2 updated with `tunnels` shape (joint sign-off).
+- [ ] At least 4 tunnel patterns added to `patterns/`.
+- [ ] All existing tests still pass. `ruff check .` passes.
 
 ---
 
@@ -606,6 +659,35 @@ Fuzzy matching is behind a feature flag `FUZZY_MATCHING_ENABLED` (default `false
 - [ ] `GET /drifts` includes `match_confidence: float | null` (null = no match, 1.0 = exact, 0.0–1.0 = fuzzy). Verified in `test_api.py`.
 - [ ] Migration re-fingerprints `known_issues`; `legacy_fingerprint` column preserves the original value; migration is reversible via Alembic downgrade.
 - [ ] UI confidence score badge visible alongside known-fix suggestions; scores < 0.7 show a visual warning indicator.
+
+---
+
+## Separate Tools (GitHub org, not netdrift)
+
+### `netmap` — Network Discovery + Topology
+
+**Decision source:** Design council 2026-06-01. BLOCK on building this inside netdrift.
+See `~/.claude/councils/2026-06-01-netdrift-discovery-topology/log.md` for full rationale.
+
+**Status:** Not started. Opens after v4.75 (tunnel drift) proves out the collector transport
+reuse pattern, and when Liam has bandwidth beyond the main netdrift roadmap.
+
+**What it is:** A standalone CLI tool that discovers network topology via LLDP/CDP/ARP
+neighbor-walking from one or more seed devices and exports a topology artifact. Does NOT
+live in the netdrift repo or process. Shares the Postgres instance and reuses NAPALM/pygnmi
+transport but not the `get_reality()` pipeline.
+
+**Hard constraints (from council):**
+- Single seed, one hop in v1. No recursive auto-pivot with shared credentials.
+- "Seen but uncredentialed" is a first-class node state, not a failure.
+- Output: JSON/GraphML file + proposed NetBox import CSV. No live push in v1.
+- If push ever ships: `--dry-run` first, then `--push --confirm`, create-only, never PATCH,
+  guessed fields left null. Full audit log of every connection attempt and write.
+- LLDP/CDP data is unauthenticated input; every node carries provenance tag (`via=lldp|cdp|arp`).
+
+**Topology in the netdrift dashboard:** Deferred to v5.x. Requires LLDP schema seam
+(joint sign-off), multi-hop walk proven in `netmap`, and a graph library validated against
+real enterprise scale (force-directed layouts are unusable past ~15 nodes).
 
 ---
 
