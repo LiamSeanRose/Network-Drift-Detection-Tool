@@ -16,8 +16,9 @@ from pathlib import Path
 
 import yaml
 
-from netdrift import netbox_client, differ
+from netdrift import differ
 from netdrift.collectors import registry
+from netdrift.pipeline import _resolve_intent_fn
 
 # devices.yml lives at the repo root, two levels up from this file
 # (src/netdrift/cli.py -> src/netdrift -> src -> repo root).
@@ -27,22 +28,6 @@ DEVICES_FILE = Path(__file__).resolve().parents[2] / "devices.yml"
 # with pipeline.py. Adding a vendor is a new self-registering collector module
 # (collectors/base.py) — no edit here.
 COLLECTORS = registry.build_collectors()
-
-def _resolve_intent_fn():
-    """Return the get_intent callable for the configured source of truth.
-
-    Reads SOURCE_OF_TRUTH from the environment. Defaults to 'netbox'.
-    """
-    source = os.environ.get("SOURCE_OF_TRUTH", "netbox").lower()
-    if source == "nautobot":
-        from netdrift import nautobot_client
-        return nautobot_client.get_intent
-    if source == "netbox":
-        return netbox_client.get_intent
-    sys.exit(
-        f"Error: unknown SOURCE_OF_TRUTH '{source}'. "
-        f"Valid values: 'netbox', 'nautobot'."
-    )
 
 
 def load_devices(path=DEVICES_FILE):
@@ -101,7 +86,10 @@ def main(argv=None, collectors=None):
     # The collector needs a dict with name + connection details.
     device = {"name": device_name, **devices[device_name]}
 
-    get_intent = _resolve_intent_fn()
+    try:
+        get_intent = _resolve_intent_fn()
+    except ValueError as e:
+        sys.exit(f"Error: {e}")
     source_label = os.environ.get("SOURCE_OF_TRUTH", "netbox").capitalize()
     try:
         intent = get_intent(device_name)
