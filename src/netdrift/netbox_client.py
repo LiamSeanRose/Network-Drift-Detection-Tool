@@ -213,14 +213,19 @@ def get_intent(device_name):
     if device is None:
         raise ValueError(f"Device '{device_name}' not found in NetBox.")
 
+    # Fetch every IP on the device in a single query and group by interface id,
+    # rather than issuing one ip_addresses lookup per interface. The per-interface
+    # form is an N+1 that scales with port count — ~50 sequential round-trips on a
+    # 48-port chassis, on every poll cycle.
+    ips_by_interface = {}
+    for ip in nb.ipam.ip_addresses.filter(device_id=device.id):
+        ips_by_interface.setdefault(ip.assigned_object_id, []).append(ip.address)
+
     interfaces = {}
     # .filter returns every interface on this device.
     for nb_iface in nb.dcim.interfaces.filter(device_id=device.id):
         # IPs assigned to this interface, as a sorted list of CIDR strings.
-        ip_addresses = sorted(
-            ip.address
-            for ip in nb.ipam.ip_addresses.filter(interface_id=nb_iface.id)
-        )
+        ip_addresses = sorted(ips_by_interface.get(nb_iface.id, []))
 
         vlan_fields = _interface_vlan_fields(nb_iface)
         interfaces[nb_iface.name] = {
