@@ -22,17 +22,20 @@ def iface(**overrides):
     return base
 
 
-def state(interfaces=None, vlans=None, bgp_neighbors=None, ospf=None, running_config=""):
+def state(interfaces=None, vlans=None, bgp_neighbors=None, ospf=None,
+          running_config="", software_version=""):
     """A schema-complete device-state object wrapping the given interfaces
     and vlans (both default to empty). v0.3 adds bgp_neighbors and ospf;
     both default to the "no routing on this device" empty shape. v1.0 adds
-    running_config; defaults to "" (no template / no config collected)."""
+    running_config; defaults to "" (no template / no config collected).
+    software_version defaults to "" (not tracked)."""
     return {
         "interfaces": interfaces or {},
         "vlans": vlans or {},
         "bgp_neighbors": bgp_neighbors or {},
         "ospf": ospf or {"adjacencies": {}},
         "running_config": running_config,
+        "software_version": software_version,
     }
 
 
@@ -215,3 +218,40 @@ def test_config_normalization_strips_trailing_whitespace():
     intent = state(running_config="hostname core-sw-01  \nip routing\n")
     reality = state(running_config="hostname core-sw-01\nip routing\n")
     assert diff(intent, reality) == []
+
+
+# --- software_version field --------------------------------------------------
+
+def test_software_version_match_produces_no_drift():
+    intent = state(software_version="4.28.0F")
+    reality = state(software_version="4.28.0F")
+    assert diff(intent, reality) == []
+
+
+def test_software_version_mismatch_produces_drift():
+    intent = state(software_version="4.28.0F")
+    reality = state(software_version="4.26.2F")
+    result = diff(intent, reality)
+    assert len(result) == 1
+    assert result[0]["object"] == "device"
+    assert result[0]["field"] == "software_version"
+    assert result[0]["drift_kind"] == "value_mismatch"
+    assert result[0]["severity"] == "warning"
+    assert result[0]["intent"] == "4.28.0F"
+    assert result[0]["reality"] == "4.26.2F"
+
+
+def test_software_version_skipped_when_intent_empty():
+    intent = state(software_version="")
+    reality = state(software_version="4.26.2F")
+    assert diff(intent, reality) == []
+
+
+def test_software_version_skipped_when_reality_empty():
+    intent = state(software_version="4.28.0F")
+    reality = state(software_version="")
+    assert diff(intent, reality) == []
+
+
+def test_software_version_skipped_when_both_empty():
+    assert diff(state(), state()) == []
