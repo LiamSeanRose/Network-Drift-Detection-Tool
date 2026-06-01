@@ -94,7 +94,7 @@ class SyslogReceiver:
         now = time.monotonic()
 
         with self._lock:
-            if now - self._last_triggered.get(name, 0.0) < self._cooldown:
+            if now - self._last_triggered.get(name, float('-inf')) < self._cooldown:
                 return
             self._last_triggered[name] = now
 
