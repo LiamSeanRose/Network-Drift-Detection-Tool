@@ -14,6 +14,7 @@ from datetime import datetime, timedelta, timezone
 
 from netdrift.auth import KEY_PREFIX, generate_api_key, hash_api_key
 from netdrift.storage.models import (
+    Acknowledgement,
     ApiKey,
     DeviceSetting,
     DriftEvent,
@@ -356,5 +357,80 @@ def delete_api_key(session, key_id):
     if key is None:
         return False
     session.delete(key)
+    session.flush()
+    return True
+
+
+# ---------------------------------------------------------------------------
+# v3.5 — acknowledgements (suppress alerting on intentional drift)
+# ---------------------------------------------------------------------------
+
+def create_acknowledgement(session, device, fingerprint, acknowledged_until=None):
+    """Record an acknowledgement for a (device, fingerprint).
+
+    acknowledged_until=None means permanent. Does NOT commit. Caller is
+    responsible for validating the expiry window (the API rejects past dates and
+    windows longer than the configured maximum).
+    """
+    ack = Acknowledgement(
+        device=device,
+        fingerprint=fingerprint,
+        acknowledged_until=acknowledged_until,
+        created_at=datetime.now(tz=timezone.utc),
+    )
+    session.add(ack)
+    session.flush()
+    return ack
+
+
+def is_acknowledged(session, device, fingerprint, now=None) -> bool:
+    """True if an active acknowledgement exists for (device, fingerprint).
+
+    Active means acknowledged_until is null (permanent) or strictly after ``now``
+    (injectable for tests; defaults to UTC now). Consulted before webhook
+    dispatch, SLA evaluation, and auto-apply.
+    """
+    if now is None:
+        now = datetime.now(tz=timezone.utc)
+
+    acks = (
+        session.query(Acknowledgement)
+        .filter(
+            Acknowledgement.device == device,
+            Acknowledgement.fingerprint == fingerprint,
+        )
+        .all()
+    )
+    for ack in acks:
+        if ack.acknowledged_until is None:
+            return True
+        until = ack.acknowledged_until
+        if until.tzinfo is None:
+            until = until.replace(tzinfo=timezone.utc)
+        if until > now:
+            return True
+    return False
+
+
+def list_acknowledgements(session):
+    """Return all Acknowledgement rows, newest first."""
+    return (
+        session.query(Acknowledgement)
+        .order_by(Acknowledgement.created_at.desc())
+        .all()
+    )
+
+
+def delete_acknowledgement(session, ack_id) -> bool:
+    """Remove an acknowledgement (un-acknowledge). Returns True if a row was
+    removed. Does NOT commit."""
+    ack = (
+        session.query(Acknowledgement)
+        .filter(Acknowledgement.id == ack_id)
+        .one_or_none()
+    )
+    if ack is None:
+        return False
+    session.delete(ack)
     session.flush()
     return True
