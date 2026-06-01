@@ -24,6 +24,7 @@ from netdrift.appliers.base import RemediationBlockedError
 from netdrift.appliers.registry import get_applier
 from netdrift.storage.models import KnownIssue, RemediationEvent
 from netdrift.storage.repository import (
+    is_acknowledged,
     is_device_paused,
     save_remediation_event,
     set_auto_apply_enabled,
@@ -146,6 +147,13 @@ def run_auto_apply(
                 .one_or_none()
             )
             if issue is None:
+                continue
+
+            if is_acknowledged(session, device_name, fp):
+                _log.debug(
+                    "Auto-apply skipped (acknowledged): device=%r fingerprint=%r",
+                    device_name, fp,
+                )
                 continue
 
             remediation = issue.remediation or {}
