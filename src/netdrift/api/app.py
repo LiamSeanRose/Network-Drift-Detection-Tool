@@ -26,7 +26,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -38,7 +39,10 @@ from netdrift.storage.database import get_sessionmaker
 from netdrift.webhook import WebhookDispatcher
 from netdrift.storage.repository import (
     confirmed_count,
+    create_api_key,
+    delete_api_key,
     get_drift_event,
+    list_api_keys,
     get_known_issue_by_id,
     get_remediation_events,
     get_drifts,
@@ -49,6 +53,7 @@ from netdrift.storage.repository import (
     set_auto_apply_enabled,
     set_device_paused,
     update_known_issue_remediation,
+    verify_api_key,
 )
 
 logger = logging.getLogger(__name__)
@@ -127,6 +132,12 @@ class DeviceAutoApplyIn(BaseModel):
     reason: str | None = None
 
 
+class ApiKeyIn(BaseModel):
+    """Request body for POST /api-keys."""
+    name: str
+    expires_at: datetime | None = None  # null = never expires
+
+
 # ---------------------------------------------------------------------------
 # Session dependency
 # ---------------------------------------------------------------------------
@@ -148,6 +159,49 @@ def get_session():
         yield session
     finally:
         session.close()
+
+
+# ---------------------------------------------------------------------------
+# API-key authentication middleware (v3.5 Feature 5)
+# ---------------------------------------------------------------------------
+
+_MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    """Require a valid X-API-Key on every mutating request.
+
+    Auth model — a deliberate joint decision (Matthew + Liam), not an oversight:
+    GET/HEAD/OPTIONS requests are unauthenticated. Drift data (``GET /drifts``)
+    and the ``/health`` probe are public-by-default for self-hosted deployments.
+    Only mutating methods (POST/PUT/PATCH/DELETE) require a key, so every
+    current and future write endpoint is protected without per-route wiring.
+
+    The X-API-Key header value is never logged.
+    """
+    if request.method.upper() in _MUTATING_METHODS:
+        presented = request.headers.get("X-API-Key")
+        if not presented:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Missing API key. Provide a valid X-API-Key header."},
+            )
+        # Resolve a session the same way routes do, honoring dependency
+        # overrides so tests authenticate against their in-memory database.
+        session_factory = app.dependency_overrides.get(get_session, get_session)
+        gen = session_factory()
+        session = next(gen)
+        try:
+            if verify_api_key(session, presented) is None:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Invalid or expired API key."},
+                )
+            session.commit()  # persist last_used_at
+        finally:
+            gen.close()
+    return await call_next(request)
 
 
 # ---------------------------------------------------------------------------
@@ -627,3 +681,46 @@ def get_issue_remediation_events(issue_id: int, session: Session = Depends(get_s
     if issue is None:
         raise HTTPException(status_code=404, detail=f"Known issue {issue_id} not found.")
     return [_remediation_event_dict(ev) for ev in get_remediation_events(session, issue_id)]
+
+
+# ---------------------------------------------------------------------------
+# Routes — API keys (v3.5)
+# ---------------------------------------------------------------------------
+
+def _api_key_dict(key) -> dict:
+    """Serialize an ApiKey row for listing — never the raw key or its hash."""
+    return {
+        "id": key.id,
+        "name": key.name,
+        "key_hint": key.key_hint,
+        "created_at": key.created_at.isoformat(),
+        "last_used_at": key.last_used_at.isoformat() if key.last_used_at else None,
+        "expires_at": key.expires_at.isoformat() if key.expires_at else None,
+    }
+
+
+@app.post("/api-keys")
+def create_api_key_endpoint(body: ApiKeyIn, session: Session = Depends(get_session)):
+    """Mint a new API key. The raw key is returned exactly once, here — it is
+    never stored in plaintext and cannot be retrieved again. Requires a valid
+    X-API-Key (the first key is bootstrapped via the driftcheck CLI)."""
+    raw_key, key = create_api_key(session, body.name, expires_at=body.expires_at)
+    session.commit()
+    logger.info("API key created: id=%d name=%r (the raw key is shown once)", key.id, key.name)
+    return {**_api_key_dict(key), "key": raw_key}
+
+
+@app.get("/api-keys")
+def list_api_keys_endpoint(session: Session = Depends(get_session)):
+    """List API keys (metadata only — never the raw key or its hash)."""
+    return [_api_key_dict(k) for k in list_api_keys(session)]
+
+
+@app.delete("/api-keys/{key_id}")
+def delete_api_key_endpoint(key_id: int, session: Session = Depends(get_session)):
+    """Revoke an API key. The key 401s on its next request."""
+    if not delete_api_key(session, key_id):
+        raise HTTPException(status_code=404, detail=f"API key {key_id} not found.")
+    session.commit()
+    logger.info("API key revoked: id=%d", key_id)
+    return {"deleted": True, "id": key_id}
