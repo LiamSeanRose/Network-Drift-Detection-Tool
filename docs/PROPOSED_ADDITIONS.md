@@ -344,6 +344,173 @@ docs), Joint (design discussion on the differ change).
 
 ---
 
+## Dashboard UX Improvements
+
+Three additions to the existing React dashboard identified by the design council.
+All three work with data the tool already collects — no new backend seams required
+beyond what is noted. These are Matthew's frontend domain; Liam reviews for
+operational correctness.
+
+### UI-1. Per-Device Health Summary Cards
+
+**What it solves:** The current dashboard opens on a flat list of drift events across
+all devices. There is no answer to "which device is in the worst shape right now"
+without scanning the full table.
+
+**What it is:** Replace the 24h history panel with a grid of device cards — one per
+device — each showing:
+- Device name (monospace)
+- Current drift count broken down by severity: `2 critical · 3 warning · 1 info`
+- A mini sparkline for 24h trend (reuses existing history data)
+- A status dot: grey (clean), amber (warning drift), red pulse (critical drift)
+- Auto-apply status: `auto-apply: ON / OFF` in muted text
+
+Clicking a card filters the drift table to that device. A clear-filter affordance
+returns to all devices.
+
+**Implementation:** Refactor the existing `HistoryPanel` component. Group drift events
+by device on the client side, or add a `/drifts/summary` endpoint returning current
+counts per device. CSS grid, no new dependencies.
+
+**Ownership:** Matthew (frontend + optional API endpoint).
+
+**Effort:** 1–2 weeks.
+
+---
+
+### UI-2. Remediation Audit Trail — First-Class View
+
+**What it solves:** The remediation audit log is currently buried inside an expanded
+row in the drift table. When a manager, post-incident review, or change-management
+process asks "what did the tool apply and when?", there is no easy answer. Invisible
+audit trails make auto-apply feel unsafe to enable.
+
+**What it is:** A new `/audit` route (or a tab in the header) showing all remediation
+events across all devices chronologically:
+
+| When | Device | Drift pattern | Action | Result | Applied by |
+|------|--------|--------------|--------|--------|------------|
+| 2m ago | core-sw-01 | interface·description·value_mismatch | apply | ✓ success | auto |
+| 14m ago | core-sw-02 | vlan·name·value_mismatch | dry-run | ✓ | liam |
+
+Failure rows get a red left-edge bar (mirrors the severity bar on the drift table).
+Filter bar: by device, by result, by date range.
+
+**Implementation:** New route in the React app. The `RemediationEvent` rows are
+already written to Postgres on every apply — this is purely a new view over existing
+data. Add a `GET /remediation-events` endpoint or reuse `GET /known-issues/{id}/remediation-events`.
+
+**Ownership:** Matthew (frontend + API endpoint if needed).
+
+**Effort:** 1–2 weeks.
+
+---
+
+### UI-3. Drift Timeline — "What Changed When"
+
+**What it solves:** The 24h sparklines show drift counts but not the events behind
+them. "This device went from 0 to 7 drift events at 14:32 — what happened?" is
+currently unanswerable without scanning the full events table with a timestamp filter.
+
+**What it is:** An SVG timeline panel (sits between the device summary cards and the
+drift table) showing drift events as dots on a per-device horizontal timeline. The
+x-axis is time (last 24h), one row per device. Each dot is coloured by severity.
+Hovering a dot shows a tooltip: timestamp, field, severity, known fix attached?
+Remediation events that resolved drift appear as a checkmark on the same timeline.
+
+**Implementation:** SVG component in React. Requires the `/drifts/history` response
+to include event-level data (currently returns aggregated 5-minute buckets only) — a
+small backend change to add individual events alongside the bucket data, or a new
+`/drifts/timeline` endpoint.
+
+**Ownership:** Matthew (frontend SVG component + minor API change).
+
+**Effort:** 2–3 weeks.
+
+---
+
+## Public Hosting — Running the App Beyond Localhost
+
+Right now netdrift only runs on the local lab VM and is accessible at
+`localhost:5173` / `localhost:8001`. For a portfolio demo, employer review, or
+community testing, it needs to be reachable from outside.
+
+### The challenge
+
+A live netdrift instance needs:
+1. A running NetBox (or Nautobot) instance for intent
+2. Live network devices for reality collection (the cEOS/SR Linux lab)
+3. A Postgres database
+4. The FastAPI backend + APScheduler scheduler
+5. The React frontend
+
+The lab devices are on `172.20.20.x` — only reachable from within the lab VM. A
+public instance can't poll them directly unless there's a VPN or the VM is the host.
+
+### Option A — Demo mode with pre-seeded fixture data (recommended)
+
+Add a `DEMO_MODE=true` environment variable. When set, the API serves from a static
+pre-seeded Postgres database instead of polling live devices. The scheduler is
+disabled. The dashboard shows real-looking drift history, known issues, remediation
+events, and the full UI — but nothing changes unless you manually trigger it.
+
+The pre-seeded data comes from the existing lab fixture JSON files in `tests/fixtures/`
+plus a few hand-crafted `RemediationEvent` rows to show the full cycle. A one-time
+`driftcheck seed-demo` CLI command populates the demo database.
+
+The demo instance then runs on a cheap VPS (Hetzner CAX11 at ~€4/month, or Oracle
+Cloud always-free ARM tier at €0). Only the API and frontend containers need to run —
+no scheduler, no lab devices. The Postgres database is small (fixture data only).
+
+**This is the recommended approach.** A hosted demo where employers can click through
+the real UI is significantly more compelling than screenshots — and with demo mode it's
+zero-maintenance (no live devices, no NetBox to keep running, static data).
+
+**Ownership:** Matthew (demo mode flag in API + scheduler, seed-demo CLI), Liam
+(lab fixture data curation for the demo dataset).
+
+**Effort:** 1–2 weeks for demo mode + seeding. VPS setup: 1–2 hours.
+
+---
+
+### Option B — Full live instance on a VPS (with VPN to lab)
+
+Run the full stack on a public VPS with a WireGuard VPN tunnel back to the lab VM
+so the scheduler can reach the cEOS/Nokia devices. Shows real live drift from the
+real lab.
+
+**Pros:** The demo is real — actual drift from actual devices.
+**Cons:** The lab VM must be online 24/7. The VPN must stay up. A lab device
+misconfiguration shows up in the public demo. Requires hardening the public API
+(the v3.5 API key auth is a prerequisite before this is safe).
+
+**Recommended only after v3.5 ships** (API key auth + per-device SLA alerting make
+this safe to run publicly). Not the first step.
+
+---
+
+### Option C — Read-only public API, write operations gated
+
+Run the full stack on a VPS but configure the demo API key as read-only. `GET /drifts`,
+`GET /known-issues`, `GET /health`, and `GET /audit` are public. All write/apply
+endpoints require a real API key that isn't published. This is the right long-term
+posture once v3.5 ships.
+
+---
+
+### Recommended path
+
+1. **Now:** Build Option A (demo mode) and deploy to a free/cheap VPS. Link to it
+   from the landing page as "Live demo →".
+2. **After v3.5:** Switch to Option C (real data, read-only public API, writes require
+   key). This becomes the permanent hosted instance.
+
+The custom domain (`netdrift.dev` or similar, ~$10/year) points to the VPS. The
+static landing page and docs site are on GitHub/Cloudflare Pages. The live demo is
+on the VPS. Three separate things, all linked.
+
+---
+
 ## Summary Table
 
 | # | Item | Type | Effort | Dependency |
@@ -357,11 +524,15 @@ docs), Joint (design discussion on the differ change).
 | 7 | Network topology map | netdrift + React | 4–6 weeks | Schema sign-off ⚠ + #8 optional |
 | 8 | LLDP topology crawler (`netmap`) | New standalone tool | 2–4 weeks | None |
 | 9 | Git-based intent source | netdrift extension | 3–4 weeks | Joint design discussion |
+| UI-1 | Per-device health summary cards | React (Matthew) | 1–2 weeks | None |
+| UI-2 | Remediation audit trail view | React + API (Matthew) | 1–2 weeks | None |
+| UI-3 | Drift timeline with event dots | React + minor API (Matthew) | 2–3 weeks | None |
 | — | Portfolio landing page | Static HTML | 1–2 days | None |
+| — | Demo mode + VPS hosting | Backend flag + VPS | 1–2 weeks | None (Option A) |
 
 **Schema sign-off required (⚠):** Items 3 and 7 add fields to `docs/schema.md`.
 Both require a joint-review PR with sign-off from Liam and Matthew before any
 implementation branch is created — same process as all previous schema changes.
 
-**Items with no dependencies:** 1, 2, 6, 8, and the portfolio page can start any
-time, in any order, without waiting for roadmap milestones.
+**Items with no dependencies (start any time):** 1, 2, 6, 8, all three UI items,
+the portfolio landing page, and demo mode hosting.
