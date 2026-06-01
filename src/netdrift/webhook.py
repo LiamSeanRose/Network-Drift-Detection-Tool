@@ -31,7 +31,7 @@ import httpx
 
 logger = logging.getLogger("netdrift.webhook")
 
-DEFAULT_EVENTS = ("critical_drift", "apply_success", "apply_failure")
+DEFAULT_EVENTS = ("critical_drift", "apply_success", "apply_failure", "sla_breached")
 DEFAULT_QUEUE_SIZE = 100
 DEFAULT_TIMEOUT = 5
 DEFAULT_RATE_LIMIT_PER_MINUTE = 60
