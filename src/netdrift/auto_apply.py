@@ -23,7 +23,11 @@ from typing import NamedTuple
 from netdrift.appliers.base import RemediationBlockedError
 from netdrift.appliers.registry import get_applier
 from netdrift.storage.models import KnownIssue, RemediationEvent
-from netdrift.storage.repository import save_remediation_event, set_auto_apply_enabled
+from netdrift.storage.repository import (
+    is_device_paused,
+    save_remediation_event,
+    set_auto_apply_enabled,
+)
 
 _log = logging.getLogger(__name__)
 
@@ -80,9 +84,9 @@ def _consecutive_failures(session, known_issue_id: int) -> int:
 
 
 def _default_is_device_paused(device_name: str, session) -> bool:
-    # Returns False until the device_settings table (v3.0 Matthew task) is
-    # wired in. Replace this default once that migration lands.
-    return False  # noqa: PIE807
+    # Argument order is flipped vs repository.is_device_paused(session, device_name)
+    # to match the (device_name, session) convention this seam exposes.
+    return is_device_paused(session, device_name)
 
 
 def run_auto_apply(
