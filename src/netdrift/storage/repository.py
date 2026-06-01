@@ -317,6 +317,29 @@ def set_device_paused(session, device_name, paused, reason=None):
     return setting
 
 
+def record_collection(session, device_name, when=None):
+    """Stamp a successful collection for a device (upsert). Does NOT commit.
+
+    Creates the device_settings row if absent, preserving any existing pause
+    state. ``when`` defaults to UTC now. Backs device_unreachable detection.
+    """
+    if when is None:
+        when = datetime.now(tz=timezone.utc)
+    setting = get_device_setting(session, device_name)
+    if setting is None:
+        setting = DeviceSetting(device_name=device_name)
+        session.add(setting)
+    setting.last_collected_at = when
+    session.flush()
+    return setting
+
+
+def device_last_collected(session, device_name):
+    """Return the device's last successful collection time, or None."""
+    setting = get_device_setting(session, device_name)
+    return setting.last_collected_at if setting else None
+
+
 # ---------------------------------------------------------------------------
 # v3.5 — api_keys (REST API authentication)
 # ---------------------------------------------------------------------------

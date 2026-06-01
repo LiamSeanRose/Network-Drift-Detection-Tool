@@ -24,6 +24,7 @@ from netdrift.storage.models import Base
 from netdrift.storage.repository import (
     create_acknowledgement,
     create_alert_rule,
+    record_collection,
     save_drifts,
 )
 
@@ -159,3 +160,53 @@ def test_same_drift_pattern_alerts_once_per_run(session):
     breaches = evaluate_sla(session, fake, now=NOW)
     assert len(fake.fired) == 1
     assert len(breaches) == 1
+
+
+# ---------------------------------------------------------------------------
+# device_unreachable substitution
+# ---------------------------------------------------------------------------
+
+def test_unreachable_device_fires_device_unreachable_not_breach(session):
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20)
+    session.commit()  # no collection ever recorded -> unreachable
+
+    fake = FakeDispatcher()
+    evaluate_sla(session, fake, now=NOW, unreachable_after_minutes=10)
+
+    assert [e for e, _ in fake.fired] == ["device_unreachable"]
+
+
+def test_reachable_device_fires_sla_breach(session):
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20)
+    record_collection(session, "core-sw-01", NOW - timedelta(minutes=1))  # fresh
+    session.commit()
+
+    fake = FakeDispatcher()
+    evaluate_sla(session, fake, now=NOW, unreachable_after_minutes=10)
+
+    assert [e for e, _ in fake.fired] == ["sla_breached"]
+
+
+def test_no_unreachable_threshold_always_breaches(session):
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20)
+    session.commit()  # uncollected, but no threshold passed -> reachability not checked
+
+    fake = FakeDispatcher()
+    evaluate_sla(session, fake, now=NOW)  # unreachable_after_minutes defaults None
+
+    assert [e for e, _ in fake.fired] == ["sla_breached"]
+
+
+def test_unreachable_fires_once_per_device(session):
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20, field="enabled")
+    _seed_drift(session, minutes_ago=20, field="description")  # different fingerprint
+    session.commit()
+
+    fake = FakeDispatcher()
+    evaluate_sla(session, fake, now=NOW, unreachable_after_minutes=10)
+
+    assert [e for e, _ in fake.fired] == ["device_unreachable"]

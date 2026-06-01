@@ -25,7 +25,7 @@ from netdrift import differ, netbox_client
 from netdrift.auto_apply import run_auto_apply
 from netdrift.collectors import registry
 from netdrift.storage.database import get_sessionmaker
-from netdrift.storage.repository import is_device_paused, save_drifts
+from netdrift.storage.repository import is_device_paused, record_collection, save_drifts
 
 # Single source of truth for vendor dispatch: the collector registry (shared
 # with cli.py). Adding a vendor is a new self-registering collector module
@@ -115,6 +115,10 @@ def run_drift_check(device, *, get_intent=None,
 
     with session_factory() as session:
         save_drifts(session, drifts)
+        # Stamp a successful collection (this point is only reached when intent,
+        # reality, diff, and persist all succeeded) — the signal device_unreachable
+        # SLA detection reads.
+        record_collection(session, device_name)
         session.commit()
 
     # v3.0: after persisting, run the auto-apply loop. It opens its own session

@@ -99,6 +99,11 @@ class DeviceSetting(Base):
         DateTime(timezone=True), nullable=True
     )
     paused_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    # v3.5: when the pipeline last completed a successful collection for this
+    # device. null = never collected. Drives device_unreachable SLA detection.
+    last_collected_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     def __repr__(self):
         return (

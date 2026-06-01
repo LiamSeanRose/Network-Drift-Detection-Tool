@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 
 from netdrift.fingerprint import fingerprint as make_fingerprint
 from netdrift.storage.repository import (
+    device_last_collected,
     get_drifts_older_than,
     is_acknowledged,
     list_alert_rules,
@@ -25,7 +26,18 @@ from netdrift.storage.repository import (
 logger = logging.getLogger("netdrift.sla")
 
 
-def evaluate_sla(session, dispatcher, *, now=None):
+def _is_unreachable(session, device, stale_before):
+    """True if the device has had no successful collection since ``stale_before``
+    (or never). A null last_collected_at means it has never reported in."""
+    last = device_last_collected(session, device)
+    if last is None:
+        return True
+    if last.tzinfo is None:
+        last = last.replace(tzinfo=timezone.utc)
+    return last < stale_before
+
+
+def evaluate_sla(session, dispatcher, *, now=None, unreachable_after_minutes=None):
     """Evaluate enabled alert rules and dispatch one webhook per breach.
 
     Args:
@@ -33,16 +45,26 @@ def evaluate_sla(session, dispatcher, *, now=None):
         dispatcher: anything with ``fire(event_type, payload)`` (the process
             WebhookDispatcher in production; a fake in tests).
         now: evaluation instant (injectable). Defaults to UTC now.
+        unreachable_after_minutes: if set, a device with no successful collection
+            in this many minutes is treated as unreachable — its breaches fire a
+            single ``device_unreachable`` alert instead of ``sla_breached``, since
+            a breach computed from stale drift would be a false positive. None
+            (the default) skips the reachability check entirely.
 
-    Returns the list of breach payloads dispatched (for logging and tests).
-    A (device, fingerprint) breaches at most once per call, even though the same
-    logical drift is re-persisted as a new row every poll cycle.
+    Returns the list of alert payloads dispatched (for logging and tests).
+    A (device, fingerprint) breaches at most once per call; an unreachable device
+    alerts at most once per call.
     """
     if now is None:
         now = datetime.now(tz=timezone.utc)
+    stale_before = (
+        now - timedelta(minutes=unreachable_after_minutes)
+        if unreachable_after_minutes is not None else None
+    )
 
     breaches: list[dict] = []
     seen: set[tuple[str, str]] = set()
+    unreachable_fired: set[str] = set()
 
     for rule in list_alert_rules(session):
         if not rule.enabled:
@@ -57,14 +79,34 @@ def evaluate_sla(session, dispatcher, *, now=None):
                 "field": event.field,
                 "drift_kind": event.drift_kind,
             })
-            key = (event.device, fp)
-            if key in seen:
+            device = event.device
+            if is_acknowledged(session, device, fp, now=now):
                 continue
-            if is_acknowledged(session, event.device, fp, now=now):
+
+            # A breach on a device the collector can't reach is stale — alert on
+            # the unreachability instead, once per device.
+            if stale_before is not None and _is_unreachable(session, device, stale_before):
+                if device not in unreachable_fired:
+                    unreachable_fired.add(device)
+                    payload = {
+                        "device": device,
+                        "timestamp": now.isoformat(),
+                        "detail": (
+                            f"Device {device} has had no successful collection "
+                            "in the last 2 poll cycles"
+                        ),
+                    }
+                    dispatcher.fire("device_unreachable", payload)
+                    logger.warning("Device unreachable: device=%r", device)
+                    breaches.append({"fingerprint": None, **payload})
+                continue
+
+            key = (device, fp)
+            if key in seen:
                 continue
             seen.add(key)
             payload = {
-                "device": event.device,
+                "device": device,
                 "timestamp": now.isoformat(),
                 "detail": (
                     f"SLA breach: {event.severity} drift on {event.object_ref} "
@@ -74,7 +116,7 @@ def evaluate_sla(session, dispatcher, *, now=None):
             dispatcher.fire("sla_breached", payload)
             logger.info(
                 "SLA breach: device=%r fingerprint=%r window=%dm",
-                event.device, fp, rule.window_minutes,
+                device, fp, rule.window_minutes,
             )
             breaches.append({"fingerprint": fp, **payload})
 
