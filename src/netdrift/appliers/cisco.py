@@ -24,6 +24,7 @@ from napalm import get_network_driver
 
 from netdrift.appliers.base import (
     ApplyResult,
+    ApplyVerificationError,
     RemediationBlockedError,
     check_blocked,
     register,
@@ -120,8 +121,9 @@ def _apply_via_napalm(conn, config_text: str, *, dry_run: bool) -> ApplyResult:
     """Execute the NAPALM merge-candidate flow and return an ApplyResult.
 
     For live applies, a post-commit verification step re-loads the same candidate
-    and checks whether IOS fully converged. A non-empty diff triggers a warning
-    and a rollback attempt.
+    and checks whether IOS fully converged. A non-empty diff triggers a warning,
+    a rollback attempt, and an ApplyVerificationError — so the orchestration layer
+    records the apply as failed rather than silently counting it as a success.
     """
     conn.load_merge_candidate(config=config_text)
     diff = conn.compare_config()
@@ -147,10 +149,21 @@ def _apply_via_napalm(conn, config_text: str, *, dry_run: bool) -> ApplyResult:
             "fully applied; attempting rollback. post_diff=%r",
             post_diff,
         )
+        rolled_back = False
         try:
             conn.rollback()
+            rolled_back = True
         except Exception as exc:  # noqa: BLE001
             _log.warning("rollback() failed after post-commit mismatch: %s", exc)
+        detail = (
+            "rollback succeeded."
+            if rolled_back
+            else "rollback FAILED — device may be in a partially-applied state."
+        )
+        raise ApplyVerificationError(
+            "cisco_iosxe apply did not converge: post-commit diff was non-empty. "
+            + detail
+        )
 
     return ApplyResult(
         transport="cli",
