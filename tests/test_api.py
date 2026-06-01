@@ -256,3 +256,48 @@ def test_drifts_includes_known_fix_when_match(client):
 
     non_matching = next(e for e in events if e["field"] == "name")
     assert non_matching["known_fix"] is None
+
+
+# ---------------------------------------------------------------------------
+# GET /drifts?since= filter + Link pagination (v3.5)
+# ---------------------------------------------------------------------------
+# The `client` fixture seeds two events, both timestamped 2026-05-26 14:32.
+
+def test_drifts_since_excludes_older_events(client):
+    resp = client.get("/drifts?since=2026-05-27T00:00:00Z")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+def test_drifts_since_includes_newer_events(client):
+    resp = client.get("/drifts?since=2026-05-25T00:00:00Z")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+
+def test_drifts_since_invalid_format_returns_422(client):
+    resp = client.get("/drifts?since=not-a-date")
+    assert resp.status_code == 422
+
+
+def test_drifts_pagination_emits_link_next_header(client):
+    resp = client.get("/drifts?limit=1")
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+    link = resp.headers.get("Link")
+    assert link is not None
+    assert 'rel="next"' in link
+    assert "offset=1" in link
+
+
+def test_drifts_pagination_offset_returns_next_page(client):
+    first = client.get("/drifts?limit=1").json()
+    second = client.get("/drifts?limit=1&offset=1").json()
+    assert len(second) == 1
+    assert first[0]["id"] != second[0]["id"]
+
+
+def test_drifts_no_link_header_on_last_page(client):
+    # limit exceeds the 2 seeded events → no next page.
+    resp = client.get("/drifts?limit=100")
+    assert "Link" not in resp.headers
