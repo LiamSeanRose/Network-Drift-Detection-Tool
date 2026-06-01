@@ -37,18 +37,52 @@ def _database_url():
     return url
 
 
+# Process-wide singletons. A SQLAlchemy Engine owns a connection pool, so we
+# want exactly one per process — not one per call. Before this was memoized,
+# the scheduler built a fresh pool on every poll cycle (pipeline.run_drift_check
+# calls get_sessionmaker() per device) and leaked connections steadily.
+_engine = None
+_sessionmaker = None
+
+
 def get_engine():
-    """Create the SQLAlchemy engine — the object that manages the actual
-    connection pool to Postgres. One engine per process is the norm."""
-    return create_engine(_database_url())
+    """Return the process-wide SQLAlchemy engine, building it on first use.
+
+    The engine manages the actual connection pool to Postgres. One engine per
+    process is the norm, so it is memoized: the first call constructs the pool,
+    every later call returns the same engine object.
+    """
+    global _engine
+    if _engine is None:
+        _engine = create_engine(_database_url())
+    return _engine
 
 
 def get_sessionmaker(engine=None):
-    """Return a Session factory bound to the engine. A Session is one
-    conversation with the database: you open one, do some work, commit, close."""
-    if engine is None:
-        engine = get_engine()
-    return sessionmaker(bind=engine)
+    """Return a Session factory. A Session is one conversation with the
+    database: you open one, do some work, commit, close.
+
+    With no argument this returns the process-wide singleton factory bound to
+    the singleton engine. Passing an explicit ``engine`` bypasses the singleton
+    entirely and yields a fresh factory bound to that engine — tests rely on
+    this to bind to their own throwaway in-memory database without polluting
+    (or being polluted by) the process-wide cache.
+    """
+    if engine is not None:
+        return sessionmaker(bind=engine)
+    global _sessionmaker
+    if _sessionmaker is None:
+        _sessionmaker = sessionmaker(bind=get_engine())
+    return _sessionmaker
+
+
+def _reset():
+    """Clear the cached engine and sessionmaker. TESTS ONLY — mirrors the
+    registry modules' _reset() helpers so a test can force a rebuild (e.g. after
+    pointing DATABASE_URL somewhere new). Not for application use."""
+    global _engine, _sessionmaker
+    _engine = None
+    _sessionmaker = None
 
 
 def create_all(engine=None):
