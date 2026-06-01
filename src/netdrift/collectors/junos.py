@@ -164,6 +164,7 @@ def get_reality(device: dict) -> dict:
     )
     conn.open()
     try:
+        facts = conn.get_facts()
         raw_interfaces = conn.get_interfaces()
         raw_ips = conn.get_interfaces_ip()
         raw_bgp = conn.get_bgp_neighbors()
@@ -206,4 +207,5 @@ def get_reality(device: dict) -> dict:
         "bgp_neighbors": _build_bgp_neighbors(raw_bgp, bgp_summary_text),
         "ospf": {"adjacencies": _parse_ospf_neighbors(ospf_text)},
         "running_config": running_config,
+        "software_version": facts.get("os_version", ""),
     }

@@ -178,10 +178,12 @@ class FakeNapalmConn:
     from canned payloads. open() / close() are no-ops; no socket is ever opened.
     """
 
-    def __init__(self, interfaces, interfaces_ip, bgp_neighbors, run_commands_result):
+    def __init__(self, interfaces, interfaces_ip, bgp_neighbors, run_commands_result,
+                 os_version="4.28.0F"):
         self._interfaces = interfaces
         self._interfaces_ip = interfaces_ip
         self._bgp_neighbors = bgp_neighbors
+        self._os_version = os_version
         self.device = FakeNapalmDevice(run_commands_result)
 
     def open(self):
@@ -189,6 +191,11 @@ class FakeNapalmConn:
 
     def close(self):
         pass
+
+    def get_facts(self):
+        return {"os_version": self._os_version, "hostname": "core-sw-01",
+                "vendor": "Arista", "model": "cEOSLab", "uptime": 0,
+                "serial_number": "", "fqdn": "", "interface_list": []}
 
     def get_interfaces(self):
         return self._interfaces
@@ -309,13 +316,18 @@ def test_get_reality_top_level_shape():
     assert result["platform"] == "arista_eos"
     assert set(result.keys()) == {
         "device", "platform", "collected_at", "interfaces", "vlans",
-        "bgp_neighbors", "ospf", "running_config",
+        "bgp_neighbors", "ospf", "running_config", "software_version",
     }
 
 
 def test_get_reality_includes_running_config():
     result = _run_get_reality()
     assert result["running_config"] == RUNNING_CONFIG
+
+
+def test_get_reality_software_version():
+    result = _run_get_reality()
+    assert result["software_version"] == "4.28.0F"
 
 
 def test_get_reality_collected_at_is_utc_iso():

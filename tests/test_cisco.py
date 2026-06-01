@@ -41,15 +41,21 @@ RUNNING_CONFIG = (
 class FakeNapalmConn:
     """Answers all get_reality() calls from canned data. No socket opened."""
 
-    def __init__(self, interfaces, interfaces_ip, bgp_neighbors, vlans, cli_results):
+    def __init__(self, interfaces, interfaces_ip, bgp_neighbors, vlans, cli_results,
+                 os_version="17.06.01a"):
         self._interfaces = interfaces
         self._interfaces_ip = interfaces_ip
         self._bgp_neighbors = bgp_neighbors
         self._vlans = vlans
         self._cli_results = cli_results
+        self._os_version = os_version
 
     def open(self): pass
     def close(self): pass
+    def get_facts(self):
+        return {"os_version": self._os_version, "hostname": "cisco-sw-01",
+                "vendor": "Cisco", "model": "WS-C3850", "uptime": 0,
+                "serial_number": "", "fqdn": "", "interface_list": []}
     def get_interfaces(self): return self._interfaces
     def get_interfaces_ip(self): return self._interfaces_ip
     def get_bgp_neighbors(self): return self._bgp_neighbors
@@ -494,13 +500,18 @@ def test_get_reality_top_level_shape():
     assert result["platform"] == "cisco_iosxe"
     assert set(result.keys()) == {
         "device", "platform", "collected_at", "interfaces", "vlans",
-        "bgp_neighbors", "ospf", "running_config",
+        "bgp_neighbors", "ospf", "running_config", "software_version",
     }
 
 
 def test_get_reality_includes_running_config():
     result = _run_get_reality()
     assert result["running_config"] == RUNNING_CONFIG
+
+
+def test_get_reality_software_version():
+    result = _run_get_reality()
+    assert result["software_version"] == "17.06.01a"
 
 
 def test_get_reality_collected_at_is_utc_iso():
