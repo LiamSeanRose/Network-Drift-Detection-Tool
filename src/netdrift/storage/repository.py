@@ -12,7 +12,7 @@ v2.5 additions:
 
 from datetime import datetime, timedelta, timezone
 
-from netdrift.storage.models import DriftEvent, KnownIssue, RemediationEvent
+from netdrift.storage.models import DeviceSetting, DriftEvent, KnownIssue, RemediationEvent
 
 
 def _parse_detected_at(value):
@@ -222,3 +222,52 @@ def get_remediation_events(session, known_issue_id):
         .order_by(RemediationEvent.applied_at.desc())
         .all()
     )
+
+
+# ---------------------------------------------------------------------------
+# v3.0 — device_settings (per-device auto-apply kill-switch)
+# ---------------------------------------------------------------------------
+
+def get_device_setting(session, device_name):
+    """Return the DeviceSetting row for device_name, or None."""
+    return (
+        session.query(DeviceSetting)
+        .filter(DeviceSetting.device_name == device_name)
+        .one_or_none()
+    )
+
+
+def is_device_paused(session, device_name) -> bool:
+    """True if auto-apply is paused for this device.
+
+    Absence of a row means not paused (the safe default). Consulted by
+    auto_apply.run_auto_apply before dispatching any apply. Note the argument
+    order is (session, device_name) per this module's convention; the
+    run_auto_apply seam expects (device_name, session), so the pipeline wiring
+    adapts with a one-line lambda.
+    """
+    setting = get_device_setting(session, device_name)
+    return bool(setting and setting.auto_remediation_paused)
+
+
+def set_device_paused(session, device_name, paused, reason=None):
+    """Pause or resume auto-apply for a device (upsert). Does NOT commit.
+
+    Pausing stamps paused_at=now and stores the optional reason; resuming
+    clears both. Returns the DeviceSetting row.
+    """
+    setting = get_device_setting(session, device_name)
+    if setting is None:
+        setting = DeviceSetting(device_name=device_name)
+        session.add(setting)
+
+    setting.auto_remediation_paused = paused
+    if paused:
+        setting.paused_at = datetime.now(tz=timezone.utc)
+        setting.paused_reason = reason
+    else:
+        setting.paused_at = None
+        setting.paused_reason = None
+
+    session.flush()
+    return setting
