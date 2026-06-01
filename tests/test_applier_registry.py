@@ -118,6 +118,12 @@ def test_check_blocked_raises_on_missing_in_intent_with_empty_list_intent():
         base.check_blocked(drift, _DEVICE)
 
 
+def test_check_blocked_raises_on_missing_in_intent_with_empty_dict_intent():
+    drift = {"field": "description", "drift_kind": "missing_in_intent", "intent": {}}
+    with pytest.raises(base.RemediationBlockedError, match="authorization to delete"):
+        base.check_blocked(drift, _DEVICE)
+
+
 def test_check_blocked_allows_normal_value_mismatch():
     drift = {"field": "description", "drift_kind": "value_mismatch", "intent": "Uplink"}
     base.check_blocked(drift, _DEVICE)  # must not raise
