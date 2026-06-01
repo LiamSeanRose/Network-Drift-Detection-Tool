@@ -59,9 +59,10 @@ The Bitnami subchart names the service <release>-postgresql.
 */}}
 {{- define "netdrift.databaseUrl" -}}
 {{- $host := printf "%s-postgresql" .Release.Name }}
+{{- $password := required "postgresql.auth.password must be set (e.g. --set postgresql.auth.password=<strong>)" .Values.postgresql.auth.password }}
 {{- printf "postgresql+psycopg://%s:%s@%s:5432/%s"
       .Values.postgresql.auth.username
-      .Values.postgresql.auth.password
+      $password
       $host
       .Values.postgresql.auth.database }}
 {{- end }}
