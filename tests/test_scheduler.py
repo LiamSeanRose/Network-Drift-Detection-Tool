@@ -6,14 +6,35 @@ the scheduler — so no timers fire and the lab is never touched. A fake `check`
 callable is injected in place of the real pipeline.
 """
 
+from collections import namedtuple
+
+from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from netdrift import scheduler as scheduler_mod
 from netdrift.scheduler import schedule_drift_checks, start_syslog_receiver
 
 DEVICES = {
     "core-sw-01": {"hostname": "172.20.20.11", "username": "admin", "password": "x"},
     "core-sw-02": {"hostname": "172.20.20.12", "username": "admin", "password": "x"},
 }
+
+
+class FakeDispatcher:
+    """Records fire() calls; mimics WebhookDispatcher's surface."""
+
+    def __init__(self):
+        self.fired = []
+        self.started = False
+
+    def fire(self, event_type, payload):
+        self.fired.append((event_type, payload))
+
+    def start(self):
+        self.started = True
+
+
+_Outcome = namedtuple("_Outcome", "known_issue_id result platform")
 
 
 def _fresh_scheduler():
@@ -87,3 +108,90 @@ def test_start_syslog_receiver_returns_receiver():
     result = start_syslog_receiver(DEVICES, check=lambda d: None,
                                    _factory=FakeReceiver)
     assert isinstance(result, FakeReceiver)
+
+
+# ---------------------------------------------------------------------------
+# v3.0 — webhook firing + structured logging + listeners
+# ---------------------------------------------------------------------------
+
+def test_check_one_fires_critical_drift_webhook(monkeypatch):
+    disp = FakeDispatcher()
+    crit = {"object": "interface:Ethernet1", "field": "enabled", "intent": True,
+            "reality": False, "severity": "critical", "detected_at": "t",
+            "device": "core-sw-01"}
+    warn = {"object": "vlan:10", "field": "name", "intent": "a", "reality": "b",
+            "severity": "warning", "detected_at": "t", "device": "core-sw-01"}
+    monkeypatch.setattr(scheduler_mod, "run_drift_check", lambda device, **kw: [crit, warn])
+
+    scheduler_mod._check_one({"name": "core-sw-01"}, dispatcher=disp)
+
+    events = [e for e, _ in disp.fired]
+    assert events.count("critical_drift") == 1  # only the critical one
+    payload = next(p for e, p in disp.fired if e == "critical_drift")
+    assert payload["device"] == "core-sw-01"
+    assert "timestamp" in payload and "detail" in payload
+
+
+def test_check_one_without_dispatcher_is_safe(monkeypatch):
+    monkeypatch.setattr(scheduler_mod, "run_drift_check", lambda device, **kw: [])
+    # No dispatcher bound — must not raise.
+    scheduler_mod._check_one({"name": "core-sw-01"})
+
+
+def test_check_one_logs_error_and_does_not_raise(monkeypatch, caplog):
+    def boom(device, **kw):
+        raise RuntimeError("device unreachable")
+    monkeypatch.setattr(scheduler_mod, "run_drift_check", boom)
+
+    with caplog.at_level("ERROR"):
+        scheduler_mod._check_one({"name": "core-sw-01"}, dispatcher=FakeDispatcher())
+
+    assert any("unreachable" in r.message for r in caplog.records)
+
+
+def test_auto_apply_wrapper_fires_success_and_failure():
+    disp = FakeDispatcher()
+    outcomes = [
+        _Outcome(1, "success", "arista_eos"),
+        _Outcome(2, "failure", "arista_eos"),
+        _Outcome(3, "blocked", "arista_eos"),
+    ]
+    fn = scheduler_mod._make_auto_apply_fn(
+        disp, "core-sw-01", _run_auto_apply=lambda *a, **k: outcomes,
+    )
+    result = fn([], {"name": "core-sw-01"}, lambda: None,
+                is_device_paused_fn=lambda n, s: False, schedule_repoll_fn=None)
+
+    assert result is outcomes
+    events = [e for e, _ in disp.fired]
+    assert "apply_success" in events
+    assert "apply_failure" in events
+    assert "apply_blocked" not in events  # only success/failure dispatch
+
+
+def test_auto_apply_wrapper_forwards_injectables():
+    captured = {}
+
+    def fake_run(drifts, device, session_factory, *, is_device_paused_fn, schedule_repoll_fn):
+        captured.update(is_device_paused_fn=is_device_paused_fn,
+                        schedule_repoll_fn=schedule_repoll_fn)
+        return []
+
+    fn = scheduler_mod._make_auto_apply_fn(None, "x", _run_auto_apply=fake_run)
+    paused, repoll = object(), object()
+    fn([1], {"name": "x"}, "sf", is_device_paused_fn=paused, schedule_repoll_fn=repoll)
+
+    assert captured["is_device_paused_fn"] is paused
+    assert captured["schedule_repoll_fn"] is repoll
+
+
+def test_register_listeners_adds_executed_and_error():
+    masks = []
+
+    class FakeScheduler:
+        def add_listener(self, fn, mask):
+            masks.append(mask)
+
+    scheduler_mod.register_listeners(FakeScheduler())
+    assert EVENT_JOB_EXECUTED in masks
+    assert EVENT_JOB_ERROR in masks
