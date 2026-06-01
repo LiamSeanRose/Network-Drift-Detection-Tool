@@ -520,9 +520,9 @@ All v2.0 work sits on the logic/out side and is owned by Matthew (B). Liam's inp
 | `GET /drifts` enriched with `known_fix` field | Matthew (B) | Matched by fingerprint on read; null when no match |
 | Frontend: known fix callout + Record fix modal | Matthew (B) | Modal scoped to pattern; Save disabled until both fields filled |
 v2.5
-[ ] Fixes are suggest-only by default.
-[ ] Auto-apply is per-issue opt-in and gated on N confirmations.
-[ ] Every applied fix shows a confirmation diff, is logged, and is verified on the next poll.
+[x] Fixes are suggest-only by default.
+[x] Auto-apply is per-issue opt-in and gated on N confirmations.
+[x] Every applied fix shows a confirmation diff, is logged, and is verified on the next poll.
 
 v2.5 Ownership
 Payload shape decided by design council 2026-05-31; full decision log at
@@ -549,6 +549,45 @@ Paired seam (joint sign-off, owned by neither alone):
 - Applier dispatch interface: `get_applier(platform)` returns a callable with the same
   lazy+fault-isolated contract as `collectors/registry.py`. Liam defines the interface;
   Matthew's orchestration calls it. Agree the exact signature before either builds against it.
+
+v3.0 — Operational Loop
+[x] Scheduler calls run_auto_apply() per device when AUTO_REMEDIATION_ENABLED=true; each matching auto-apply-enabled KnownIssue runs check_blocked() and writes a RemediationEvent (success/failure/blocked).
+[x] AUTO_REMEDIATION_ENABLED=false (or absent) prevents all auto-apply calls.
+[x] Management interfaces are never auto-applied; RemediationBlockedError is raised/logged with no RemediationEvent written.
+[x] kind == "restore_intent" gate re-enforced at execution time.
+[x] 3 consecutive failures for the same KnownIssue set auto_apply_enabled=False and log a WARNING.
+[x] A successful auto-apply schedules a one-shot re-poll within ≤60s.
+[x] WebhookDispatcher fires on critical drift, apply success, and apply failure; WEBHOOK_URL unset → no dispatch, no error.
+[x] PATCH /devices/{name}/auto-apply {"paused": true} skips and logs subsequent auto-apply for that device.
+[x] All print() in scheduler.py replaced with structured logging; EVENT_JOB_EXECUTED / EVENT_JOB_ERROR listeners wired.
+[x] Liam confirmed all three vendor management-interface blocklists are correct and complete (blocklist-audit PRs merged).
+[x] docker-compose.yml and .env.example updated with new env vars and restart: unless-stopped; README, CHANGELOG.md, and this §15 updated.
+
+v3.0 Ownership
+Roadmap and ownership agreed in docs/ROADMAP_POST_V2.5.md (design council 2026-06-01).
+
+| v3.0 work stream | Owner | Notes |
+|---|---|---|
+| `netdrift/auto_apply.py` — `run_auto_apply()` | Joint (Liam primary, Matthew review) | Calls `get_applier()` + writes `RemediationEvent` |
+| Wire `run_auto_apply` into `pipeline.run_drift_check` | Matthew (B) | Gated on `AUTO_REMEDIATION_ENABLED` |
+| `device_settings` table + Alembic migration | Matthew (B) | |
+| `PATCH /devices/{name}/auto-apply` endpoint | Matthew (B) | Per-device kill-switch; no UI in v3.0 |
+| `netdrift/webhook.py` — `WebhookDispatcher` | Matthew (B) | Daemon thread + bounded queue + URL validation |
+| Wire `WebhookDispatcher` into scheduler `main()` | Matthew (B) | Alongside `SyslogReceiver` |
+| FastAPI `BackgroundTasks` wrapper for API-path applies | Matthew (B) | Calls `dispatcher.fire()` |
+| Consecutive-failure auto-disable in `run_auto_apply` | Joint | Matthew schema, Liam logic |
+| Mgmt interface blocklist audit + fix (all 3 vendors) | Liam (A) | Pre-ship gate |
+| NAPALM `timeout=30` in Arista + Cisco `_napalm_conn()` | Liam (A) | Pre-ship gate |
+| `database.py` engine singleton fix | Matthew (B) | Pre-v3.0 chore |
+| `docker-compose.yml` + `.env.example` updates | Matthew (B) | New env vars + `restart: unless-stopped` |
+| APScheduler event listener logging | Matthew (B) | Structured logging in `scheduler.py` |
+| README + CHANGELOG.md v3.0 + this §15 | Matthew (B) (release shepherd) | |
+
+v3.75 — Juniper JunOS (parallel Liam track)
+[x] collectors/junos.py returns schema-valid interfaces, VLANs, BGP, OSPF.
+[x] appliers/junos.py implements restore_intent + raw_snippet with commit-confirmed auto-rollback.
+[x] Management interfaces fxp0, em0, fxp0.0, em0.0 raise RemediationBlockedError.
+[x] docs/schema.md Section 4 updated with juniper_junos (joint sign-off).
 
 16. Glossary
 Intent / intended state — what the network should be, documented in NetBox.
