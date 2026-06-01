@@ -19,9 +19,12 @@ plumbing. _on_message(src_ip) contains all the dispatch logic and is tested
 directly in tests/test_syslog_receiver.py without opening any socket.
 """
 
+import logging
 import socket
 import threading
 import time
+
+_log = logging.getLogger(__name__)
 
 DEFAULT_PORT = 1514
 DEFAULT_COOLDOWN = 30  # seconds between triggered polls for the same device
@@ -69,7 +72,7 @@ class SyslogReceiver:
         """Bind a UDP socket and dispatch every incoming packet."""
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.bind(("0.0.0.0", self._port))
-        print(f"Syslog receiver listening on UDP:{self._port}.")
+        _log.info("Syslog receiver listening on UDP:%s.", self._port)
         while True:
             try:
                 _data, addr = sock.recvfrom(4096)
@@ -105,5 +108,5 @@ class SyslogReceiver:
             name=f"syslog-poll:{name}",
         )
         t.start()
-        print(f"Syslog from {src_ip} ({name}): triggered immediate drift check.")
+        _log.info("Syslog from %s (%s): triggered immediate drift check.", src_ip, name)
         return t
