@@ -11,16 +11,17 @@ import logging
 
 import pytest
 
-from netdrift.collectors import arista, base, cisco, nokia, registry
+from netdrift.collectors import arista, base, cisco, junos, nokia, registry
 
 
-def test_build_collectors_returns_the_three_bundled_platforms():
+def test_build_collectors_returns_all_bundled_platforms():
     collectors = registry.build_collectors()
-    assert set(collectors) == {"arista_eos", "cisco_iosxe", "nokia_srlinux"}
+    assert set(collectors) == {"arista_eos", "cisco_iosxe", "nokia_srlinux", "juniper_junos"}
     # Values are the actual collector callables, not copies/wrappers.
     assert collectors["arista_eos"] is arista.get_reality
     assert collectors["cisco_iosxe"] is cisco.get_reality
     assert collectors["nokia_srlinux"] is nokia.get_reality
+    assert collectors["juniper_junos"] is junos.get_reality
 
 
 def test_build_platform_map_maps_every_slug():
@@ -32,6 +33,9 @@ def test_build_platform_map_maps_every_slug():
         "ios-xe": "cisco_iosxe",
         "nokia-srlinux": "nokia_srlinux",
         "srlinux": "nokia_srlinux",
+        "juniper-junos": "juniper_junos",
+        "junos": "juniper_junos",
+        "juniper": "juniper_junos",
     }
 
 
