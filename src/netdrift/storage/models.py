@@ -139,6 +139,32 @@ class ApiKey(Base):
         return f"<ApiKey id={self.id} name={self.name!r} hint={self.key_hint!r}>"
 
 
+class AlertRule(Base):
+    """One SLA alert rule — one row in the alert_rules table (v3.5 Feature 4).
+
+    "If a drift of this severity stays unresolved longer than window_minutes,
+    alert." ``device`` is nullable: null means the rule applies to every device;
+    a value scopes it to one device. Evaluation runs each scheduler cycle and
+    dispatches via the WebhookDispatcher; acknowledged drift is suppressed.
+    """
+
+    __tablename__ = "alert_rules"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # null = applies to all devices.
+    device: Mapped[str | None] = mapped_column(String, nullable=True)
+    severity: Mapped[str] = mapped_column(String)
+    window_minutes: Mapped[int] = mapped_column(Integer)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    def __repr__(self):
+        return (
+            f"<AlertRule id={self.id} device={self.device!r} "
+            f"severity={self.severity!r} window_minutes={self.window_minutes}>"
+        )
+
+
 class Acknowledgement(Base):
     """One drift acknowledgement — "this drift is intentional, stop alerting".
 

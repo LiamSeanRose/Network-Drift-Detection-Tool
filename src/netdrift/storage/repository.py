@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 from netdrift.auth import KEY_PREFIX, generate_api_key, hash_api_key
 from netdrift.storage.models import (
     Acknowledgement,
+    AlertRule,
     ApiKey,
     DeviceSetting,
     DriftEvent,
@@ -432,5 +433,46 @@ def delete_acknowledgement(session, ack_id) -> bool:
     if ack is None:
         return False
     session.delete(ack)
+    session.flush()
+    return True
+
+
+# ---------------------------------------------------------------------------
+# v3.5 — alert_rules (per-device drift SLA)
+# ---------------------------------------------------------------------------
+
+def create_alert_rule(session, device, severity, window_minutes, enabled=True):
+    """Insert an AlertRule. device=None means "all devices". Does NOT commit.
+
+    Caller validates severity and window_minutes (the API rejects bad values).
+    """
+    rule = AlertRule(
+        device=device,
+        severity=severity,
+        window_minutes=window_minutes,
+        enabled=enabled,
+        created_at=datetime.now(tz=timezone.utc),
+    )
+    session.add(rule)
+    session.flush()
+    return rule
+
+
+def list_alert_rules(session):
+    """Return all AlertRule rows, oldest first."""
+    return session.query(AlertRule).order_by(AlertRule.created_at).all()
+
+
+def get_alert_rule(session, rule_id):
+    """Return an AlertRule by primary key, or None."""
+    return session.query(AlertRule).filter(AlertRule.id == rule_id).one_or_none()
+
+
+def delete_alert_rule(session, rule_id) -> bool:
+    """Delete an AlertRule. Returns True if a row was removed. Does NOT commit."""
+    rule = get_alert_rule(session, rule_id)
+    if rule is None:
+        return False
+    session.delete(rule)
     session.flush()
     return True
