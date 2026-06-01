@@ -107,6 +107,38 @@ class DeviceSetting(Base):
         )
 
 
+class ApiKey(Base):
+    """One API key — one row in the api_keys table (v3.5 Feature 5).
+
+    Authenticates mutating endpoints via the ``X-API-Key`` header. Only the
+    SHA-256 hash of the full key is stored (see auth.hash_api_key); the raw key
+    is returned to the operator exactly once at creation and never persisted, so
+    a database leak cannot yield usable keys.
+
+    key_hint holds the first 8 characters of the random token (after the
+    ``sk-netdrift-`` prefix) so operators can tell keys apart in listings
+    without exposing anything usable. Revocation is a hard delete of the row.
+    """
+
+    __tablename__ = "api_keys"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    key_hash: Mapped[str] = mapped_column(String, unique=True, index=True)
+    name: Mapped[str] = mapped_column(String)
+    key_hint: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_used_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # null = never expires.
+    expires_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    def __repr__(self):
+        return f"<ApiKey id={self.id} name={self.name!r} hint={self.key_hint!r}>"
+
+
 class RemediationEvent(Base):
     """One apply or dry-run attempt — one row in the remediation_events table.
 
