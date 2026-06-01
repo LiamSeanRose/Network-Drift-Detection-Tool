@@ -16,7 +16,12 @@ from netdrift.appliers.base import ApplyResult, RemediationBlockedError
 from netdrift.auto_apply import FAILURE_THRESHOLD, AutoApplyOutcome, run_auto_apply
 from netdrift.storage.database import create_all, get_sessionmaker
 from netdrift.storage.models import KnownIssue
-from netdrift.storage.repository import save_known_issue, set_auto_apply_enabled, set_device_paused
+from netdrift.storage.repository import (
+    create_acknowledgement,
+    save_known_issue,
+    set_auto_apply_enabled,
+    set_device_paused,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -465,3 +470,67 @@ def test_repoll_not_called_when_no_drifts_match(monkeypatch, session_factory):
         schedule_repoll_fn=lambda d: repolled.append(d),
     )
     assert repolled == []
+
+
+# ---------------------------------------------------------------------------
+# Acknowledgement — acknowledged drift must not be auto-applied
+# ---------------------------------------------------------------------------
+
+def test_acknowledged_drift_is_skipped(monkeypatch, session_factory):
+    monkeypatch.setenv("AUTO_REMEDIATION_ENABLED", "true")
+    _make_issue(session_factory)
+
+    # Acknowledge the fingerprint permanently (no expiry).
+    with session_factory() as session:
+        create_acknowledgement(
+            session,
+            device=DEVICE["name"],
+            fingerprint="interface|description|value_mismatch",
+        )
+        session.commit()
+
+    calls = []
+
+    def recording_applier(platform):
+        def apply(remediation, drift, device, *, dry_run=False):
+            calls.append(drift["field"])
+            return ApplyResult("cli", "cmd", "", True)
+        return apply
+
+    result = run_auto_apply([DRIFT], DEVICE, session_factory,
+                            applier_fn=recording_applier)
+
+    assert result == []
+    assert calls == []
+
+
+def test_expired_acknowledgement_does_not_block_apply(monkeypatch, session_factory):
+    from datetime import datetime, timezone, timedelta
+    monkeypatch.setenv("AUTO_REMEDIATION_ENABLED", "true")
+    _make_issue(session_factory)
+
+    # Acknowledgement expired in the past.
+    past = datetime.now(timezone.utc) - timedelta(hours=1)
+    with session_factory() as session:
+        create_acknowledgement(
+            session,
+            device=DEVICE["name"],
+            fingerprint="interface|description|value_mismatch",
+            acknowledged_until=past,
+        )
+        session.commit()
+
+    calls = []
+
+    def recording_applier(platform):
+        def apply(remediation, drift, device, *, dry_run=False):
+            calls.append(drift["field"])
+            return ApplyResult("cli", "cmd", "", True)
+        return apply
+
+    result = run_auto_apply([DRIFT], DEVICE, session_factory,
+                            applier_fn=recording_applier)
+
+    # Expired ack — apply should proceed normally.
+    assert len(result) == 1
+    assert calls == ["description"]
