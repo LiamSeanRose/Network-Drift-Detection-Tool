@@ -26,7 +26,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -320,10 +320,26 @@ def list_drift_history(device: str | None = None, hours: int = 24,
 
 
 @app.get("/drifts")
-def list_drifts(device: str | None = None, limit: int = 100,
+def list_drifts(request: Request, response: Response,
+                device: str | None = None, limit: int = 100, offset: int = 0,
+                since: str | None = None,
                 session: Session = Depends(get_session)):
-    """Return stored drift events as JSON, newest first."""
-    events = get_drifts(session, device=device, limit=limit)
+    """Return stored drift events as JSON, newest first.
+
+    ``since`` (ISO 8601) returns only events at or after that time. ``limit`` and
+    ``offset`` paginate; when a full page is returned a ``Link: <next>; rel="next"``
+    header points at the following page.
+    """
+    since_dt = None
+    if since is not None:
+        try:
+            since_dt = datetime.fromisoformat(since.replace("Z", "+00:00"))
+        except ValueError:
+            raise HTTPException(
+                status_code=422, detail="since must be an ISO 8601 datetime."
+            )
+
+    events = get_drifts(session, device=device, limit=limit, offset=offset, since=since_dt)
     all_issues = list_known_issues(session)
     known = {i.fingerprint: i for i in all_issues}
     counts = {i.id: confirmed_count(session, i.id) for i in all_issues}
@@ -350,6 +366,11 @@ def list_drifts(device: str | None = None, limit: int = 100,
             }),
             "known_fix": _known_fix_dict(issue, counts.get(issue.id, 0) if issue else 0),
         })
+
+    # A full page implies there may be more; point at the next one.
+    if limit and len(events) == limit:
+        next_url = request.url.include_query_params(offset=offset + limit)
+        response.headers["Link"] = f'<{next_url}>; rel="next"'
     return rows
 
 
