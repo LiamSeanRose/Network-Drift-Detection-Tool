@@ -34,6 +34,19 @@ spec:
           envFrom:
             - secretRef:
                 name: {{ include "netdrift.fullname" . }}
+          {{- with .Values.scheduler.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          livenessProbe:
+            exec:
+              # Detects container crashes and OOM kills. Does not detect a
+              # deadlocked APScheduler thread — for that, add a heartbeat file
+              # write to scheduler.py and check its mtime here instead.
+              command: ["python", "-c", "import netdrift.scheduler"]
+            initialDelaySeconds: 60
+            periodSeconds: 60
+            failureThreshold: 3
           {{- if .Values.devicesYaml }}
           volumeMounts:
             - name: devices
