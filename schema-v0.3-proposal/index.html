@@ -1,0 +1,997 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source network drift detection — the self-hosted alternative to NetBox Assurance.">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>docs/schema-v0.3-proposal.md — v0.3 Schema Additions (Proposal) - Network Drift Detection Tool</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#docsschema-v03-proposalmd-v03-schema-additions-proposal" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Network Drift Detection Tool" class="md-header__button md-logo" aria-label="Network Drift Detection Tool" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Network Drift Detection Tool
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              docs/schema-v0.3-proposal.md — v0.3 Schema Additions (Proposal)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/LiamSeanRose/Network-Drift-Detection-Tool" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LiamSeanRose/Network-Drift-Detection-Tool
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../lab/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../schema/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Schema Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../PROJECT_PLAN/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Network Drift Detection Tool" class="md-nav__button md-logo" aria-label="Network Drift Detection Tool" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Network Drift Detection Tool
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/LiamSeanRose/Network-Drift-Detection-Tool" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LiamSeanRose/Network-Drift-Detection-Tool
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROJECT_PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-purpose-of-this-document" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Purpose of this document
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-proposed-v03-device-state-object" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Proposed v0.3 device-state object
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Proposed v0.3 device-state object">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-field-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New field reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-decisions-and-rationale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Decisions and rationale
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Decisions and rationale">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision-1-bgp-neighbors-keyed-by-ip-string" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision 1 — BGP neighbors keyed by IP string
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision-2-capture-only-intent-like-bgp-fields-not-telemetry" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision 2 — capture only intent-like BGP fields, not telemetry
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision-3-session_state-is-included-as-the-one-operational-field" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision 3 — session_state is included, as the one operational field
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision-4-ospf-mirrors-bgp-keyed-by-router-id" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision 4 — OSPF mirrors BGP, keyed by router-id
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision-5-nokia-sr-linux-routing-is-best-effort-like-its-vlans" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision 5 — Nokia SR Linux routing is best-effort, like its VLANs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-what-device-reconnaissance-showed-2026-05-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. What device reconnaissance showed (2026-05-26)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-open-questions-for-the-schema-call" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Open questions for the schema call
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-proposed-severity-defaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Proposed severity defaults
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="docsschema-v03-proposalmd-v03-schema-additions-proposal"><code>docs/schema-v0.3-proposal.md</code> — v0.3 Schema Additions (Proposal)<a class="headerlink" href="#docsschema-v03-proposalmd-v03-schema-additions-proposal" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Status: PROPOSAL — not yet agreed.</strong> This document is Person A's proposed set
+of v0.3 schema additions, written up for the joint schema call. Nothing here is
+part of the contract until both partners review and approve it. On approval, these
+changes fold into <code>docs/schema.md</code> (Section 2, the rules, Section 6/7, the worked
+example, and Section 9) and this proposal file can be deleted or archived.</p>
+<p><strong>Scope:</strong> v0.3 only — routing state (BGP neighbors, OSPF adjacencies), as
+outlined in <code>schema.md</code> Section 9. No config-text diffing (that is v1.0). Scope
+deliberately held narrow per the project's #1 risk (scope creep on the diff
+engine).</p>
+</blockquote>
+<hr />
+<h2 id="1-purpose-of-this-document">1. Purpose of this document<a class="headerlink" href="#1-purpose-of-this-document" title="Permanent link">&para;</a></h2>
+<p><code>schema.md</code> Section 9 sketches the v0.3 routing fields but leaves real design
+questions open. This proposal resolves each one with a concrete decision and the
+reasoning behind it, so the schema call is a <em>review-and-ratify</em> meeting rather
+than a design-from-scratch one. Section 2 is the proposed final shape; Section 3
+records the decisions and rationale; Section 4 lists what was learned from device
+reconnaissance; Section 5 is the checklist for the call.</p>
+<p>This proposal is grounded in actual device output. On 2026-05-26, Person A built
+a minimal BGP + OSPF lab on the two cEOS nodes and captured what NAPALM and the
+EOS CLI passthrough actually return. The field choices below follow from that
+real data, not guesswork — see Section 4.</p>
+<hr />
+<h2 id="2-proposed-v03-device-state-object">2. Proposed v0.3 device-state object<a class="headerlink" href="#2-proposed-v03-device-state-object" title="Permanent link">&para;</a></h2>
+<p>The v0.1 and v0.2 fields are unchanged. v0.3 adds <strong>two new top-level keys</strong>:
+<code>bgp_neighbors</code> and <code>ospf</code>.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="s2">&quot;device&quot;</span><span class="p">:</span> <span class="s2">&quot;core-sw-01&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="s2">&quot;platform&quot;</span><span class="p">:</span> <span class="s2">&quot;arista_eos&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="s2">&quot;collected_at&quot;</span><span class="p">:</span> <span class="s2">&quot;2026-05-26T14:32:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="s2">&quot;interfaces&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="o">...</span><span class="n">unchanged</span> <span class="kn">from</span><span class="w"> </span><span class="nn">v0.</span><span class="mf">2.</span><span class="o">..</span> <span class="p">},</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="s2">&quot;vlans&quot;</span><span class="p">:</span> <span class="p">{</span> <span class="o">...</span><span class="n">unchanged</span> <span class="kn">from</span><span class="w"> </span><span class="nn">v0.</span><span class="mf">2.</span><span class="o">..</span> <span class="p">},</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>    <span class="c1"># --- v0.3 addition: BGP neighbors ---</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>    <span class="s2">&quot;bgp_neighbors&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>        <span class="c1"># keys are the neighbor IP as a STRING (see Decision 1)</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>        <span class="s2">&quot;10.0.0.2&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>            <span class="s2">&quot;remote_as&quot;</span><span class="p">:</span> <span class="mi">65000</span><span class="p">,</span>        <span class="c1"># int</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>            <span class="s2">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>           <span class="c1"># bool — admin state</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>         <span class="c1"># str, &quot;&quot; when unset (Rule 4)</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>            <span class="s2">&quot;session_state&quot;</span><span class="p">:</span> <span class="s2">&quot;established&quot;</span><span class="p">,</span>  <span class="c1"># see Decision 3</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>        <span class="p">},</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>    <span class="p">},</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>    <span class="c1"># --- v0.3 addition: OSPF ---</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>    <span class="s2">&quot;ospf&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>        <span class="s2">&quot;adjacencies&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>            <span class="c1"># keys are the OSPF neighbor router-id as a STRING</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>            <span class="s2">&quot;2.2.2.2&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>                <span class="s2">&quot;area&quot;</span><span class="p">:</span> <span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span>     <span class="c1"># str — dotted form, always</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>                <span class="s2">&quot;interface&quot;</span><span class="p">:</span> <span class="s2">&quot;Ethernet1&quot;</span><span class="p">,</span>  <span class="c1"># str — canonical interface name</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>                <span class="s2">&quot;adjacency_state&quot;</span><span class="p">:</span> <span class="s2">&quot;full&quot;</span><span class="p">,</span>  <span class="c1"># see Decision 4</span>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>            <span class="p">},</span>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>        <span class="p">},</span>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>    <span class="p">},</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="new-field-reference">New field reference<a class="headerlink" href="#new-field-reference" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>bgp_neighbors</code></td>
+<td><code>dict</code></td>
+<td>Top-level. Keyed by neighbor IP string. <code>{}</code> if no BGP.</td>
+</tr>
+<tr>
+<td><code>bgp_neighbors[].remote_as</code></td>
+<td><code>int</code></td>
+<td>The AS the peer is expected to be in.</td>
+</tr>
+<tr>
+<td><code>bgp_neighbors[].enabled</code></td>
+<td><code>bool</code></td>
+<td>Admin state of the neighbor (configured up vs shut).</td>
+</tr>
+<tr>
+<td><code>bgp_neighbors[].description</code></td>
+<td><code>str</code></td>
+<td>Neighbor description. <code>""</code> when unset, never <code>None</code> (Rule 4).</td>
+</tr>
+<tr>
+<td><code>bgp_neighbors[].session_state</code></td>
+<td><code>str</code></td>
+<td>Operational session state, lower-cased. See Decision 3.</td>
+</tr>
+<tr>
+<td><code>ospf</code></td>
+<td><code>dict</code></td>
+<td>Top-level. <code>{"adjacencies": {}}</code> if no OSPF.</td>
+</tr>
+<tr>
+<td><code>ospf.adjacencies</code></td>
+<td><code>dict</code></td>
+<td>Keyed by neighbor router-id string.</td>
+</tr>
+<tr>
+<td><code>ospf.adjacencies[].area</code></td>
+<td><code>str</code></td>
+<td>OSPF area, dotted-decimal form (e.g. <code>"0.0.0.0"</code>).</td>
+</tr>
+<tr>
+<td><code>ospf.adjacencies[].interface</code></td>
+<td><code>str</code></td>
+<td>Canonical interface name the adjacency is on.</td>
+</tr>
+<tr>
+<td><code>ospf.adjacencies[].adjacency_state</code></td>
+<td><code>str</code></td>
+<td>Operational adjacency state, lower-cased. See Decision 4.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-decisions-and-rationale">3. Decisions and rationale<a class="headerlink" href="#3-decisions-and-rationale" title="Permanent link">&para;</a></h2>
+<h3 id="decision-1-bgp-neighbors-keyed-by-ip-string">Decision 1 — BGP neighbors keyed by IP string<a class="headerlink" href="#decision-1-bgp-neighbors-keyed-by-ip-string" title="Permanent link">&para;</a></h3>
+<p>Consistent with <code>vlans</code> (Decision 4 of the v0.2 proposal): dict keys are strings,
+so a neighbor is <code>"10.0.0.2"</code>, not an <code>ipaddress</code> object or an int. Keying by IP
+(not by a list index) means the differ can pair intent-neighbor to reality-neighbor
+the same way it pairs interfaces by name. A neighbor present in one side and absent
+in the other is a missing-object drift, handled like <code>_interface</code> (Rule 7).</p>
+<p>Proposed drift object type: <code>bgp_neighbor:&lt;ip&gt;</code> (e.g. <code>bgp_neighbor:10.0.0.2</code>).</p>
+<h3 id="decision-2-capture-only-intent-like-bgp-fields-not-telemetry">Decision 2 — capture only intent-like BGP fields, not telemetry<a class="headerlink" href="#decision-2-capture-only-intent-like-bgp-fields-not-telemetry" title="Permanent link">&para;</a></h3>
+<p>NAPALM's <code>get_bgp_neighbors_detail()</code> returns ~30 fields per neighbor. Almost all
+are live telemetry — <code>uptime</code>, <code>input_messages</code>, <code>flap_count</code>, <code>local_port</code>, etc.
+These change every poll cycle. Diffing them would produce constant noise, not
+drift, because drift means "intended config != actual config" and nobody <em>intends</em>
+a message count.</p>
+<p>The fields a human actually configures and documents — and therefore the only ones
+worth drift detection — are: which neighbors exist, <code>remote_as</code>, <code>enabled</code>,
+<code>description</code>. Those four (plus <code>session_state</code>, see Decision 3) are the schema.
+Everything else NAPALM offers is deliberately dropped.</p>
+<h3 id="decision-3-session_state-is-included-as-the-one-operational-field">Decision 3 — <code>session_state</code> is included, as the one operational field<a class="headerlink" href="#decision-3-session_state-is-included-as-the-one-operational-field" title="Permanent link">&para;</a></h3>
+<p><code>session_state</code> (BGP) is operational, not intent — but "my configured peer is
+DOWN" is the single most useful routing-drift signal there is, so it earns its
+place. Open question for the call: should a state mismatch be a real drift record,
+or surfaced differently from a config mismatch? Proposed: treat it as drift with
+<code>severity: warning</code> (see Section 6 below), lower than a <code>remote_as</code> mismatch.</p>
+<p>Values are lower-cased: <code>established</code>, <code>idle</code>, <code>active</code>, <code>connect</code>, <code>opensent</code>,
+<code>openconfirm</code>. The collector lower-cases whatever the device reports.</p>
+<h3 id="decision-4-ospf-mirrors-bgp-keyed-by-router-id">Decision 4 — OSPF mirrors BGP, keyed by router-id<a class="headerlink" href="#decision-4-ospf-mirrors-bgp-keyed-by-router-id" title="Permanent link">&para;</a></h3>
+<p>OSPF adjacencies keyed by neighbor router-id string. <code>adjacency_state</code> lower-cased:
+<code>full</code>, <code>2-way</code>, <code>init</code>, <code>exstart</code>, <code>exchange</code>, <code>loading</code>, <code>down</code>. Proposed drift
+object type: <code>ospf_adjacency:&lt;router-id&gt;</code>.</p>
+<p><code>area</code> is always the dotted-decimal form (<code>"0.0.0.0"</code>), never the bare-int form
+(<code>0</code>) — EOS accepts both as input but the collector normalizes to dotted, so
+intent and reality always compare like-for-like.</p>
+<h3 id="decision-5-nokia-sr-linux-routing-is-best-effort-like-its-vlans">Decision 5 — Nokia SR Linux routing is best-effort, like its VLANs<a class="headerlink" href="#decision-5-nokia-sr-linux-routing-is-best-effort-like-its-vlans" title="Permanent link">&para;</a></h3>
+<p>Per the existing <code>nokia.py</code> precedent (SR Linux VLAN mapping is documented as
+best-effort), v0.3 SR Linux routing collection will be best-effort and documented
+in the collector docstring. The schema shape is vendor-neutral; per-vendor mapping
+gaps are a collector concern, not a schema concern.</p>
+<hr />
+<h2 id="4-what-device-reconnaissance-showed-2026-05-26">4. What device reconnaissance showed (2026-05-26)<a class="headerlink" href="#4-what-device-reconnaissance-showed-2026-05-26" title="Permanent link">&para;</a></h2>
+<p>Captured from the live cEOS lab to ground the field choices above.</p>
+<p><strong>BGP — <code>napalm get_bgp_neighbors()</code> returns a clean structured dict:</strong>
+nested <code>global -&gt; peers -&gt; &lt;ip&gt; -&gt; {local_as, remote_as, remote_id, is_up,
+is_enabled, description, uptime, address_family{...}}</code>. This maps directly onto
+the proposed schema — <code>remote_as</code>, <code>is_enabled</code>, <code>description</code> are all present.
+<code>get_bgp_neighbors_detail()</code> returns far more, but as established in Decision 2 it
+is mostly telemetry.</p>
+<p><strong>Decision for the collector:</strong> build the v0.3 BGP collector on
+<code>get_bgp_neighbors()</code> (the summary getter), not the detail getter.</p>
+<p><strong>OSPF — NAPALM has NO core getter.</strong> There is no <code>get_ospf_neighbors()</code> in
+NAPALM's getter set. OSPF state has to come from the EOS eAPI / CLI passthrough
+(<code>conn.cli(["show ip ospf neighbor"])</code>) and be parsed by the collector itself.</p>
+<p><strong>Decision for the collector:</strong> the v0.3 OSPF collector parses
+<code>show ip ospf neighbor</code> output. This is a known extra cost for OSPF that BGP does
+not have, and is flagged here so it is not a surprise during implementation. The
+SR Linux side uses gNMI OSPF paths (pygnmi), consistent with the existing Nokia
+VLAN collector.</p>
+<hr />
+<h2 id="5-open-questions-for-the-schema-call">5. Open questions for the schema call<a class="headerlink" href="#5-open-questions-for-the-schema-call" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong><code>session_state</code> / <code>adjacency_state</code> — drift or not?</strong> Decision 3 proposes
+   treating an operational state mismatch as drift at <code>warning</code> severity. Agree,
+   or handle session/adjacency state as a separate "health" signal outside the
+   drift record?</li>
+<li><strong>BGP address-family scope.</strong> The proposal collapses to a single neighbor
+   entry. Do we need per-AF state (ipv4 vs ipv6 vs evpn) in v0.3, or is that
+   deferred? Proposed: defer — v0.3 lab is ipv4-only.</li>
+<li><strong>OSPF — adjacencies only, or also interface/area config?</strong> The proposal
+   captures adjacencies (neighbor relationships). Should v0.3 also capture
+   per-interface OSPF config (cost, area membership, passive)? Proposed: defer
+   interface-level OSPF; adjacencies first.</li>
+<li><strong>How is routing intent stored in NetBox?</strong> NetBox has no native BGP/OSPF
+   model. Options: a plugin (e.g. netbox-bgp), config contexts, or custom fields.
+   This is a <code>netbox_client.py</code> / <code>seed_netbox.py</code> question that blocks the
+   intent side of v0.3 and needs its own decision.</li>
+<li><strong>Drift object types.</strong> Confirm <code>bgp_neighbor:&lt;ip&gt;</code> and
+   <code>ospf_adjacency:&lt;router-id&gt;</code> as the new <code>object</code> values for the differ.</li>
+</ol>
+<hr />
+<h2 id="6-proposed-severity-defaults">6. Proposed severity defaults<a class="headerlink" href="#6-proposed-severity-defaults" title="Permanent link">&para;</a></h2>
+<p>Extends <code>schema.md</code> Section 7. Defaults only; configurable later.</p>
+<table>
+<thead>
+<tr>
+<th>Drift</th>
+<th>Severity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>BGP neighbor present in intent, missing in reality</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>BGP neighbor present in reality, missing in intent</td>
+<td><code>info</code></td>
+</tr>
+<tr>
+<td>BGP <code>remote_as</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>BGP <code>enabled</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>BGP <code>session_state</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>BGP <code>description</code> mismatch</td>
+<td><code>info</code></td>
+</tr>
+<tr>
+<td>OSPF adjacency present in intent, missing in reality</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>OSPF adjacency present in reality, missing in intent</td>
+<td><code>info</code></td>
+</tr>
+<tr>
+<td>OSPF <code>area</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>OSPF <code>adjacency_state</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>This is a proposal. When approved by both partners, it folds into <code>schema.md</code> and
+the change log there gets a new row.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.top", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

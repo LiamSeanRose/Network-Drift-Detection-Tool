@@ -1,0 +1,2418 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source network drift detection — the self-hosted alternative to NetBox Assurance.">
+      
+      
+      
+      
+        <link rel="prev" href="../lab/">
+      
+      
+        <link rel="next" href="../PROJECT_PLAN/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Schema Reference - Network Drift Detection Tool</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#docsschemamd-the-normalized-schema" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Network Drift Detection Tool" class="md-header__button md-logo" aria-label="Network Drift Detection Tool" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Network Drift Detection Tool
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Schema Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/LiamSeanRose/Network-Drift-Detection-Tool" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LiamSeanRose/Network-Drift-Detection-Tool
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../lab/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Schema Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../PROJECT_PLAN/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Network Drift Detection Tool" class="md-nav__button md-logo" aria-label="Network Drift Detection Tool" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Network Drift Detection Tool
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/LiamSeanRose/Network-Drift-Detection-Tool" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LiamSeanRose/Network-Drift-Detection-Tool
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-why-this-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Why this exists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-the-device-state-object-v10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. The device-state object (v1.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. The device-state object (v1.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#field-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-schema-rules-apply-to-both-sides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Schema rules — apply to BOTH sides
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-allowed-platform-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Allowed platform values
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-the-drift-record-output-of-the-diff-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. The drift record (output of the diff engine)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. The drift record (output of the diff engine)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#field-reference_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-drift_kind-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. drift_kind values
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-severity-guidance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. severity guidance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-worked-example-the-full-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Worked example (the full loop)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-the-known_issueremediation-field-v25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. The known_issue.remediation field (v2.5)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. The known_issue.remediation field (v2.5)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shape-discriminated-union-on-kind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shape — discriminated union on kind
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kind-restore_intent-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        kind: "restore_intent" rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kind-raw_snippet-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        kind: "raw_snippet" rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kind-null-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        kind: null rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto_apply_enabled-field-on-known_issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        auto_apply_enabled field on known_issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#remediation_events-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        remediation_events table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hard-do-not-auto-apply-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hard do-not-auto-apply list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dry-run-api-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dry-run API contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-planned-schema-growth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Planned schema growth
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-resolved-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Resolved questions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. Resolved questions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v01-schema-call-2026-05-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.1 schema call (2026-05-21)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v02-schema-call-2026-05-23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.2 schema call (2026-05-23)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v02-follow-up-2026-05-24" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.2 follow-up (2026-05-24)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v03-schema-call-2026-05-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3 schema call (2026-05-26)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v10-schema-call-2026-05-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.0 schema call (2026-05-31)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v25-schema-call-2026-05-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v2.5 schema call (2026-05-31)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-change-log-for-this-document" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Change log for this document
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROJECT_PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-why-this-exists" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Why this exists
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-the-device-state-object-v10" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. The device-state object (v1.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. The device-state object (v1.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#field-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-schema-rules-apply-to-both-sides" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Schema rules — apply to BOTH sides
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-allowed-platform-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Allowed platform values
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-the-drift-record-output-of-the-diff-engine" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. The drift record (output of the diff engine)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="5. The drift record (output of the diff engine)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#field-reference_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Field reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-drift_kind-values" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. drift_kind values
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#7-severity-guidance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. severity guidance
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#8-worked-example-the-full-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. Worked example (the full loop)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#9-the-known_issueremediation-field-v25" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. The known_issue.remediation field (v2.5)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="9. The known_issue.remediation field (v2.5)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#shape-discriminated-union-on-kind" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Shape — discriminated union on kind
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kind-restore_intent-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        kind: "restore_intent" rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kind-raw_snippet-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        kind: "raw_snippet" rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#kind-null-rules" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        kind: null rules
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#auto_apply_enabled-field-on-known_issues" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        auto_apply_enabled field on known_issues
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#remediation_events-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        remediation_events table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hard-do-not-auto-apply-list" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hard do-not-auto-apply list
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#dry-run-api-contract" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dry-run API contract
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#10-planned-schema-growth" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        10. Planned schema growth
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#11-resolved-questions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        11. Resolved questions
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="11. Resolved questions">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v01-schema-call-2026-05-21" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.1 schema call (2026-05-21)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v02-schema-call-2026-05-23" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.2 schema call (2026-05-23)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v02-follow-up-2026-05-24" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.2 follow-up (2026-05-24)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v03-schema-call-2026-05-26" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v0.3 schema call (2026-05-26)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v10-schema-call-2026-05-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v1.0 schema call (2026-05-31)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v25-schema-call-2026-05-31" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v2.5 schema call (2026-05-31)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#12-change-log-for-this-document" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        12. Change log for this document
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="docsschemamd-the-normalized-schema"><code>docs/schema.md</code> — The Normalized Schema<a class="headerlink" href="#docsschemamd-the-normalized-schema" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>This file is the contract between the collector side (Person A) and the diff
+engine side (Person B).</strong> Both <code>get_intent()</code> (NetBox) and <code>get_reality()</code>
+(device) must return data in <em>exactly</em> the shape defined here. The diff engine
+assumes the data already matches this shape and does not care where it came from.</p>
+<p><strong>Rule: any change to this file is a merge request that BOTH partners review and
+approve.</strong> Do not change the schema unilaterally.</p>
+<p><strong>Status:</strong> v1.0 / v2.5. Config-level drift (<code>running_config</code>) added 2026-05-31;
+remediation payload (<code>known_issue.remediation</code>) added 2026-05-31 (see the change
+log). Further changes require a merge request both partners approve.</p>
+</blockquote>
+<hr />
+<h2 id="1-why-this-exists">1. Why this exists<a class="headerlink" href="#1-why-this-exists" title="Permanent link">&para;</a></h2>
+<p>Person A builds code that pulls data <em>from NetBox</em> and <em>from devices</em>. Person B
+builds the code that <em>compares</em> that data. They never touch the same files. The only
+thing they share is the <strong>shape of the data that passes between them</strong>. That shape is
+defined here.</p>
+<p>If both sides honour this document, they can develop completely independently:</p>
+<ul>
+<li>Person A builds collectors against this spec.</li>
+<li>Person B builds the diff engine against hand-written sample dicts (see
+  <code>tests/fixtures/</code>) that follow this spec.</li>
+</ul>
+<p>They only integrate at the end, and it just works — because both followed the same
+contract.</p>
+<hr />
+<h2 id="2-the-device-state-object-v10">2. The device-state object (v1.0)<a class="headerlink" href="#2-the-device-state-object-v10" title="Permanent link">&para;</a></h2>
+<p>This is what <code>get_intent(device_name)</code> and <code>get_reality(device)</code> both return.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="s2">&quot;device&quot;</span><span class="p">:</span> <span class="s2">&quot;core-sw-01&quot;</span><span class="p">,</span>                  <span class="c1"># str</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="s2">&quot;platform&quot;</span><span class="p">:</span> <span class="s2">&quot;arista_eos&quot;</span><span class="p">,</span>                <span class="c1"># str</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="s2">&quot;collected_at&quot;</span><span class="p">:</span> <span class="s2">&quot;2026-05-20T14:32:00Z&quot;</span><span class="p">,</span>  <span class="c1"># str, ISO 8601 UTC</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="s2">&quot;interfaces&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="c1"># key = canonical full interface name</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="s2">&quot;Ethernet1&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Uplink to dist-01&quot;</span><span class="p">,</span>  <span class="c1"># str</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>            <span class="s2">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>                     <span class="c1"># bool</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>            <span class="s2">&quot;ip_addresses&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;10.1.1.5/24&quot;</span><span class="p">],</span>     <span class="c1"># list[str], sorted</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>            <span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="s2">&quot;routed&quot;</span><span class="p">,</span>                    <span class="c1"># &quot;access&quot; | &quot;tagged&quot; | &quot;routed&quot;</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>            <span class="s2">&quot;untagged_vlan&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>               <span class="c1"># int | None</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>            <span class="s2">&quot;tagged_vlans&quot;</span><span class="p">:</span> <span class="p">[],</span>                  <span class="c1"># list[int], sorted</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>        <span class="p">},</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a>        <span class="s2">&quot;Ethernet2&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a>            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Access port - users&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a>            <span class="s2">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a>            <span class="s2">&quot;ip_addresses&quot;</span><span class="p">:</span> <span class="p">[],</span>
+<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a>            <span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="s2">&quot;access&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a>            <span class="s2">&quot;untagged_vlan&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a>            <span class="s2">&quot;tagged_vlans&quot;</span><span class="p">:</span> <span class="p">[],</span>
+<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a>        <span class="p">},</span>
+<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a>        <span class="s2">&quot;Ethernet3&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a>            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Trunk to dist-01&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a>            <span class="s2">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-0-26" name="__codelineno-0-26" href="#__codelineno-0-26"></a>            <span class="s2">&quot;ip_addresses&quot;</span><span class="p">:</span> <span class="p">[],</span>
+<a id="__codelineno-0-27" name="__codelineno-0-27" href="#__codelineno-0-27"></a>            <span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="s2">&quot;tagged&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-28" name="__codelineno-0-28" href="#__codelineno-0-28"></a>            <span class="s2">&quot;untagged_vlan&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-29" name="__codelineno-0-29" href="#__codelineno-0-29"></a>            <span class="s2">&quot;tagged_vlans&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mi">30</span><span class="p">],</span>
+<a id="__codelineno-0-30" name="__codelineno-0-30" href="#__codelineno-0-30"></a>        <span class="p">},</span>
+<a id="__codelineno-0-31" name="__codelineno-0-31" href="#__codelineno-0-31"></a>    <span class="p">},</span>
+<a id="__codelineno-0-32" name="__codelineno-0-32" href="#__codelineno-0-32"></a>    <span class="s2">&quot;vlans&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-33" name="__codelineno-0-33" href="#__codelineno-0-33"></a>        <span class="c1"># keys are VLAN IDs as STRINGS, not ints — see Rule 7</span>
+<a id="__codelineno-0-34" name="__codelineno-0-34" href="#__codelineno-0-34"></a>        <span class="s2">&quot;10&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;users&quot;</span><span class="p">},</span>
+<a id="__codelineno-0-35" name="__codelineno-0-35" href="#__codelineno-0-35"></a>        <span class="s2">&quot;20&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;voice&quot;</span><span class="p">},</span>
+<a id="__codelineno-0-36" name="__codelineno-0-36" href="#__codelineno-0-36"></a>        <span class="s2">&quot;30&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;mgmt&quot;</span><span class="p">},</span>
+<a id="__codelineno-0-37" name="__codelineno-0-37" href="#__codelineno-0-37"></a>    <span class="p">},</span>
+<a id="__codelineno-0-38" name="__codelineno-0-38" href="#__codelineno-0-38"></a>    <span class="s2">&quot;bgp_neighbors&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-39" name="__codelineno-0-39" href="#__codelineno-0-39"></a>        <span class="c1"># keys are the neighbor IP as a STRING — see Rule 7</span>
+<a id="__codelineno-0-40" name="__codelineno-0-40" href="#__codelineno-0-40"></a>        <span class="s2">&quot;10.0.0.2&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-41" name="__codelineno-0-41" href="#__codelineno-0-41"></a>            <span class="s2">&quot;remote_as&quot;</span><span class="p">:</span> <span class="mi">65000</span><span class="p">,</span>              <span class="c1"># int</span>
+<a id="__codelineno-0-42" name="__codelineno-0-42" href="#__codelineno-0-42"></a>            <span class="s2">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>                 <span class="c1"># bool — admin state</span>
+<a id="__codelineno-0-43" name="__codelineno-0-43" href="#__codelineno-0-43"></a>            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>               <span class="c1"># str, &quot;&quot; if unset — never None</span>
+<a id="__codelineno-0-44" name="__codelineno-0-44" href="#__codelineno-0-44"></a>            <span class="s2">&quot;session_state&quot;</span><span class="p">:</span> <span class="s2">&quot;established&quot;</span><span class="p">,</span>   <span class="c1"># str, lower-cased — see Rule 10</span>
+<a id="__codelineno-0-45" name="__codelineno-0-45" href="#__codelineno-0-45"></a>        <span class="p">},</span>
+<a id="__codelineno-0-46" name="__codelineno-0-46" href="#__codelineno-0-46"></a>    <span class="p">},</span>
+<a id="__codelineno-0-47" name="__codelineno-0-47" href="#__codelineno-0-47"></a>    <span class="s2">&quot;ospf&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-48" name="__codelineno-0-48" href="#__codelineno-0-48"></a>        <span class="s2">&quot;adjacencies&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-49" name="__codelineno-0-49" href="#__codelineno-0-49"></a>            <span class="c1"># keys are the neighbor router-id as a STRING</span>
+<a id="__codelineno-0-50" name="__codelineno-0-50" href="#__codelineno-0-50"></a>            <span class="s2">&quot;2.2.2.2&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-51" name="__codelineno-0-51" href="#__codelineno-0-51"></a>                <span class="s2">&quot;area&quot;</span><span class="p">:</span> <span class="s2">&quot;0.0.0.0&quot;</span><span class="p">,</span>            <span class="c1"># str — dotted-decimal, always</span>
+<a id="__codelineno-0-52" name="__codelineno-0-52" href="#__codelineno-0-52"></a>                <span class="s2">&quot;interface&quot;</span><span class="p">:</span> <span class="s2">&quot;Ethernet1&quot;</span><span class="p">,</span>     <span class="c1"># str — canonical interface name</span>
+<a id="__codelineno-0-53" name="__codelineno-0-53" href="#__codelineno-0-53"></a>                <span class="s2">&quot;adjacency_state&quot;</span><span class="p">:</span> <span class="s2">&quot;full&quot;</span><span class="p">,</span>    <span class="c1"># str, lower-cased — see Rule 10</span>
+<a id="__codelineno-0-54" name="__codelineno-0-54" href="#__codelineno-0-54"></a>            <span class="p">},</span>
+<a id="__codelineno-0-55" name="__codelineno-0-55" href="#__codelineno-0-55"></a>        <span class="p">},</span>
+<a id="__codelineno-0-56" name="__codelineno-0-56" href="#__codelineno-0-56"></a>    <span class="p">},</span>
+<a id="__codelineno-0-57" name="__codelineno-0-57" href="#__codelineno-0-57"></a>
+<a id="__codelineno-0-58" name="__codelineno-0-58" href="#__codelineno-0-58"></a>    <span class="c1"># --- v1.0 addition ---</span>
+<a id="__codelineno-0-59" name="__codelineno-0-59" href="#__codelineno-0-59"></a>    <span class="s2">&quot;running_config&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>   <span class="c1"># str — full device running config as text, &quot;&quot; if unavailable</span>
+<a id="__codelineno-0-60" name="__codelineno-0-60" href="#__codelineno-0-60"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="field-reference">Field reference<a class="headerlink" href="#field-reference" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>device</code></td>
+<td><code>str</code></td>
+<td>Device name. Must be identical in NetBox and on the device.</td>
+</tr>
+<tr>
+<td><code>platform</code></td>
+<td><code>str</code></td>
+<td>Normalized platform id. See Section 4 for the allowed values.</td>
+</tr>
+<tr>
+<td><code>collected_at</code></td>
+<td><code>str</code></td>
+<td>When this snapshot was taken. ISO 8601, UTC, <code>Z</code> suffix.</td>
+</tr>
+<tr>
+<td><code>interfaces</code></td>
+<td><code>dict</code></td>
+<td>Keyed by canonical full interface name.</td>
+</tr>
+<tr>
+<td><code>interfaces[].description</code></td>
+<td><code>str</code></td>
+<td>Interface description. Empty string <code>""</code> if unset — never <code>None</code>.</td>
+</tr>
+<tr>
+<td><code>interfaces[].enabled</code></td>
+<td><code>bool</code></td>
+<td><strong>Administrative</strong> state: is the interface NOT shut down? This is config intent, not link/carrier state.</td>
+</tr>
+<tr>
+<td><code>interfaces[].ip_addresses</code></td>
+<td><code>list[str]</code></td>
+<td>IPs in CIDR notation (<code>"10.1.1.5/24"</code>). Sorted ascending. Empty list <code>[]</code> if none.</td>
+</tr>
+<tr>
+<td><code>interfaces[].mode</code></td>
+<td><code>str</code></td>
+<td>One of <code>access</code>, <code>tagged</code>, <code>routed</code>. Always present, never <code>None</code>. See Rule 8.</td>
+</tr>
+<tr>
+<td><code>interfaces[].untagged_vlan</code></td>
+<td><code>int \| None</code></td>
+<td>The access/untagged VLAN ID. <code>None</code> when the interface has no untagged VLAN (routed interfaces; trunks).</td>
+</tr>
+<tr>
+<td><code>interfaces[].tagged_vlans</code></td>
+<td><code>list[int]</code></td>
+<td>Tagged VLAN IDs, sorted ascending. Empty list <code>[]</code> if none.</td>
+</tr>
+<tr>
+<td><code>vlans</code></td>
+<td><code>dict</code></td>
+<td>Top-level VLAN definitions. Keyed by VLAN ID <strong>as a string</strong>. Value is a dict with at least <code>name</code>. On the intent side, VLANs are scoped to the device's NetBox <strong>site</strong> (v0.2).</td>
+</tr>
+<tr>
+<td><code>vlans[].name</code></td>
+<td><code>str</code></td>
+<td>VLAN name. Empty string <code>""</code> if unset — never <code>None</code>.</td>
+</tr>
+<tr>
+<td><code>bgp_neighbors</code></td>
+<td><code>dict</code></td>
+<td>Top-level. BGP neighbors keyed by neighbor IP <strong>as a string</strong>. Empty dict <code>{}</code> if the device runs no BGP.</td>
+</tr>
+<tr>
+<td><code>bgp_neighbors[].remote_as</code></td>
+<td><code>int</code></td>
+<td>The AS number the peer is expected to be in.</td>
+</tr>
+<tr>
+<td><code>bgp_neighbors[].enabled</code></td>
+<td><code>bool</code></td>
+<td>Administrative state of the neighbor: configured up vs shut down.</td>
+</tr>
+<tr>
+<td><code>bgp_neighbors[].description</code></td>
+<td><code>str</code></td>
+<td>Neighbor description. Empty string <code>""</code> if unset — never <code>None</code>.</td>
+</tr>
+<tr>
+<td><code>bgp_neighbors[].session_state</code></td>
+<td><code>str</code></td>
+<td>Operational BGP session state, lower-cased (<code>established</code>, <code>idle</code>, <code>active</code>, <code>connect</code>, <code>opensent</code>, <code>openconfirm</code>). See Rule 10.</td>
+</tr>
+<tr>
+<td><code>ospf</code></td>
+<td><code>dict</code></td>
+<td>Top-level. Always present; <code>{"adjacencies": {}}</code> if the device runs no OSPF.</td>
+</tr>
+<tr>
+<td><code>ospf.adjacencies</code></td>
+<td><code>dict</code></td>
+<td>OSPF adjacencies keyed by neighbor router-id <strong>as a string</strong>.</td>
+</tr>
+<tr>
+<td><code>ospf.adjacencies[].area</code></td>
+<td><code>str</code></td>
+<td>OSPF area in dotted-decimal form (<code>"0.0.0.0"</code>), never the bare-integer form.</td>
+</tr>
+<tr>
+<td><code>ospf.adjacencies[].interface</code></td>
+<td><code>str</code></td>
+<td>Canonical full interface name the adjacency is formed on.</td>
+</tr>
+<tr>
+<td><code>ospf.adjacencies[].adjacency_state</code></td>
+<td><code>str</code></td>
+<td>Operational OSPF adjacency state, lower-cased (<code>full</code>, <code>2-way</code>, <code>init</code>, <code>exstart</code>, <code>exchange</code>, <code>loading</code>, <code>down</code>). See Rule 10.</td>
+</tr>
+<tr>
+<td><code>running_config</code></td>
+<td><code>str</code></td>
+<td>The device's full running configuration as plain text. On the <strong>reality</strong> side: output of <code>show running-config</code> (or equivalent). On the <strong>intent</strong> side: config rendered from a NetBox Config Template (<code>GET /api/dcim/devices/{id}/render-config/</code>). Empty string <code>""</code> when unavailable or no template exists — never <code>None</code>, per Rule 4.</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-schema-rules-apply-to-both-sides">3. Schema rules — apply to BOTH sides<a class="headerlink" href="#3-schema-rules-apply-to-both-sides" title="Permanent link">&para;</a></h2>
+<p>These rules exist so the diff engine never reports a difference that is really just
+a formatting or ordering artifact.</p>
+<ol>
+<li>
+<p><strong>Interface names are canonical and full.</strong> <code>Ethernet1</code>, never <code>Et1</code>.
+   <code>GigabitEthernet1/0/1</code>, never <code>Gi1/0/1</code>. <strong>Each collector is responsible for
+   expanding abbreviations</strong> before returning. The diff engine assumes names already
+   match exactly and does no normalization of its own.</p>
+</li>
+<li>
+<p><strong>Timestamps are ISO 8601, UTC, with a <code>Z</code> suffix.</strong> Example:
+   <code>"2026-05-20T14:32:00Z"</code>. Never local time. Never a naive datetime. In Python,
+   produce it with a timezone-aware UTC datetime and <code>.isoformat()</code>, or
+   <code>datetime.now(timezone.utc)</code>.</p>
+</li>
+<li>
+<p><strong>Lists are sorted before returning.</strong> <code>ip_addresses</code> and <code>tagged_vlans</code> are
+   sorted ascending. Any list-valued field added later is also sorted. This means
+   <code>["10.1.1.5/24", "10.1.1.6/24"]</code> and <code>["10.1.1.6/24", "10.1.1.5/24"]</code> can never
+   be reported as drift. <code>tagged_vlans</code> is sorted as a list of integers.</p>
+</li>
+<li>
+<p><strong>Absent values are explicit for string and list fields, never a missing key.</strong></p>
+</li>
+<li>Unset description → <code>""</code> (empty string)</li>
+<li>No IP addresses → <code>[]</code> (empty list)</li>
+<li>No tagged VLANs → <code>[]</code> (empty list)</li>
+<li>This rule governs <strong>string and list</strong> fields, where "empty" and "absent" are
+     the same real-world thing and must look identical so the diff engine never
+     reports representation noise as drift.</li>
+<li><strong>Nullable scalar fields</strong> (e.g. <code>untagged_vlan</code>) are typed <code>X | None</code> and use
+     <code>None</code> to mean "genuinely absent". They must still always be present as a key.</li>
+<li>
+<p>Every interface dict has all six keys, always.</p>
+</li>
+<li>
+<p><strong><code>enabled</code> is administrative state.</strong> It answers "is this interface configured
+   as <code>no shutdown</code>?" — not "is the cable plugged in?" Link/carrier state is a
+   separate field added in a later version.</p>
+</li>
+<li>
+<p><strong><code>device</code> must match across all three places</strong> — the name in NetBox, the name
+   on the physical/virtual device, and the value in this object. If they differ,
+   intent and reality cannot be paired up. Keep them consistent.</p>
+</li>
+<li>
+<p><strong><code>vlans</code> dict keys are strings.</strong> The top-level <code>vlans</code> dict is keyed by VLAN
+   ID as a <strong>string</strong> (<code>"10"</code>), not an integer. This data is JSON-serialized
+   (Postgres JSON columns, FastAPI responses), and JSON object keys are always
+   strings — an int-keyed dict silently becomes string-keyed on a JSON round-trip.
+   Keeping keys as strings everywhere makes the in-memory and JSON representations
+   identical, so the diff engine never sees false drift from a type mismatch.
+   Note the deliberate asymmetry: <code>tagged_vlans</code> stays a <code>list[int]</code> — lists
+   survive JSON unchanged, and integer sorting is correct.</p>
+</li>
+<li>
+<p><strong><code>mode</code> is one of exactly three values</strong> — <code>access</code>, <code>tagged</code>, <code>routed</code> — and
+   is always present. A routed layer-3 interface is <strong>not</strong> "modeless"; <code>routed</code>
+   <em>is</em> its mode. There is no fourth "unknown" value. If a collector cannot
+   classify an interface into one of the three, that is a collector bug to surface
+   loudly — not a schema value to invent.</p>
+</li>
+<li>
+<p><strong>The <code>vlans</code> block contains every VLAN present on the device, including the
+   default VLAN (VLAN 1).</strong> There is no special-casing of reserved or default
+   VLAN IDs — neither collectors nor the diff engine filter them. VLAN 1 is a
+   normal VLAN: the collector reports it, and intent (NetBox) is expected to
+   document it like any other. If a VLAN exists on one side but not the other,
+   that is genuine drift and is reported as such. The fix for "VLAN 1 shows as
+   undocumented drift" is to document VLAN 1 in NetBox, not to filter it out.</p>
+</li>
+<li>
+<p><strong>Operational routing-state values are lower-cased strings, and they ARE in
+    scope for drift.</strong> <code>session_state</code> (BGP) and <code>adjacency_state</code> (OSPF) are
+    operational, not pure configuration — but a configured peer or adjacency
+    being <em>down</em> is the single most useful routing-drift signal, so they are
+    compared like any other field. Each collector lower-cases whatever the device
+    reports (<code>established</code>, not <code>Established</code>) so intent and reality compare
+    like-for-like. The <code>area</code> field is likewise always normalized to
+    dotted-decimal form (<code>"0.0.0.0"</code>), since EOS accepts both <code>0</code> and <code>0.0.0.0</code>
+    as input but the collector must emit one canonical form.</p>
+</li>
+</ol>
+<hr />
+<h2 id="4-allowed-platform-values">4. Allowed <code>platform</code> values<a class="headerlink" href="#4-allowed-platform-values" title="Permanent link">&para;</a></h2>
+<p>A fixed, normalized set. Collectors must emit one of these exact strings — not the
+vendor's own naming, not NetBox's slug if it differs.</p>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Vendor / OS</th>
+<th>Introduced</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>arista_eos</code></td>
+<td>Arista EOS</td>
+<td>v0.1</td>
+</tr>
+<tr>
+<td><code>juniper_junos</code></td>
+<td>Juniper Junos</td>
+<td>later</td>
+</tr>
+<tr>
+<td><code>cisco_iosxe</code></td>
+<td>Cisco IOS-XE</td>
+<td>v0.3</td>
+</tr>
+<tr>
+<td><code>nokia_srlinux</code></td>
+<td>Nokia SR Linux</td>
+<td>v0.2</td>
+</tr>
+<tr>
+<td><code>frr</code></td>
+<td>FRRouting</td>
+<td>later</td>
+</tr>
+</tbody>
+</table>
+<p>If a new platform is needed, add it here in the same merge request that adds its
+collector.</p>
+<hr />
+<h2 id="5-the-drift-record-output-of-the-diff-engine">5. The drift record (output of the diff engine)<a class="headerlink" href="#5-the-drift-record-output-of-the-diff-engine" title="Permanent link">&para;</a></h2>
+<p>The diff engine consumes two device-state objects (intent + reality for the same
+device) and returns a <code>list</code> of drift records. Each record is one difference.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>    <span class="s2">&quot;device&quot;</span><span class="p">:</span> <span class="s2">&quot;core-sw-01&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>    <span class="s2">&quot;object&quot;</span><span class="p">:</span> <span class="s2">&quot;interface:Ethernet1&quot;</span><span class="p">,</span>   <span class="c1"># &quot;&lt;type&gt;:&lt;identifier&gt;&quot;</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>    <span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="s2">&quot;ip_addresses&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>    <span class="s2">&quot;intent&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;10.1.1.5/24&quot;</span><span class="p">],</span>         <span class="c1"># value from NetBox</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>    <span class="s2">&quot;reality&quot;</span><span class="p">:</span> <span class="p">[</span><span class="s2">&quot;10.1.1.9/24&quot;</span><span class="p">],</span>        <span class="c1"># value from the device</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>    <span class="s2">&quot;drift_kind&quot;</span><span class="p">:</span> <span class="s2">&quot;value_mismatch&quot;</span><span class="p">,</span>    <span class="c1"># see Section 6</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>    <span class="s2">&quot;severity&quot;</span><span class="p">:</span> <span class="s2">&quot;warning&quot;</span><span class="p">,</span>             <span class="c1"># info | warning | critical</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>    <span class="s2">&quot;detected_at&quot;</span><span class="p">:</span> <span class="s2">&quot;2026-05-20T14:32:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="field-reference_1">Field reference<a class="headerlink" href="#field-reference_1" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>device</code></td>
+<td><code>str</code></td>
+<td>Device the drift was found on.</td>
+</tr>
+<tr>
+<td><code>object</code></td>
+<td><code>str</code></td>
+<td><code>"&lt;type&gt;:&lt;identifier&gt;"</code> for all types except config. Types: <code>interface</code> (e.g. <code>interface:Ethernet1</code>), <code>vlan</code> (e.g. <code>vlan:20</code>), <code>bgp_neighbor</code> (e.g. <code>bgp_neighbor:10.0.0.2</code>), <code>ospf_adjacency</code> (e.g. <code>ospf_adjacency:2.2.2.2</code>), and <code>config</code> (no identifier suffix — there is only one running config per device).</td>
+</tr>
+<tr>
+<td><code>field</code></td>
+<td><code>str</code></td>
+<td>Which field drifted: <code>description</code>, <code>enabled</code>, <code>ip_addresses</code>, <code>mode</code>, <code>untagged_vlan</code>, <code>tagged_vlans</code>, <code>name</code>, <code>remote_as</code>, <code>session_state</code>, <code>area</code>, <code>interface</code>, <code>adjacency_state</code>, <code>running_config</code>, or a sentinel (<code>_interface</code>, <code>_vlan</code>, <code>_bgp_neighbor</code>, <code>_ospf_adjacency</code>).</td>
+</tr>
+<tr>
+<td><code>intent</code></td>
+<td>varies</td>
+<td>The value NetBox says it should be. Type matches the field.</td>
+</tr>
+<tr>
+<td><code>reality</code></td>
+<td>varies</td>
+<td>The value the device actually reports.</td>
+</tr>
+<tr>
+<td><code>drift_kind</code></td>
+<td><code>str</code></td>
+<td>Category of difference. See Section 6.</td>
+</tr>
+<tr>
+<td><code>severity</code></td>
+<td><code>str</code></td>
+<td><code>info</code>, <code>warning</code>, or <code>critical</code>. See Section 7.</td>
+</tr>
+<tr>
+<td><code>detected_at</code></td>
+<td><code>str</code></td>
+<td>ISO 8601 UTC. When the diff was computed (not when collected).</td>
+</tr>
+</tbody>
+</table>
+<p>If intent and reality match perfectly, the diff engine returns an <strong>empty list</strong>.</p>
+<hr />
+<h2 id="6-drift_kind-values">6. <code>drift_kind</code> values<a class="headerlink" href="#6-drift_kind-values" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Value</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>value_mismatch</code></td>
+<td>Both intent and reality have a value for this field, and they differ.</td>
+</tr>
+<tr>
+<td><code>missing_in_reality</code></td>
+<td>Intent has it, the device does not. (e.g. NetBox lists an interface or VLAN the device doesn't have, or an IP the device isn't carrying.)</td>
+</tr>
+<tr>
+<td><code>missing_in_intent</code></td>
+<td>The device has it, NetBox does not. Undocumented configuration.</td>
+</tr>
+<tr>
+<td><code>extra</code></td>
+<td>Generic catch-all. Avoid using it; prefer a specific kind.</td>
+</tr>
+</tbody>
+</table>
+<p><strong>How this maps to interfaces:</strong> if an interface key exists in intent but not in
+reality, that is one drift record with <code>drift_kind = missing_in_reality</code> and
+<code>field</code> set to the sentinel <code>"_interface"</code>.</p>
+<p><strong>How this maps to VLANs:</strong> the top-level <code>vlans</code> block can drift on its own — a
+VLAN present on one side but not the other, or a <code>name</code> mismatch. A VLAN missing
+on one side is one drift record with <code>object = "vlan:&lt;id&gt;"</code>, <code>field</code> set to the
+sentinel <code>"_vlan"</code>, and the appropriate <code>missing_in_*</code> kind. A <code>name</code> mismatch is
+<code>object = "vlan:&lt;id&gt;"</code>, <code>field = "name"</code>, <code>drift_kind = value_mismatch</code>.</p>
+<p><strong>How this maps to BGP neighbors:</strong> the top-level <code>bgp_neighbors</code> block drifts per
+neighbor, keyed by IP. A neighbor present on one side but not the other is one
+drift record with <code>object = "bgp_neighbor:&lt;ip&gt;"</code>, <code>field</code> set to the sentinel
+<code>"_bgp_neighbor"</code>, and the appropriate <code>missing_in_*</code> kind. A field difference is
+<code>object = "bgp_neighbor:&lt;ip&gt;"</code>, <code>field</code> one of <code>remote_as</code> / <code>enabled</code> /
+<code>description</code> / <code>session_state</code>, <code>drift_kind = value_mismatch</code>.</p>
+<p><strong>How this maps to OSPF adjacencies:</strong> the <code>ospf.adjacencies</code> block drifts per
+adjacency, keyed by neighbor router-id. An adjacency present on one side but not
+the other is one drift record with <code>object = "ospf_adjacency:&lt;router-id&gt;"</code>,
+<code>field</code> set to the sentinel <code>"_ospf_adjacency"</code>, and the appropriate
+<code>missing_in_*</code> kind. A field difference is
+<code>object = "ospf_adjacency:&lt;router-id&gt;"</code>, <code>field</code> one of <code>area</code> / <code>interface</code> /
+<code>adjacency_state</code>, <code>drift_kind = value_mismatch</code>.</p>
+<p><strong>How this maps to running config:</strong> there is exactly one running config per
+device. If the normalized intent config and the normalized reality config differ,
+the diff engine emits <strong>one</strong> drift record with <code>object = "config"</code>,
+<code>field = "running_config"</code>, <code>drift_kind = value_mismatch</code>. No record is emitted
+if either side is <code>""</code> (see Section 10, Decision 4). The <code>intent</code> and <code>reality</code>
+values in the record are the full normalized config strings.</p>
+<hr />
+<h2 id="7-severity-guidance">7. <code>severity</code> guidance<a class="headerlink" href="#7-severity-guidance" title="Permanent link">&para;</a></h2>
+<p>Severity is assigned by the diff engine based on field and kind. Starting rules —
+refine as you learn:</p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Severity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>description</code> mismatch</td>
+<td><code>info</code></td>
+</tr>
+<tr>
+<td><code>enabled</code> mismatch (intent up, reality down)</td>
+<td><code>critical</code></td>
+</tr>
+<tr>
+<td><code>enabled</code> mismatch (intent down, reality up)</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td><code>ip_addresses</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>Interface missing in reality</td>
+<td><code>critical</code></td>
+</tr>
+<tr>
+<td>Interface missing in intent (undocumented)</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td><code>mode</code> mismatch (e.g. access vs tagged)</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td><code>untagged_vlan</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td><code>tagged_vlans</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>VLAN present in intent, missing in reality</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>VLAN present in reality, missing in intent</td>
+<td><code>info</code></td>
+</tr>
+<tr>
+<td>VLAN <code>name</code> mismatch</td>
+<td><code>info</code></td>
+</tr>
+<tr>
+<td>BGP neighbor missing in reality (intent has it)</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>BGP neighbor missing in intent (undocumented)</td>
+<td><code>info</code></td>
+</tr>
+<tr>
+<td>BGP <code>remote_as</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>BGP <code>enabled</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>BGP <code>session_state</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>BGP <code>description</code> mismatch</td>
+<td><code>info</code></td>
+</tr>
+<tr>
+<td>OSPF adjacency missing in reality (intent has it)</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>OSPF adjacency missing in intent (undocumented)</td>
+<td><code>info</code></td>
+</tr>
+<tr>
+<td>OSPF <code>area</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>OSPF <code>adjacency_state</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td>Config text mismatch (<code>running_config</code>)</td>
+<td><code>warning</code></td>
+</tr>
+</tbody>
+</table>
+<p>These are defaults. In a later version, severity becomes configurable per site/role.</p>
+<hr />
+<h2 id="8-worked-example-the-full-loop">8. Worked example (the full loop)<a class="headerlink" href="#8-worked-example-the-full-loop" title="Permanent link">&para;</a></h2>
+<p><strong>Intent — from NetBox via <code>get_intent("core-sw-01")</code>:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>    <span class="s2">&quot;device&quot;</span><span class="p">:</span> <span class="s2">&quot;core-sw-01&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>    <span class="s2">&quot;platform&quot;</span><span class="p">:</span> <span class="s2">&quot;arista_eos&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>    <span class="s2">&quot;collected_at&quot;</span><span class="p">:</span> <span class="s2">&quot;2026-05-20T14:32:00Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>    <span class="s2">&quot;interfaces&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>        <span class="s2">&quot;Ethernet1&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Uplink to dist-01&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>            <span class="s2">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a>            <span class="s2">&quot;ip_addresses&quot;</span><span class="p">:</span> <span class="p">[],</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>            <span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="s2">&quot;routed&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>            <span class="s2">&quot;untagged_vlan&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a>            <span class="s2">&quot;tagged_vlans&quot;</span><span class="p">:</span> <span class="p">[],</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>        <span class="p">},</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>        <span class="s2">&quot;Ethernet2&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a>            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Access port - users&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>            <span class="s2">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>            <span class="s2">&quot;ip_addresses&quot;</span><span class="p">:</span> <span class="p">[],</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>            <span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="s2">&quot;access&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a>            <span class="s2">&quot;untagged_vlan&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>            <span class="s2">&quot;tagged_vlans&quot;</span><span class="p">:</span> <span class="p">[],</span>
+<a id="__codelineno-2-21" name="__codelineno-2-21" href="#__codelineno-2-21"></a>        <span class="p">},</span>
+<a id="__codelineno-2-22" name="__codelineno-2-22" href="#__codelineno-2-22"></a>    <span class="p">},</span>
+<a id="__codelineno-2-23" name="__codelineno-2-23" href="#__codelineno-2-23"></a>    <span class="s2">&quot;vlans&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-2-24" name="__codelineno-2-24" href="#__codelineno-2-24"></a>        <span class="s2">&quot;10&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;users&quot;</span><span class="p">},</span>
+<a id="__codelineno-2-25" name="__codelineno-2-25" href="#__codelineno-2-25"></a>        <span class="s2">&quot;20&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;voice&quot;</span><span class="p">},</span>
+<a id="__codelineno-2-26" name="__codelineno-2-26" href="#__codelineno-2-26"></a>    <span class="p">},</span>
+<a id="__codelineno-2-27" name="__codelineno-2-27" href="#__codelineno-2-27"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Reality — from the device via <code>get_reality(device)</code>:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>    <span class="s2">&quot;device&quot;</span><span class="p">:</span> <span class="s2">&quot;core-sw-01&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>    <span class="s2">&quot;platform&quot;</span><span class="p">:</span> <span class="s2">&quot;arista_eos&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>    <span class="s2">&quot;collected_at&quot;</span><span class="p">:</span> <span class="s2">&quot;2026-05-20T14:32:03Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>    <span class="s2">&quot;interfaces&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>        <span class="s2">&quot;Ethernet1&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Uplink to dist-01&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>            <span class="s2">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>            <span class="s2">&quot;ip_addresses&quot;</span><span class="p">:</span> <span class="p">[],</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>            <span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="s2">&quot;routed&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>            <span class="s2">&quot;untagged_vlan&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>            <span class="s2">&quot;tagged_vlans&quot;</span><span class="p">:</span> <span class="p">[],</span>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a>        <span class="p">},</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>        <span class="s2">&quot;Ethernet2&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>            <span class="s2">&quot;description&quot;</span><span class="p">:</span> <span class="s2">&quot;Access port - users&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a>            <span class="s2">&quot;enabled&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>            <span class="s2">&quot;ip_addresses&quot;</span><span class="p">:</span> <span class="p">[],</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>            <span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="s2">&quot;access&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-19" name="__codelineno-3-19" href="#__codelineno-3-19"></a>            <span class="s2">&quot;untagged_vlan&quot;</span><span class="p">:</span> <span class="mi">99</span><span class="p">,</span>                   <span class="c1"># drift: should be VLAN 10</span>
+<a id="__codelineno-3-20" name="__codelineno-3-20" href="#__codelineno-3-20"></a>            <span class="s2">&quot;tagged_vlans&quot;</span><span class="p">:</span> <span class="p">[],</span>
+<a id="__codelineno-3-21" name="__codelineno-3-21" href="#__codelineno-3-21"></a>        <span class="p">},</span>
+<a id="__codelineno-3-22" name="__codelineno-3-22" href="#__codelineno-3-22"></a>    <span class="p">},</span>
+<a id="__codelineno-3-23" name="__codelineno-3-23" href="#__codelineno-3-23"></a>    <span class="s2">&quot;vlans&quot;</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-3-24" name="__codelineno-3-24" href="#__codelineno-3-24"></a>        <span class="s2">&quot;10&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;users&quot;</span><span class="p">},</span>
+<a id="__codelineno-3-25" name="__codelineno-3-25" href="#__codelineno-3-25"></a>        <span class="s2">&quot;20&quot;</span><span class="p">:</span> <span class="p">{</span><span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="s2">&quot;Voice-VLAN&quot;</span><span class="p">},</span>              <span class="c1"># drift: name differs</span>
+<a id="__codelineno-3-26" name="__codelineno-3-26" href="#__codelineno-3-26"></a>    <span class="p">},</span>
+<a id="__codelineno-3-27" name="__codelineno-3-27" href="#__codelineno-3-27"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Diff engine output — a list of two drift records:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">[</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>    <span class="p">{</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>        <span class="s2">&quot;device&quot;</span><span class="p">:</span> <span class="s2">&quot;core-sw-01&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>        <span class="s2">&quot;object&quot;</span><span class="p">:</span> <span class="s2">&quot;interface:Ethernet2&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>        <span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="s2">&quot;untagged_vlan&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>        <span class="s2">&quot;intent&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a>        <span class="s2">&quot;reality&quot;</span><span class="p">:</span> <span class="mi">99</span><span class="p">,</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>        <span class="s2">&quot;drift_kind&quot;</span><span class="p">:</span> <span class="s2">&quot;value_mismatch&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>        <span class="s2">&quot;severity&quot;</span><span class="p">:</span> <span class="s2">&quot;warning&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>        <span class="s2">&quot;detected_at&quot;</span><span class="p">:</span> <span class="s2">&quot;2026-05-20T14:32:04Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>    <span class="p">},</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a>    <span class="p">{</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>        <span class="s2">&quot;device&quot;</span><span class="p">:</span> <span class="s2">&quot;core-sw-01&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>        <span class="s2">&quot;object&quot;</span><span class="p">:</span> <span class="s2">&quot;vlan:20&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>        <span class="s2">&quot;field&quot;</span><span class="p">:</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a>        <span class="s2">&quot;intent&quot;</span><span class="p">:</span> <span class="s2">&quot;voice&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>        <span class="s2">&quot;reality&quot;</span><span class="p">:</span> <span class="s2">&quot;Voice-VLAN&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>        <span class="s2">&quot;drift_kind&quot;</span><span class="p">:</span> <span class="s2">&quot;value_mismatch&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>        <span class="s2">&quot;severity&quot;</span><span class="p">:</span> <span class="s2">&quot;info&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>        <span class="s2">&quot;detected_at&quot;</span><span class="p">:</span> <span class="s2">&quot;2026-05-20T14:32:04Z&quot;</span><span class="p">,</span>
+<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a>    <span class="p">},</span>
+<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a><span class="p">]</span>
+</code></pre></div>
+<hr />
+<h2 id="9-the-known_issueremediation-field-v25">9. The <code>known_issue.remediation</code> field (v2.5)<a class="headerlink" href="#9-the-known_issueremediation-field-v25" title="Permanent link">&para;</a></h2>
+<p><code>remediation</code> is a JSONB field on the <code>known_issues</code> table. It holds the executable
+fix for a recurring drift pattern and is the seam between Person A's applier layer
+(<code>appliers/&lt;vendor&gt;.py</code>) and Person B's storage and orchestration layer.</p>
+<h3 id="shape-discriminated-union-on-kind">Shape — discriminated union on <code>kind</code><a class="headerlink" href="#shape-discriminated-union-on-kind" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// kind: &quot;restore_intent&quot; — auto-apply eligible; the primary path</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="p">{</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">  </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;restore_intent&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">&quot;object_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;interface | vlan | bgp_neighbor | ospf_adjacency&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">&quot;field&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;description | enabled | ip_addresses | mode | untagged_vlan | tagged_vlans | remote_as | ...&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">  </span><span class="nt">&quot;drift_kinds&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;value_mismatch&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;missing_in_reality&quot;</span><span class="p">]</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="p">}</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="c1">// kind: &quot;raw_snippet&quot; — suggest-only forever; escape hatch for config-level drift</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="p">{</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="w">  </span><span class="nt">&quot;kind&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;raw_snippet&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="w">  </span><span class="nt">&quot;schema_version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="w">  </span><span class="nt">&quot;by_platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="w">    </span><span class="nt">&quot;arista_eos&quot;</span><span class="p">:</span><span class="w">    </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;transport&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cli&quot;</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;body&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;EOS CLI text&gt;&quot;</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a><span class="w">    </span><span class="nt">&quot;cisco_iosxe&quot;</span><span class="p">:</span><span class="w">   </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;transport&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cli&quot;</span><span class="p">,</span><span class="w">  </span><span class="nt">&quot;body&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;IOS-XE CLI text&gt;&quot;</span><span class="w"> </span><span class="p">},</span>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="w">    </span><span class="nt">&quot;nokia_srlinux&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;transport&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;gnmi&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;updates&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;path&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;val&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;...&quot;</span><span class="p">}]</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="p">}</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a><span class="c1">// kind: null — diagnosis recorded, no executable fix</span>
+</code></pre></div>
+<h3 id="kind-restore_intent-rules"><code>kind: "restore_intent"</code> rules<a class="headerlink" href="#kind-restore_intent-rules" title="Permanent link">&para;</a></h3>
+<ul>
+<li>Stores a <strong>policy grant</strong>, not commands and not a frozen intent value.
+  Intent is read live from the drift record at apply time (the differ already
+  carries <code>intent</code> from NetBox — nothing device-specific is stored, so the
+  payload survives the fingerprint abstraction by construction).</li>
+<li><code>object_type</code> must match the prefix of the drift record's <code>object</code> field.</li>
+<li><code>field</code> must be a schema-modeled field name (Sections 2 and 5).</li>
+<li><code>drift_kinds</code> lists the <code>drift_kind</code> values this grant covers for this fingerprint.</li>
+<li>The only kind eligible for <code>auto_apply_enabled: true</code>.</li>
+</ul>
+<h3 id="kind-raw_snippet-rules"><code>kind: "raw_snippet"</code> rules<a class="headerlink" href="#kind-raw_snippet-rules" title="Permanent link">&para;</a></h3>
+<ul>
+<li>For config-level / <code>running_config</code> drift that the schema does not model
+  field-by-field (the C2 constraint — "must have a story for this").</li>
+<li><code>by_platform</code> is keyed by canonical platform string (Section 4). At apply time,
+  the applier uses only its own platform's entry — never a cross-platform entry.</li>
+<li>Nokia must use <code>"transport": "gnmi"</code> with <code>{path, val}</code> update tuples. Prefer
+  <code>update</code> semantics. Never <code>replace</code> on a parent gNMI container — it silently
+  deletes unlisted siblings and causes an outage.</li>
+<li><code>auto_apply_enabled: true</code> is <strong>code-level forbidden</strong> for any record with
+  this kind, regardless of confirmed count.</li>
+<li>API enforces write-time validation: body/updates length caps, deny-list patterns.</li>
+</ul>
+<h3 id="kind-null-rules"><code>kind: null</code> rules<a class="headerlink" href="#kind-null-rules" title="Permanent link">&para;</a></h3>
+<ul>
+<li>No executable payload. Use for diagnosis-only records and for any issue where
+  an executable fix is not yet known.</li>
+<li>Required for operational-symptom fields (<code>session_state</code>, <code>adjacency_state</code>) —
+  these are symptoms, not settings, and are never directly configurable.</li>
+</ul>
+<h3 id="auto_apply_enabled-field-on-known_issues"><code>auto_apply_enabled</code> field on <code>known_issues</code><a class="headerlink" href="#auto_apply_enabled-field-on-known_issues" title="Permanent link">&para;</a></h3>
+<p>A separate boolean field (default <code>false</code>). Rules:</p>
+<ul>
+<li><strong>Forbidden</strong> when <code>remediation.kind</code> is <code>"raw_snippet"</code> or <code>null</code> — enforced
+  in code, not merely by policy.</li>
+<li>Flipping it is a first-class audit event (actor + timestamp); it is a separate
+  write scope from the record-fix API.</li>
+<li>A global <code>auto_remediation_enabled</code> kill-switch (default <code>false</code>) overrides all
+  per-issue settings.</li>
+<li>Only eligible once <code>confirmed_count</code> reaches the threshold (default: 3).</li>
+</ul>
+<h3 id="remediation_events-table"><code>remediation_events</code> table<a class="headerlink" href="#remediation_events-table" title="Permanent link">&para;</a></h3>
+<p>Records each apply attempt. Append-only — never updated or deleted.</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>int</td>
+<td>Primary key.</td>
+</tr>
+<tr>
+<td><code>known_issue_id</code></td>
+<td>int</td>
+<td>FK → <code>known_issues.id</code>.</td>
+</tr>
+<tr>
+<td><code>drift_event_id</code></td>
+<td>int</td>
+<td>FK → <code>drift_events.id</code> — the drift that triggered this.</td>
+</tr>
+<tr>
+<td><code>platform</code></td>
+<td>str</td>
+<td>Platform slug at apply time.</td>
+</tr>
+<tr>
+<td><code>rendered_commands</code></td>
+<td>str</td>
+<td>Exact commands / gNMI updates sent to the device.</td>
+</tr>
+<tr>
+<td><code>dry_run_diff</code></td>
+<td>str</td>
+<td>Candidate diff from the live dry-run.</td>
+</tr>
+<tr>
+<td><code>result</code></td>
+<td>str</td>
+<td><code>"success"</code> / <code>"failure"</code> / <code>"dry_run_only"</code>.</td>
+</tr>
+<tr>
+<td><code>applied_by</code></td>
+<td>str</td>
+<td>Actor (<code>"user:&lt;id&gt;"</code>, <code>"scheduler"</code>, <code>"api"</code>).</td>
+</tr>
+<tr>
+<td><code>applied_at</code></td>
+<td>str</td>
+<td>ISO 8601 UTC.</td>
+</tr>
+</tbody>
+</table>
+<p><code>confirmed_count</code> on <code>known_issues</code> is <strong>derived</strong> as
+<code>COUNT(*) WHERE known_issue_id = ? AND result = 'success'</code>. It is not a stored
+mutable field — an append-only log cannot be manipulated to bypass the gate.</p>
+<h3 id="hard-do-not-auto-apply-list">Hard do-not-auto-apply list<a class="headerlink" href="#hard-do-not-auto-apply-list" title="Permanent link">&para;</a></h3>
+<p>Enforced at the applier layer for every kind. The applier must refuse to execute
+if the drift record's <code>object</code> or <code>field</code> matches any of:</p>
+<ol>
+<li>The management / transport interface the tool connects over.</li>
+<li>AAA / credentials: TACACS+, RADIUS, enable secrets, local user passwords.</li>
+<li>Operational-symptom fields: <code>session_state</code>, <code>adjacency_state</code>.</li>
+<li>Reachability / identity: hostname, NTP, DNS, management routing.</li>
+<li>Any drift where <code>drift_kind = "missing_in_intent"</code> and <code>intent</code> is null or
+   <code>""</code> — "undocumented" is not authorization to delete.</li>
+</ol>
+<h3 id="dry-run-api-contract">Dry-run API contract<a class="headerlink" href="#dry-run-api-contract" title="Permanent link">&para;</a></h3>
+<p><code>POST /known-issues/{id}/remediate/dry-run</code></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="p">{</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">  </span><span class="nt">&quot;platform&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;arista_eos&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="nt">&quot;transport&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;cli&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">  </span><span class="nt">&quot;rendered_diff&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;candidate diff text&gt;&quot;</span><span class="p">,</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">  </span><span class="nt">&quot;would_apply&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="p">}</span>
+</code></pre></div>
+<p>The diff is produced by a live applier call — never from the stored payload.
+NAPALM-based platforms (Arista, Cisco): <code>load_merge_candidate</code> → <code>compare_config</code>.
+Nokia gNMI: applier synthesizes a diff from current read-back state vs intended
+update. Person B exposes the endpoint; Person A implements the applier that
+produces the diff.</p>
+<hr />
+<h2 id="10-planned-schema-growth">10. Planned schema growth<a class="headerlink" href="#10-planned-schema-growth" title="Permanent link">&para;</a></h2>
+<p>Listed here so both partners can see where it's going and avoid design choices that
+would block these.</p>
+<p>No further schema fields are planned at this time. v2.5 (<code>remediation</code> payload,
+<code>remediation_events</code>) is current. Post-v2.5 changes require a new proposal and
+joint sign-off.</p>
+<hr />
+<h2 id="11-resolved-questions">11. Resolved questions<a class="headerlink" href="#11-resolved-questions" title="Permanent link">&para;</a></h2>
+<h3 id="v01-schema-call-2026-05-21">v0.1 schema call (2026-05-21)<a class="headerlink" href="#v01-schema-call-2026-05-21" title="Permanent link">&para;</a></h3>
+<p>These were the open questions for v0.1. Settled jointly; the schema was frozen for
+v0.1.</p>
+<ol>
+<li>
+<p><strong>Interface-missing convention.</strong> When an interface exists in intent but not
+   reality (or vice versa), the drift record's <code>field</code> is the sentinel
+   <code>"_interface"</code>. <strong>Confirmed</strong> — implemented in <code>differ.py</code>.</p>
+</li>
+<li>
+<p><strong>Case sensitivity of <code>device</code>.</strong> Device names are <strong>case-sensitive: exact,
+   byte-for-byte match, no normalization.</strong> <code>Core-SW-01</code> and <code>core-sw-01</code> are
+   different devices. A casing mismatch surfaces as a loud, obvious failure
+   ("no reality for X") rather than being silently folded. The name in NetBox, on
+   the device, and in the schema object must be identical; <code>seed_netbox.py</code> is
+   responsible for keeping them consistent. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>NetBox naming an interface differently from the device.</strong> Per Section 3
+   rule 1, each collector normalizes interface names to canonical full form before
+   returning, so any vendor-specific naming is handled inside that vendor's
+   collector — not in this schema. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong><code>collected_at</code> vs <code>detected_at</code>.</strong> <code>collected_at</code> is set by the collector
+   when the snapshot is taken; <code>detected_at</code> is set by the diff engine when the
+   diff is computed. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>Where test fixtures live.</strong> <code>tests/fixtures/</code>, as pairs of intent/reality
+   dicts plus the expected drift list. Person B owns them; Person A reviews them.
+   <strong>Confirmed.</strong></p>
+</li>
+</ol>
+<h3 id="v02-schema-call-2026-05-23">v0.2 schema call (2026-05-23)<a class="headerlink" href="#v02-schema-call-2026-05-23" title="Permanent link">&para;</a></h3>
+<p>The v0.2 VLAN additions. Settled jointly from the v0.2 proposal.</p>
+<ol>
+<li>
+<p><strong><code>mode</code> is <code>access</code> / <code>tagged</code> / <code>routed</code>, always present, never <code>None</code>.</strong> The
+   three values are exhaustive; <code>routed</code> is a real mode, not the absence of one.
+   See Rule 8. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong><code>untagged_vlan</code> is <code>int | None</code>.</strong> <code>None</code> means "no untagged VLAN" (routed
+   interfaces, trunks). Rule 4 was reworded to scope its "never <code>None</code>" to string
+   and list fields only; nullable scalar fields use <code>None</code>. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>Native VLAN not modelled in v0.2.</strong> A trunk's native VLAN is a real concept
+   but an edge case; out of scope for v0.2 per the project's #1 risk (scope creep
+   on the diff engine). <code>untagged_vlan</code> means strictly "the access VLAN of an
+   access port." Recorded as a known future gap. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong><code>vlans</code> dict keys are strings; <code>tagged_vlans</code> stays <code>list[int]</code>.</strong> See
+   Rule 7. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>Routed interfaces carry empty VLAN fields, not missing keys.</strong> A routed
+    interface has <code>mode: "routed"</code>, <code>untagged_vlan: None</code>, <code>tagged_vlans: []</code>.
+    Keys always present. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>New <code>vlan:&lt;id&gt;</code> drift-record object type.</strong> Top-level VLAN drift uses
+    <code>object = "vlan:&lt;id&gt;"</code>. See Section 6. <strong>Confirmed.</strong></p>
+</li>
+</ol>
+<h3 id="v02-follow-up-2026-05-24">v0.2 follow-up (2026-05-24)<a class="headerlink" href="#v02-follow-up-2026-05-24" title="Permanent link">&para;</a></h3>
+<p>Three operational questions raised after the v0.2 collector work (PR #23),
+tracked in the GitHub issue and settled jointly.</p>
+<ol>
+<li>
+<p><strong>Default/reserved VLANs are in scope.</strong> VLAN 1 (and any reserved IDs a
+    device reports) are treated as normal VLANs — no filtering in collectors or
+    the diff engine. Intent must document them. <code>seed_netbox.py</code> seeds VLAN 1.
+    Reserved range 1002–1005 is not special-cased; Arista cEOS does not create
+    it, and if a future platform does, it is documented in intent like any other
+    VLAN. See Rule 9. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong><code>vlans</code> block is site-scoped on the intent side.</strong> <code>netbox_client.py</code>
+    scopes VLANs to the device's NetBox site. Device-scoped or global VLANs are
+    a later concern. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong><code>Management0</code> is <code>mode: "routed"</code>.</strong> It has an IP and no switchport, so
+    <code>routed</code> is correct per Rule 8 — not an oversight. <strong>Confirmed.</strong></p>
+</li>
+</ol>
+<h3 id="v03-schema-call-2026-05-26">v0.3 schema call (2026-05-26)<a class="headerlink" href="#v03-schema-call-2026-05-26" title="Permanent link">&para;</a></h3>
+<p>The v0.3 routing-state additions. Settled jointly from the v0.3 proposal
+(<code>docs/schema-v0.3-proposal.md</code>).</p>
+<ol>
+<li>
+<p><strong>Operational state (<code>session_state</code>, <code>adjacency_state</code>) is drift.</strong> A
+    configured BGP peer or OSPF adjacency being down is the most useful routing
+    signal the tool produces, so operational state is compared like any other
+    field, at <code>warning</code> severity. See Rule 10. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>BGP address families deferred.</strong> v0.3 models one entry per neighbor, not
+    per address-family (ipv4/ipv6/evpn). The v0.3 lab is ipv4-only;
+    per-address-family state is revisited if/when a multi-AF lab exists.
+    <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>OSPF: adjacencies only for v0.3.</strong> v0.3 captures OSPF <em>adjacencies</em>
+    (neighbor relationships). Per-interface OSPF config (cost, passive-interface,
+    area membership) is real config-intent but is deferred to a later version to
+    keep v0.3 scope contained. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>Routing intent is stored in NetBox config contexts.</strong> NetBox has no native
+    BGP/OSPF data model. Of the options (the <code>netbox-bgp</code> plugin, config
+    contexts, custom fields), config contexts were chosen: native to NetBox (no
+    plugin dependency), handle nested/list data naturally, and one mechanism
+    covers both BGP and OSPF. This is an intent-side implementation decision
+    (<code>netbox_client.py</code>, <code>seed_netbox.py</code>); it does not change the device-state
+    shape in Section 2. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>New <code>bgp_neighbor:&lt;ip&gt;</code> and <code>ospf_adjacency:&lt;router-id&gt;</code> drift-record
+    object types.</strong> Plus the sentinels <code>_bgp_neighbor</code> and <code>_ospf_adjacency</code> for
+    missing-object drift, following the existing <code>_interface</code> / <code>_vlan</code> pattern.
+    See Sections 5 and 6. <strong>Confirmed.</strong></p>
+</li>
+</ol>
+<h3 id="v10-schema-call-2026-05-31">v1.0 schema call (2026-05-31)<a class="headerlink" href="#v10-schema-call-2026-05-31" title="Permanent link">&para;</a></h3>
+<p>The v1.0 config-level drift addition. Settled jointly from the v1.0 proposal
+(<code>docs/schema-v1.0-proposal.md</code>, PR #55).</p>
+<ol>
+<li>
+<p><strong><code>running_config</code> field type is <code>str</code>, not a structured dict.</strong> Parsing the
+    config into a structured representation is the semantic-equivalence problem —
+    deep, vendor-specific, and deferred. v1.0 diff is text-level only.
+    <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>Intent side: NetBox Config Templates (Render Config API).</strong> When a device
+    has a template assigned, <code>get_intent()</code> calls
+    <code>GET /api/dcim/devices/{id}/render-config/</code> and returns the rendered text. If
+    no template is assigned, it returns <code>running_config: ""</code>. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>Reality side: <code>show running-config</code> (or equivalent).</strong> Each collector adds
+    one new operation to capture the full running config text. The exact
+    command/API is each collector's implementation choice. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>Skip the diff if either side is <code>""</code>.</strong> If <code>running_config</code> is <code>""</code> on
+    either side, the diff engine produces no drift records for this field. An
+    empty intent means "no template — nothing to compare." An empty reality means
+    the collector could not retrieve the config. Neither is drift. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>Minimal normalization only.</strong> Before comparing, both sides strip trailing
+    whitespace from each line and normalize line endings to <code>\n</code>. No semantic
+    equivalence. Known false positives (timestamps in comments, section ordering)
+    are accepted at v1.0. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>One drift record per device, not per line.</strong> A config mismatch emits exactly
+    one record. Per-line records would produce dozens of events for one mismatch,
+    overwhelming the severity signal. The full text in <code>intent</code>/<code>reality</code> carries
+    enough for a human or future UI feature to display a line diff. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong><code>"config"</code> as the object type, no identifier suffix.</strong> Existing types follow
+    <code>"&lt;type&gt;:&lt;identifier&gt;"</code>. Config drift uses the bare string <code>"config"</code> — there
+    is only one running config per device. Deliberate exception to the pattern.
+    <strong>Confirmed.</strong></p>
+</li>
+</ol>
+<h3 id="v25-schema-call-2026-05-31">v2.5 schema call (2026-05-31)<a class="headerlink" href="#v25-schema-call-2026-05-31" title="Permanent link">&para;</a></h3>
+<p>The v2.5 auto-remediation payload. Settled jointly from the design council
+decision log
+(<code>~/.claude/councils/2026-05-31-netdrift-v2.5-remediation-payload/log.md</code>).</p>
+<ol>
+<li>
+<p><strong><code>remediation</code> is a discriminated union on <code>kind</code>.</strong> A flat command blob was
+    rejected: it cannot survive the fingerprint abstraction (breaks C1) and cannot
+    be vendor-agnostic. The union gives structured intent a clean primary path and
+    a walled escape hatch for config-level drift. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong><code>restore_intent</code> stores a policy grant, not commands or frozen values.</strong> The
+    intent value already exists in the live drift record at apply time — the differ
+    carries it from NetBox. Storing it again creates staleness risk and
+    re-introduces device-specificity the fingerprint abstraction was designed to
+    eliminate. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong><code>raw_snippet</code> is permanently suggest-only; <code>auto_apply_enabled</code> is
+    code-level forbidden for it.</strong> Raw-text blast radius is unbounded; Nokia
+    cannot text-apply at all; one auto-apply outage ends OSS adoption faster than
+    any coverage gap. C2 is satisfied by "suggest + generated commands + human
+    confirm" — it does not require auto-apply. Revisit only after
+    <code>restore_intent</code> auto-apply has a clean field record and a per-snippet
+    review/sign-off mechanism exists. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong><code>kind: null</code> is the required resting state for operational-symptom drift.</strong>
+    <code>session_state</code> and <code>adjacency_state</code> are symptoms, not settings. A fix that
+    re-configures neighbors to "resolve" a down session risks simultaneous flaps
+    across every matched device. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong><code>confirmed_count</code> is derived from <code>remediation_events</code>, not a mutable
+    counter.</strong> An append-only log cannot be manipulated to bypass the confirm-N
+    gate; a mutable counter can. <strong>Confirmed.</strong></p>
+</li>
+<li>
+<p><strong>Confirmation diff comes from a live dry-run, not the stored payload.</strong> The
+    stored payload may be months old; the live diff reflects what would actually
+    change on the device today. The dry-run endpoint lives on Person B's API but
+    delegates rendering to Person A's applier. <strong>Confirmed.</strong></p>
+</li>
+</ol>
+<hr />
+<h2 id="12-change-log-for-this-document">12. Change log for this document<a class="headerlink" href="#12-change-log-for-this-document" title="Permanent link">&para;</a></h2>
+<p>Keep a running log so both partners can see how the contract evolved.</p>
+<table>
+<thead>
+<tr>
+<th>Date</th>
+<th>Change</th>
+<th>Approved by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2026-05-20</td>
+<td>Initial v0.1 draft.</td>
+<td>A + B</td>
+</tr>
+<tr>
+<td>2026-05-21</td>
+<td>Section 10 open questions resolved; schema frozen for v0.1.</td>
+<td>A + B</td>
+</tr>
+<tr>
+<td>2026-05-23</td>
+<td>v0.2 VLAN / layer-2 fields added: interface <code>mode</code>, <code>untagged_vlan</code>, <code>tagged_vlans</code>; top-level <code>vlans</code>. Rule 4 reworded; Rules 7 and 8 added; <code>vlan:&lt;id&gt;</code> drift object type.</td>
+<td>A + B</td>
+</tr>
+<tr>
+<td>2026-05-24</td>
+<td>v0.2 follow-up: Rule 9 added (default/reserved VLANs in scope, no filtering); <code>vlans</code> site-scoping documented; Section 10 items 12–14.</td>
+<td>A + B</td>
+</tr>
+<tr>
+<td>2026-05-25</td>
+<td>Roadmap change: v0.2 second/third vendors are Juniper (vJunos-switch) then Cisco (IOS-XE), replacing Nokia SR Linux / FRR. SR Linux and FRR deferred to a later version. Joint decision A + B.</td>
+<td>A + B</td>
+</tr>
+<tr>
+<td>2026-05-25</td>
+<td>Roadmap revert: v0.2 second vendor is Nokia SR Linux (was Juniper vJunos-switch). vJunos-switch is a QEMU VM and cannot run nested inside the lab VM. Cisco IOS-XE stays v0.3. Joint decision A + B.</td>
+<td>A + B</td>
+</tr>
+<tr>
+<td>2026-05-26</td>
+<td>v0.3 routing-state fields added: top-level <code>bgp_neighbors</code> and <code>ospf</code>. Rule 10 added (operational state in scope, lower-cased values, area normalization). New <code>bgp_neighbor</code> / <code>ospf_adjacency</code> drift object types and <code>_bgp_neighbor</code> / <code>_ospf_adjacency</code> sentinels. Section 10 items 15–19. Routing intent stored via NetBox config contexts.</td>
+<td>A + B</td>
+</tr>
+<tr>
+<td>2026-05-31</td>
+<td>v1.0 config-level drift: top-level <code>running_config</code> field added. <code>"config"</code> object type added (Section 6). Config severity row added (Section 7). Section 11 items 20–26.</td>
+<td>A + B</td>
+</tr>
+<tr>
+<td>2026-05-31</td>
+<td>v2.5 remediation payload: Section 9 added — <code>known_issue.remediation</code> discriminated union (<code>restore_intent</code>, <code>raw_snippet</code>, <code>null</code>), <code>auto_apply_enabled</code>, <code>remediation_events</code> table, hard do-not-auto-apply list, dry-run API contract. Section 11 items 27–32. Sections renumbered (old 9→10, 10→11, 11→12).</td>
+<td>A + B</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<p><em>When this document and the code disagree, this document wins — fix the code. When
+both partners agree the document is wrong, change the document via merge request,
+then fix the code.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.top", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

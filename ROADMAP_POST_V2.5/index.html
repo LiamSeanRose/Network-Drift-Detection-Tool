@@ -1,0 +1,2025 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source network drift detection — the self-hosted alternative to NetBox Assurance.">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Post-v2.5 Execution Plan - Network Drift Detection Tool</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#post-v25-execution-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Network Drift Detection Tool" class="md-header__button md-logo" aria-label="Network Drift Detection Tool" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Network Drift Detection Tool
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Post-v2.5 Execution Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/LiamSeanRose/Network-Drift-Detection-Tool" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LiamSeanRose/Network-Drift-Detection-Tool
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../lab/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../schema/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Schema Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../PROJECT_PLAN/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Network Drift Detection Tool" class="md-nav__button md-logo" aria-label="Network Drift Detection Tool" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Network Drift Detection Tool
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/LiamSeanRose/Network-Drift-Detection-Tool" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LiamSeanRose/Network-Drift-Detection-Tool
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROJECT_PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#what-changed-from-the-draft" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What Changed from the Draft
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#version-overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Version Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-1-high-value-low-effort" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1 — High value, low effort
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 1 — High value, low effort">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v30-operational-loop" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3.0 — Operational Loop
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v3.0 — Operational Loop">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#management-interface-blocklist-audit-liam-gate-item" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Management Interface Blocklist Audit (Liam — gate item)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v30-ownership-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3.0 Ownership Table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paired-seams-joint-sign-off-before-code-is-written" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paired Seams (joint sign-off before code is written)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v30-definition-of-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3.0 Definition of Done
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v30-implementation-order" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3.0 Implementation Order
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v35-security-sla-acknowledge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3.5 — Security + SLA + Acknowledge
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v3.5 — Security + SLA + Acknowledge">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#features_1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v35-ownership-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3.5 Ownership Table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paired-seams-joint-sign-off" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paired Seams (joint sign-off)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v35-definition-of-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3.5 Definition of Done
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-1-parallel-liam-track" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1 — Parallel Liam Track
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 1 — Parallel Liam Track">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v375-juniper-junos-support" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3.75 — Juniper JunOS Support
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v3.75 — Juniper JunOS Support">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#scope" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Scope
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v375-ownership-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3.75 Ownership Table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v375-definition-of-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3.75 Definition of Done
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-2-grows-the-projects-reach" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2 — Grows the project's reach
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 2 — Grows the project&#39;s reach">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v40-community-pattern-library" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v4.0 — Community Pattern Library
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v4.0 — Community Pattern Library">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#features_2" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v40-ownership-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v4.0 Ownership Table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#paired-seams" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Paired Seams
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v40-definition-of-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v4.0 Definition of Done
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v45-advanced-sla-juniper-advanced-features" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v4.5 — Advanced SLA + Juniper Advanced Features
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-3-the-genuinely-novel-direction" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3 — The genuinely novel direction
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 3 — The genuinely novel direction">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v50-fuzzy-semantic-fingerprint-matching" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v5.0 — Fuzzy / Semantic Fingerprint Matching
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="v5.0 — Fuzzy / Semantic Fingerprint Matching">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#algorithm-recommendation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Algorithm recommendation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v50-ownership-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v5.0 Ownership Table
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v50-definition-of-done" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v5.0 Definition of Done
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#test-infrastructure-changes-add-as-each-version-ships" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Test Infrastructure Changes (add as each version ships)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Test Infrastructure Changes (add as each version ships)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#v30-add-to-dev-extras-in-pyprojecttoml" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3.0 — add to dev extras in pyproject.toml
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v35-add-to-dev-extras" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v3.5 — add to dev extras
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#v40-add-separate-ci-job" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        v4.0 — add separate CI job
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#testing-principles-non-negotiable" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Testing principles (non-negotiable)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#open-questions-resolve-before-each-version-branch-opens" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Open Questions (resolve before each version branch opens)
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#emergent-issues-found-during-review" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Emergent Issues Found During Review
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="post-v25-execution-plan">Post-v2.5 Execution Plan<a class="headerlink" href="#post-v25-execution-plan" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Status:</strong> Formal — supersedes the draft. Reviewed by design council 2026-06-01.
+Versions, DoD items, and ownership assignments are agreed. A new branch must not be
+created for any version without checking this document first.</p>
+<p><strong>Integrate into <code>docs/PROJECT_PLAN.md §15</code></strong> incrementally as each version ships —
+copy the ownership table and DoD checklist into §15 when the version branch opens.</p>
+<p><strong>Last updated:</strong> 2026-06-01</p>
+</blockquote>
+<hr />
+<h2 id="what-changed-from-the-draft">What Changed from the Draft<a class="headerlink" href="#what-changed-from-the-draft" title="Permanent link">&para;</a></h2>
+<p>Five decisions made by design council that differ from the original rough outline:</p>
+<ol>
+<li>
+<p><strong>Drift acknowledgement moves from v3.0 → v3.5.</strong> An unauthenticated acknowledge
+   endpoint is a targeted attack vector: make a config change, suppress the resulting
+   alert. It ships in v3.5 alongside the API keys that make it safe.</p>
+</li>
+<li>
+<p><strong>Webhook dispatch is not FastAPI <code>BackgroundTasks</code>.</strong> The scheduler and API are
+   separate Docker processes. All scheduler-fired webhooks use a <code>WebhookDispatcher</code>
+   daemon thread with a bounded <code>queue.Queue</code> in <code>netdrift/webhook.py</code>. FastAPI
+   <code>BackgroundTasks</code> only covers the API-triggered dispatch path.</p>
+</li>
+<li>
+<p><strong>Auto-apply logic goes in <code>netdrift/auto_apply.py</code>, not <code>scheduler.py</code>.</strong> Putting it
+   in <code>scheduler.py</code> couples Matthew's module to <code>get_applier()</code> and <code>KnownIssue</code> (both
+   Liam-domain). The new module is called from <code>pipeline.run_drift_check()</code> after
+   <code>save_drifts()</code>.</p>
+</li>
+<li>
+<p><strong>Per-device kill-switch is a v3.0 must-have.</strong> The global env-var kill-switch requires
+   a process restart. When auto-apply is actively harming one device you need to stop it
+   immediately. New: <code>device_settings</code> table + <code>PATCH /devices/{name}/auto-apply</code>. API-only
+   in v3.0; dashboard toggle in v3.5.</p>
+</li>
+<li>
+<p><strong>Juniper JunOS support is a new parallel Liam track (v3.75)</strong>, running concurrently
+   with Matthew's v3.0–v3.5 work. It has zero dependency on either of those versions.</p>
+</li>
+</ol>
+<hr />
+<h2 id="version-overview">Version Overview<a class="headerlink" href="#version-overview" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Version</th>
+<th>Theme</th>
+<th>Tier</th>
+<th>Est. (part-time, 2 people)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>v3.0</td>
+<td>Operational loop</td>
+<td>1 — High value, low effort</td>
+<td>4–6 weeks</td>
+</tr>
+<tr>
+<td>v3.5</td>
+<td>Security + SLA + Acknowledge</td>
+<td>1 — High value, low effort</td>
+<td>5–7 weeks</td>
+</tr>
+<tr>
+<td>v3.75</td>
+<td>Juniper JunOS support</td>
+<td>1 — Liam parallel track</td>
+<td>3 weeks (Liam only)</td>
+</tr>
+<tr>
+<td>v4.0</td>
+<td>Community pattern library</td>
+<td>2 — Grows project reach</td>
+<td>4–6 weeks</td>
+</tr>
+<tr>
+<td>v4.5</td>
+<td>Advanced SLA + Juniper advanced</td>
+<td>2 — Grows project reach</td>
+<td>6–8 weeks</td>
+</tr>
+<tr>
+<td>v5.0</td>
+<td>Fuzzy/semantic fingerprint matching</td>
+<td>3 — Genuinely novel</td>
+<td>3–4 months (after corpus)</td>
+</tr>
+</tbody>
+</table>
+<p>v3.75 runs in parallel with v3.0–v3.5. It targets merge before v4.0 opens.</p>
+<hr />
+<h2 id="tier-1-high-value-low-effort">Tier 1 — High value, low effort<a class="headerlink" href="#tier-1-high-value-low-effort" title="Permanent link">&para;</a></h2>
+<h3 id="v30-operational-loop">v3.0 — Operational Loop<a class="headerlink" href="#v30-operational-loop" title="Permanent link">&para;</a></h3>
+<p><strong>Theme:</strong> Close the auto-remediation loop and make the tool observable outside the UI.</p>
+<p><strong>Dependency gate (definition of ready):</strong>
+- v2.5 tagged ✓
+- Liam has confirmed the management interface blocklists are complete for all 3 vendors (see
+  Blocklist Audit section below — this is a hard gate before any auto-apply branch merges)
+- Both partners agree on the <code>auto_apply.py</code> module placement (this document)
+- Both partners agree on the webhook dispatch mechanism (this document)</p>
+<h4 id="features">Features<a class="headerlink" href="#features" title="Permanent link">&para;</a></h4>
+<p><strong>Feature 1: Background auto-apply in the scheduler</strong></p>
+<p>After each drift check, cross-reference drift results against <code>known_issues</code> where
+<code>auto_apply_enabled = true</code> and <code>AUTO_REMEDIATION_ENABLED = true</code>. For each match, call
+<code>check_blocked()</code> then <code>get_applier(platform)(..., dry_run=False)</code>. Record a
+<code>RemediationEvent</code>. Schedule a one-shot re-poll within 60 seconds.</p>
+<p><strong>Module:</strong> <code>netdrift/auto_apply.py</code> — new module, jointly owned.</p>
+<p>Function signature:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">def</span><span class="w"> </span><span class="nf">run_auto_apply</span><span class="p">(</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="n">drifts</span><span class="p">:</span> <span class="nb">list</span><span class="p">[</span><span class="nb">dict</span><span class="p">],</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>    <span class="n">device</span><span class="p">:</span> <span class="nb">dict</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="n">session_factory</span><span class="p">,</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="o">*</span><span class="p">,</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>    <span class="n">applier_fn</span><span class="o">=</span><span class="n">get_applier</span><span class="p">,</span>   <span class="c1"># injectable for tests</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>    <span class="n">now_fn</span><span class="o">=</span><span class="n">datetime</span><span class="o">.</span><span class="n">utcnow</span><span class="p">,</span>   <span class="c1"># injectable for tests</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">list</span><span class="p">[</span><span class="n">RemediationEvent</span><span class="p">]:</span>
+</code></pre></div></p>
+<p>Called from <code>pipeline.run_drift_check()</code> after <code>save_drifts()</code>, conditional on
+<code>AUTO_REMEDIATION_ENABLED</code>.</p>
+<p>Required safety rails (all mandatory before shipping):
+- <code>check_blocked()</code> fires before every apply — raises <code>RemediationBlockedError</code> for
+  <code>session_state</code>, <code>adjacency_state</code>, and management interfaces
+- <code>kind</code> gate re-enforced at execution time: only <code>restore_intent</code> is eligible for
+  auto-apply (do not trust the DB invariant alone)
+- Consecutive-failure auto-disable: 3 consecutive <code>outcome=failure</code> rows for the same
+  <code>KnownIssue</code> → set <code>auto_apply_enabled=False</code> and log a WARNING
+- <code>RemediationEvent</code> written on both success and failure — never swallowed without recording
+- Per-device runtime kill-switch (Feature 3 below) checked before dispatching</p>
+<p><strong>Feature 2: Webhook / notification output</strong></p>
+<p>Fire outbound HTTP POST on: new <code>critical</code>-severity drift persisted, auto-apply
+<code>outcome=success</code>, auto-apply <code>outcome=failure</code>.</p>
+<p><strong>Module:</strong> <code>netdrift/webhook.py</code> — <code>WebhookDispatcher</code> class.</p>
+<p>Design:
+- Daemon thread draining a bounded <code>queue.Queue(maxsize=100)</code>. If queue is full, log a
+  WARNING and drop (never block the scheduler).
+- <code>fire(event_type, payload)</code>: enqueues the event.
+- Dispatcher calls <code>httpx.post()</code> synchronously with <code>timeout=5</code> and logs the result.
+  Redact <code>WEBHOOK_URL</code> to host+path only in logs (tokens are often in the URL).
+- URL validation at instantiation: reject <code>localhost</code>, RFC 1918, link-local (<code>169.254.x</code>),
+  and non-HTTP(S) schemes. A <code>WEBHOOK_ALLOW_PRIVATE=true</code> env var overrides RFC 1918
+  for on-prem Slack/PagerDuty.
+- Initialized once in <code>scheduler.py</code>'s <code>main()</code> alongside <code>SyslogReceiver</code>.
+- A thin <code>BackgroundTasks</code> wrapper in <code>api/app.py</code> calls the same <code>fire()</code> method
+  for API-triggered apply results.</p>
+<p>Config: <code>WEBHOOK_URL</code> (required for any dispatch), <code>WEBHOOK_EVENTS</code> (comma-separated,
+default: <code>critical_drift,apply_success,apply_failure</code>).</p>
+<p><strong>Feature 3: Per-device auto-apply kill-switch (new — not in original draft)</strong></p>
+<p>When auto-apply is actively harming one device, operators need to stop it without
+restarting the scheduler.</p>
+<p>New table: <code>device_settings</code> — <code>device_name</code> (PK), <code>auto_remediation_paused</code> (bool,
+default False), <code>paused_at</code> (nullable datetime), <code>paused_reason</code> (nullable text).</p>
+<p>New endpoint: <code>PATCH /devices/{name}/auto-apply {"paused": bool, "reason": str|null}</code>.</p>
+<p><code>run_auto_apply()</code> checks <code>device_settings.auto_remediation_paused</code> before dispatching
+any apply for a device. API-only for v3.0; dashboard toggle added in v3.5.</p>
+<h4 id="management-interface-blocklist-audit-liam-gate-item">Management Interface Blocklist Audit (Liam — gate item)<a class="headerlink" href="#management-interface-blocklist-audit-liam-gate-item" title="Permanent link">&para;</a></h4>
+<p>The council's domain-expert identified gaps in all three vendors:</p>
+<p><strong>Arista EOS</strong> (current: <code>{Management0, Management1}</code>)
+- Missing: <code>Management0/0</code>, <code>Management0/1</code>, <code>Management1/0</code>, <code>Management1/1</code> (chassis platforms)
+- Missing: sub-interface variants (<code>Management0.0</code>, etc.)
+- Recommended fix: replace exact set with <code>iface.startswith("Management")</code> prefix guard</p>
+<p><strong>Cisco IOS-XE</strong> (current: <code>{GigabitEthernet0, GigabitEthernet0/0, Management0, Management1}</code>)
+- Missing: <code>GigabitEthernet0/0/0</code> (ISR 4000 management port)
+- Risk: <code>GigabitEthernet0</code> is a <em>data</em> interface on CSR 1000v and C8000v — current
+  blocklist would incorrectly block data-plane remediation on cloud routers
+- Recommended fix: add <code>GigabitEthernet0/0/0</code> to set; add per-device <code>mgmt_interface</code>
+  override field in <code>devices.yml</code> for CSR/C8000v disambiguation</p>
+<p><strong>Nokia SR Linux</strong> (current: <code>{mgmt0}</code>)
+- Missing: <code>mgmt0.0</code> subinterface
+- Recommended fix: add <code>mgmt0.0</code> to set; add <code>startswith("mgmt")</code> prefix guard</p>
+<p><strong>Also required before auto-apply ships:</strong>
+Add <code>optional_args["timeout"] = 30</code> to <code>_napalm_conn()</code> in both <code>appliers/arista.py</code> and
+<code>appliers/cisco.py</code>. Without this, NAPALM hangs indefinitely on a dead device and ties up
+APScheduler worker threads. This is a 1-line change per file.</p>
+<h4 id="v30-ownership-table">v3.0 Ownership Table<a class="headerlink" href="#v30-ownership-table" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Work stream</th>
+<th>Owner</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>netdrift/auto_apply.py</code> — <code>run_auto_apply()</code></td>
+<td>Joint (Liam primary, Matthew review)</td>
+<td>Calls <code>get_applier()</code> (Liam side) + writes <code>RemediationEvent</code> (Matthew schema)</td>
+</tr>
+<tr>
+<td>Wire <code>run_auto_apply</code> into <code>pipeline.run_drift_check</code></td>
+<td>Matthew</td>
+<td>One conditional call after <code>save_drifts()</code>; gated on <code>AUTO_REMEDIATION_ENABLED</code></td>
+</tr>
+<tr>
+<td><code>device_settings</code> table + Alembic migration</td>
+<td>Matthew</td>
+<td></td>
+</tr>
+<tr>
+<td><code>PATCH /devices/{name}/auto-apply</code> endpoint</td>
+<td>Matthew</td>
+<td>Per-device kill-switch; no UI in v3.0</td>
+</tr>
+<tr>
+<td><code>netdrift/webhook.py</code> — <code>WebhookDispatcher</code></td>
+<td>Matthew</td>
+<td>Daemon thread + bounded queue + URL validation</td>
+</tr>
+<tr>
+<td>Wire <code>WebhookDispatcher</code> into scheduler <code>main()</code></td>
+<td>Matthew</td>
+<td>Initialize alongside <code>SyslogReceiver</code>; fire on auto-apply results</td>
+</tr>
+<tr>
+<td>Thin FastAPI <code>BackgroundTasks</code> wrapper for API-path applies</td>
+<td>Matthew</td>
+<td>Calls <code>dispatcher.fire()</code></td>
+</tr>
+<tr>
+<td><code>tests/test_auto_apply.py</code> — 8+ test cases</td>
+<td>Joint</td>
+<td>Fake applier fixture in <code>conftest.py</code> (Matthew writes, Liam reviews against applier protocol)</td>
+</tr>
+<tr>
+<td><code>tests/test_webhook.py</code> — 8+ test cases</td>
+<td>Matthew</td>
+<td>Add <code>pytest-httpserver</code> to dev extras</td>
+</tr>
+<tr>
+<td>Consecutive-failure auto-disable in <code>run_auto_apply</code></td>
+<td>Joint</td>
+<td>Requires a <code>KnownIssue</code> table write to disable; Matthew schema, Liam logic</td>
+</tr>
+<tr>
+<td>Mgmt interface blocklist audit and fix (all 3 vendors)</td>
+<td>Liam</td>
+<td>See blocklist section above; pre-ship gate</td>
+</tr>
+<tr>
+<td>NAPALM <code>timeout=30</code> in Arista + Cisco <code>_napalm_conn()</code></td>
+<td>Liam</td>
+<td>Pre-ship gate</td>
+</tr>
+<tr>
+<td><code>database.py</code> engine singleton fix</td>
+<td>Matthew</td>
+<td><code>get_engine()</code> + <code>get_sessionmaker()</code> must be module-level singletons — do as a pre-v3.0 chore PR; opens multiple connection pools per poll cycle without this fix</td>
+</tr>
+<tr>
+<td><code>docker-compose.yml</code> + <code>.env.example</code> updates</td>
+<td>Matthew</td>
+<td>Add <code>AUTO_REMEDIATION_ENABLED</code>, <code>WEBHOOK_URL</code>, <code>WEBHOOK_EVENTS</code>; add <code>restart: unless-stopped</code> to <code>api</code> and <code>scheduler</code> services</td>
+</tr>
+<tr>
+<td>APScheduler event listener logging</td>
+<td>Matthew</td>
+<td>Replace all <code>print()</code> in <code>scheduler.py</code> with <code>logging.getLogger("netdrift.scheduler")</code>; wire <code>EVENT_JOB_EXECUTED</code> + <code>EVENT_JOB_ERROR</code> listeners</td>
+</tr>
+<tr>
+<td>README + CHANGELOG.md v3.0 + <code>docs/PROJECT_PLAN.md §15</code></td>
+<td>Matthew (release shepherd)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="paired-seams-joint-sign-off-before-code-is-written">Paired Seams (joint sign-off before code is written)<a class="headerlink" href="#paired-seams-joint-sign-off-before-code-is-written" title="Permanent link">&para;</a></h4>
+<ol>
+<li>
+<p><strong><code>auto_apply.py</code> function signature and injectable seams</strong> — agree on parameters before
+   implementation. Specifically: does it accept <code>session_factory</code> or an open <code>session</code>?
+   Does <code>applier_fn=get_applier</code> default work for the test injection pattern?</p>
+</li>
+<li>
+<p><strong><code>device_settings.device_name</code> key</strong> — Matthew owns the migration; Liam must confirm
+   the key maps to the <code>name</code> field in <code>devices.yml</code> (not the NetBox slug).</p>
+</li>
+</ol>
+<h4 id="v30-definition-of-done">v3.0 Definition of Done<a class="headerlink" href="#v30-definition-of-done" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] Scheduler calls <code>run_auto_apply()</code> for each device when <code>AUTO_REMEDIATION_ENABLED=true</code>. For each matching <code>KnownIssue</code> with <code>auto_apply_enabled=True</code>, <code>check_blocked()</code> is called; a <code>RemediationEvent</code> with <code>outcome</code> (<code>success</code>/<code>failure</code>/<code>blocked</code>) is written regardless of result. Verified by test with injected fake applier asserting call count, args, and written <code>RemediationEvent</code> rows.</li>
+<li>[ ] <code>AUTO_REMEDIATION_ENABLED=false</code> (or absent) prevents all auto-apply calls regardless of per-issue <code>auto_apply_enabled</code> flags. Verified by unit test asserting zero applier calls.</li>
+<li>[ ] Management interfaces are never auto-applied regardless of any flag. <code>RemediationBlockedError</code> is raised and logged; no <code>RemediationEvent</code> is written for a blocked dispatch. Verified explicitly in <code>test_auto_apply.py</code>.</li>
+<li>[ ] <code>kind == "restore_intent"</code> gate re-enforced at execution time; a <code>raw_snippet</code>-kind known issue is not auto-applied even if <code>auto_apply_enabled=True</code>. Verified in test.</li>
+<li>[ ] 3 consecutive <code>outcome=failure</code> rows for the same <code>KnownIssue</code> cause <code>auto_apply_enabled</code> to be set <code>False</code> and a WARNING to be logged. Verified in test.</li>
+<li>[ ] A successful auto-apply schedules a one-shot re-poll of the affected device within ≤60 seconds. Verified by asserting the re-poll job is enqueued (not by waiting for it to fire).</li>
+<li>[ ] <code>WebhookDispatcher</code> HTTP POST is dispatched for: new <code>critical</code>-severity drift persisted, auto-apply <code>outcome=success</code>, auto-apply <code>outcome=failure</code>. Payload contains <code>event_type</code>, <code>device</code>, <code>timestamp</code>, <code>detail</code>. <code>WEBHOOK_URL</code> unset → no dispatch, no error. Verified using <code>pytest-httpserver</code>.</li>
+<li>[ ] <code>PATCH /devices/{name}/auto-apply {"paused": true}</code> causes subsequent auto-apply calls for that device to be skipped and logged. Verified in test.</li>
+<li>[ ] All <code>print()</code> in <code>scheduler.py</code> replaced with structured logging. APScheduler <code>EVENT_JOB_EXECUTED</code> and <code>EVENT_JOB_ERROR</code> listeners emit at INFO and ERROR.</li>
+<li>[ ] Liam has confirmed in a PR comment that all three vendor management interface blocklists are correct and complete.</li>
+<li>[ ] <code>docker-compose.yml</code> and <code>.env.example</code> updated with all new env vars. <code>restart: unless-stopped</code> added to <code>api</code> and <code>scheduler</code> services. README, CHANGELOG.md, and <code>docs/PROJECT_PLAN.md §15</code> updated.</li>
+</ul>
+<h4 id="v30-implementation-order">v3.0 Implementation Order<a class="headerlink" href="#v30-implementation-order" title="Permanent link">&para;</a></h4>
+<ol>
+<li><strong>Matthew (pre-v3.0 chore PR):</strong> Fix <code>database.py</code> engine singleton. No features — just correctness. Merge to main before any v3.0 feature work.</li>
+<li><strong>Liam (week 1, small PRs):</strong> NAPALM timeout fix + all three vendor blocklist fixes. These land on the v3.0 branch early and are the gate items.</li>
+<li><strong>Parallel tracks (weeks 1–3):</strong></li>
+<li>Matthew: <code>device_settings</code> table + <code>PATCH /devices/{name}/auto-apply</code> endpoint</li>
+<li>Matthew: <code>netdrift/webhook.py</code> <code>WebhookDispatcher</code> class + <code>test_webhook.py</code></li>
+<li><strong>Week 3–4:</strong> Matthew wires <code>WebhookDispatcher</code> into <code>scheduler.py</code>'s <code>main()</code>.</li>
+<li><strong>Week 3–4:</strong> Liam + Matthew implement <code>netdrift/auto_apply.py</code> + <code>test_auto_apply.py</code>.</li>
+<li><strong>Week 4–5:</strong> Matthew wires <code>run_auto_apply</code> into <code>pipeline.run_drift_check</code>.</li>
+<li><strong>Week 5–6:</strong> Lab integration testing. Matthew wires API-path webhook dispatch. Docs + tag.</li>
+</ol>
+<hr />
+<h3 id="v35-security-sla-acknowledge">v3.5 — Security + SLA + Acknowledge<a class="headerlink" href="#v35-security-sla-acknowledge" title="Permanent link">&para;</a></h3>
+<p><strong>Theme:</strong> Make the tool safe to run in a shared environment and give oncall a reason to trust it.</p>
+<p><strong>Dependency gate:</strong>
+- v3.0 complete and tagged
+- <code>WebhookDispatcher</code> from v3.0 is the SLA alert dispatch mechanism</p>
+<h4 id="features_1">Features<a class="headerlink" href="#features_1" title="Permanent link">&para;</a></h4>
+<p><strong>Feature 4: Per-device drift SLA / alerting rules</strong></p>
+<p><code>alert_rules</code> table: <code>id</code>, <code>device</code> (nullable = all devices), <code>severity</code>,
+<code>window_minutes</code>, <code>enabled</code>, <code>created_at</code>.</p>
+<p>SLA evaluation runs on each scheduler cycle. Query: find unacknowledged drift events
+matching <code>severity</code> (and <code>device</code> if set) where <code>detected_at &lt;= now() - window_minutes</code>.
+If found, dispatch via <code>WebhookDispatcher</code>.</p>
+<p>Critical: the SLA evaluator function <strong>must accept a <code>now: datetime</code> parameter</strong>
+(default <code>datetime.now(tz=timezone.utc)</code>). Tests pass a fixed datetime — no <code>time.sleep()</code>
+anywhere. This is non-negotiable given the prior CI flake history.</p>
+<p>Device unreachability: if a device has had no successful collection in the last 2 poll
+cycles, the alert type is <code>device_unreachable</code>, not <code>sla_breached</code>. Do not fire a false
+SLA alert when the collector is broken.</p>
+<p>Jitter note: a 10-minute SLA with a 5-minute poll interval can fire up to 15 minutes
+after drift first appears (worst case). Document this in the alert rule UI.</p>
+<p>Also in v3.5: per-device kill-switch toggle added to the dashboard (the API was added
+in v3.0).</p>
+<p><strong>Feature 5: REST API authentication (API keys)</strong></p>
+<p><code>api_keys</code> table: <code>id</code>, <code>key_hash</code> (SHA-256 of the full random key), <code>name</code>,
+<code>key_hint</code> (first 8 chars), <code>created_at</code>, <code>last_used_at</code>, <code>expires_at</code> (nullable).</p>
+<p>Key generation: <code>secrets.token_urlsafe(32)</code> with prefix <code>sk-netdrift-</code>. Hash stored,
+raw key shown once on creation and never again.</p>
+<p>Middleware: <code>X-API-Key</code> header on all mutating endpoints. <code>X-API-Key</code> header <strong>must be
+excluded from FastAPI access logs</strong> — never log secrets.</p>
+<p>Exemptions: <code>/health</code>, <code>GET /drifts</code> (read-only, unauthenticated by design — a deliberate
+joint decision; document the rationale in a code comment in the middleware).</p>
+<p>Bootstrap: <code>driftcheck create-api-key --name "admin"</code> CLI command writes directly to
+Postgres. First key bootstrapped this way; subsequent keys via <code>POST /api-keys</code>
+(requires a valid key).</p>
+<p>Also add: <code>GET /drifts?since=&lt;ISO8601&gt;</code> filter and <code>Link: &lt;next&gt;</code> pagination header.
+Required before any serious external API consumer, and this is the release where auth
+makes external consumers realistic.</p>
+<p><strong>Feature 6: Drift acknowledgement (moved from v3.0)</strong></p>
+<p>An engineer marks drift as acknowledged — "this is intentional, stop alerting" — with an
+optional expiry. Max expiry: 90 days (422 on longer values).</p>
+<p><strong>Storage design — joint decision required before implementation:</strong></p>
+<p>Storing <code>acknowledged</code> as columns on <code>drift_events</code> is wrong: <code>DriftEvent</code> rows are
+immutable (a new row is created on every poll cycle). An acknowledgement on event ID 123
+is silently lost when the next poll creates event ID 456 for the same drift. <strong>The correct
+model is a separate <code>acknowledgements</code> table keyed by <code>(device, fingerprint,
+acknowledged_until)</code></strong>, so the acknowledgement persists across poll cycles. Both partners
+must agree on this before Matthew writes the migration.</p>
+<p>Endpoint: <code>POST /drifts/{id}/acknowledge</code> — body <code>{acknowledged_until: ISO8601 | null}</code>.
+Requires API key.</p>
+<p>Suppression logic: event is suppressed from webhook dispatch, SLA evaluation, and
+<code>run_auto_apply()</code> when an active acknowledgement record exists for
+<code>(device, fingerprint)</code> where <code>acknowledged_until IS NULL OR acknowledged_until &gt; now()</code>.</p>
+<p>UI: acknowledged events dimmed in drift table; acknowledge toggle in the row action menu.</p>
+<p>Also required: drift retention migration (delete events older than 90 days or a
+configurable TTL). The table grows at ~21M rows/year at 10 devices × 5-minute polls.
+Ship this migration with v3.5 or drift history queries slow down materially.</p>
+<h4 id="v35-ownership-table">v3.5 Ownership Table<a class="headerlink" href="#v35-ownership-table" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Work stream</th>
+<th>Owner</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>alert_rules</code> table + migration</td>
+<td>Matthew</td>
+<td><code>device</code> nullable; <code>severity</code>; <code>window_minutes</code>; <code>enabled</code></td>
+</tr>
+<tr>
+<td><code>evaluate_sla(session, now=datetime.utcnow)</code> in scheduler</td>
+<td>Matthew</td>
+<td>Injectable clock; no <code>time.sleep</code> anywhere near this function</td>
+</tr>
+<tr>
+<td><code>POST/GET/DELETE /alert-rules</code> endpoints</td>
+<td>Matthew</td>
+<td>Requires API key</td>
+</tr>
+<tr>
+<td>Alert rules panel in dashboard</td>
+<td>Matthew</td>
+<td>Simple list + form</td>
+</tr>
+<tr>
+<td>Per-device auto-apply toggle in dashboard</td>
+<td>Matthew</td>
+<td>UI for the v3.0 API</td>
+</tr>
+<tr>
+<td><code>api_keys</code> table + migration</td>
+<td>Matthew</td>
+<td></td>
+</tr>
+<tr>
+<td>FastAPI auth middleware</td>
+<td>Matthew</td>
+<td><code>X-API-Key</code>; exclude from access logs; exempt <code>/health</code>, <code>GET /drifts</code></td>
+</tr>
+<tr>
+<td><code>driftcheck create-api-key</code> CLI command</td>
+<td>Liam</td>
+<td><code>cli.py</code> extension; writes directly to DB via <code>DATABASE_URL</code></td>
+</tr>
+<tr>
+<td><code>POST /api-keys</code>, <code>GET /api-keys</code>, <code>DELETE /api-keys/{id}</code> endpoints</td>
+<td>Matthew</td>
+<td></td>
+</tr>
+<tr>
+<td><code>acknowledgements</code> table + migration</td>
+<td>Matthew</td>
+<td>Joint design decision on schema shape required first</td>
+</tr>
+<tr>
+<td><code>POST /drifts/{id}/acknowledge</code> endpoint</td>
+<td>Matthew</td>
+<td>Requires API key</td>
+</tr>
+<tr>
+<td>Acknowledgement check in <code>run_auto_apply()</code> + webhook dispatch</td>
+<td>Matthew + Liam</td>
+<td><code>run_auto_apply</code> (Liam side) must check the acknowledgements table</td>
+</tr>
+<tr>
+<td>Acknowledge toggle in dashboard</td>
+<td>Matthew</td>
+<td>Dim acknowledged rows</td>
+</tr>
+<tr>
+<td><code>GET /drifts?since=&lt;ISO8601&gt;</code> + pagination</td>
+<td>Matthew</td>
+<td></td>
+</tr>
+<tr>
+<td>Composite index <code>drift_events(device, severity, detected_at)</code></td>
+<td>Matthew</td>
+<td>Required for SLA query performance</td>
+</tr>
+<tr>
+<td>Drift retention migration (TTL / delete events older than N days)</td>
+<td>Matthew</td>
+<td>Default: 90 days; configurable via env var</td>
+</tr>
+<tr>
+<td>Lab validation of SLA timing against real poll cadence</td>
+<td>Liam</td>
+<td>Sign off in PR description that SLA fires correctly in the lab</td>
+</tr>
+<tr>
+<td>README + CHANGELOG.md v3.5 + <code>docs/PROJECT_PLAN.md §15</code></td>
+<td>Matthew (release shepherd)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="paired-seams-joint-sign-off">Paired Seams (joint sign-off)<a class="headerlink" href="#paired-seams-joint-sign-off" title="Permanent link">&para;</a></h4>
+<ol>
+<li>
+<p><strong><code>acknowledgements</code> table schema</strong> — agree before Matthew writes the migration.
+   Key question: is the lookup key <code>(device, fingerprint)</code> or <code>(device, object_type, field)</code>?</p>
+</li>
+<li>
+<p><strong><code>GET /drifts</code> auth exemption</strong> — both partners explicitly agree drift data is
+   public-by-default for self-hosted deployments. Document in a code comment in the
+   middleware as a deliberate decision, not an oversight.</p>
+</li>
+</ol>
+<h4 id="v35-definition-of-done">v3.5 Definition of Done<a class="headerlink" href="#v35-definition-of-done" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] An <code>alert_rule</code> with <code>device=core-sw-01</code>, <code>severity=critical</code>, <code>window_minutes=10</code> dispatches a webhook when a critical drift event on that device has <code>detected_at</code> older than 10 minutes and is not acknowledged. Test uses injected <code>now</code> callable (no real sleep). Verified in <code>tests/test_sla.py</code>.</li>
+<li>[ ] SLA alert for a device with no successful collection in the last 2 cycles is tagged <code>device_unreachable</code>, not <code>sla_breached</code>. Verified in test.</li>
+<li>[ ] All mutating endpoints return <code>401</code> when <code>X-API-Key</code> is absent or invalid. Verified by a parametrized test hitting each of: <code>POST /known-issues</code>, <code>POST /known-issues/{id}/remediate/apply</code>, <code>POST /known-issues/{id}/remediate/dry-run</code>, <code>POST /drifts/{id}/acknowledge</code>, <code>POST /alert-rules</code>, <code>DELETE /alert-rules/{id}</code>, <code>POST /api-keys</code>, <code>DELETE /api-keys/{id}</code>, <code>PATCH /devices/{name}/auto-apply</code>.</li>
+<li>[ ] <code>driftcheck create-api-key --name "admin"</code> creates the first key and prints it to stdout exactly once. Key is stored as SHA-256 hash; plaintext is never persisted. Verified in test.</li>
+<li>[ ] A revoked key returns <code>401</code> on the next request. Verified end-to-end.</li>
+<li>[ ] <code>GET /api-keys</code> response never includes the raw key value. Verified in test.</li>
+<li>[ ] <code>POST /drifts/{id}/acknowledge</code> with <code>acknowledged_until</code> in the past returns <code>422</code>. With a valid future datetime, the event is suppressed from the next SLA evaluation and auto-apply cycle. Verified with manufactured timestamps (no sleep).</li>
+<li>[ ] Acknowledged drift with an expired <code>acknowledged_until</code> is NOT suppressed on the following cycle. Verified with manufactured past timestamp.</li>
+<li>[ ] Composite index <code>(device, severity, detected_at)</code> exists on <code>drift_events</code>.</li>
+<li>[ ] Drift retention migration is present and ran successfully.</li>
+<li>[ ] <code>GET /drifts?since=&lt;ISO8601&gt;</code> filter works. Verified in <code>test_api.py</code>.</li>
+<li>[ ] Liam has confirmed in a PR description that SLA fires correctly relative to the lab's real 5-minute poll cadence.</li>
+<li>[ ] README, CHANGELOG.md v3.5, <code>docs/PROJECT_PLAN.md §15</code> updated.</li>
+</ul>
+<hr />
+<h2 id="tier-1-parallel-liam-track">Tier 1 — Parallel Liam Track<a class="headerlink" href="#tier-1-parallel-liam-track" title="Permanent link">&para;</a></h2>
+<h3 id="v375-juniper-junos-support">v3.75 — Juniper JunOS Support<a class="headerlink" href="#v375-juniper-junos-support" title="Permanent link">&para;</a></h3>
+<p><strong>Theme:</strong> Fourth vendor — EX/QFX switching and MX/SRX routing via NAPALM <code>junos</code> driver.</p>
+<p><strong>Dependency gate:</strong>
+- No dependency on v3.0 or v3.5
+- Liam confirms a reachable JunOS device exists in the lab (vQFX, vJunos-switch, or physical EX)
+- Both partners agree on the <code>juniper_junos</code> platform slug addition to <code>docs/schema.md</code> Section 4 (one-line joint sign-off)</p>
+<p><strong>Start:</strong> Liam can open this branch as soon as the lab device is confirmed, regardless of where Matthew is in v3.0–v3.5.</p>
+<p><strong>Target merge:</strong> before v4.0 opens (so Juniper patterns can be included in the initial bundle).</p>
+<h4 id="scope">Scope<a class="headerlink" href="#scope" title="Permanent link">&para;</a></h4>
+<p><strong>Collector (<code>collectors/junos.py</code>):</strong>
+- Interfaces + IPs: NAPALM <code>get_interfaces()</code> + <code>get_interfaces_ip()</code>
+- BGP: NAPALM <code>get_bgp_neighbors()</code>
+- OSPF: direct NETCONF RPC or CLI (confirm best path in lab)
+- VLANs: NAPALM <code>get_vlans()</code> supplemented with <code>get-vlan-information</code> NETCONF RPC.
+  Important: JunOS has two VLAN models (pre-ELS and ELS); the collector must handle both.
+- Interface name handling: JunOS canonical names use slashes (<code>ge-0/0/0</code>, <code>xe-0/0/0</code>,
+  <code>et-0/0/0</code>) — these are valid schema names, do not strip. Use <code>lo0.0</code> (not <code>lo0</code>) for
+  the loopback that carries the IP. IRB interfaces (<code>irb.0</code>): treat as <code>mode: "routed"</code>;
+  the VLAN bridge-domain mapping is out of scope for v3.75.
+- Management interface blocklist: <code>fxp0</code>, <code>em0</code>, <code>fxp0.0</code>, <code>em0.0</code></p>
+<p><strong>Applier (<code>appliers/junos.py</code>):</strong>
+- NAPALM merge-candidate flow, same as Arista
+- JunOS enhancement: use <code>commit confirmed 5</code> (5-minute auto-rollback) before <code>commit</code>.
+  After <code>commit_config()</code> succeeds, issue <code>commit</code> to finalize. This is the only
+  JunOS-specific behaviour and is a meaningful safety improvement over Arista/Cisco.</p>
+<p><strong>Registration:</strong> <code>pipeline.COLLECTORS["juniper_junos"]</code>, <code>netbox_client.PLATFORM_MAP</code>,
+<code>appliers/__init__.APPLIER_MODULES += ("junos",)</code>.</p>
+<p><strong>Schema impact:</strong> Add <code>"juniper_junos"</code> to <code>docs/schema.md</code> Section 4.
+One-line change, joint sign-off required.</p>
+<h4 id="v375-ownership-table">v3.75 Ownership Table<a class="headerlink" href="#v375-ownership-table" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Work stream</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>collectors/junos.py</code></td>
+<td>Liam</td>
+</tr>
+<tr>
+<td><code>appliers/junos.py</code></td>
+<td>Liam</td>
+</tr>
+<tr>
+<td><code>tests/test_junos_collector.py</code></td>
+<td>Liam</td>
+</tr>
+<tr>
+<td><code>tests/test_junos_applier.py</code></td>
+<td>Liam</td>
+</tr>
+<tr>
+<td>Registration in <code>pipeline.py</code>, <code>cli.py</code>, <code>appliers/__init__.py</code>, <code>netbox_client.py</code></td>
+<td>Liam</td>
+</tr>
+<tr>
+<td><code>docs/schema.md</code> Section 4 update</td>
+<td>Joint sign-off</td>
+</tr>
+<tr>
+<td>Lab validation against live JunOS device</td>
+<td>Liam</td>
+</tr>
+<tr>
+<td>README vendor support table update</td>
+<td>Liam</td>
+</tr>
+</tbody>
+</table>
+<h4 id="v375-definition-of-done">v3.75 Definition of Done<a class="headerlink" href="#v375-definition-of-done" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] <code>collectors/junos.py</code> returns schema-valid output for interfaces, VLANs, BGP neighbors, and OSPF adjacencies. Verified by fixture-driven tests using <code>FakeNapalmJunosConn</code>.</li>
+<li>[ ] <code>appliers/junos.py</code> implements <code>restore_intent</code> and <code>raw_snippet</code> with NAPALM merge-candidate + <code>commit confirmed 5</code> flow. Verified in <code>test_junos_applier.py</code>.</li>
+<li>[ ] Management interfaces <code>fxp0</code>, <code>em0</code>, <code>fxp0.0</code>, <code>em0.0</code> raise <code>RemediationBlockedError</code>. Verified in test.</li>
+<li>[ ] <code>driftcheck &lt;junos-device&gt;</code> runs against the lab JunOS device and produces schema-valid output. Liam confirms in PR description with sample output.</li>
+<li>[ ] All existing tests still pass (no regressions). <code>ruff check .</code> passes.</li>
+<li>[ ] <code>docs/schema.md</code> Section 4 updated with <code>juniper_junos</code>; Matthew has signed off on the PR.</li>
+</ul>
+<hr />
+<h2 id="tier-2-grows-the-projects-reach">Tier 2 — Grows the project's reach<a class="headerlink" href="#tier-2-grows-the-projects-reach" title="Permanent link">&para;</a></h2>
+<h3 id="v40-community-pattern-library">v4.0 — Community Pattern Library<a class="headerlink" href="#v40-community-pattern-library" title="Permanent link">&para;</a></h3>
+<p><strong>Theme:</strong> Make the knowledge base valuable on day one for a new user, without needing
+weeks of real drift data.</p>
+<p><strong>Dependency gate:</strong>
+- v3.5 complete and tagged (API auth is a prerequisite for safe pattern import)
+- v3.75 complete and merged (so Juniper patterns can be included in the initial bundle)
+- Both partners have agreed on the <code>patterns/</code> YAML schema (joint sign-off)
+- <code>CONTRIBUTING.md</code> pattern submission section drafted before release</p>
+<h4 id="features_2">Features<a class="headerlink" href="#features_2" title="Permanent link">&para;</a></h4>
+<p><strong><code>patterns/</code> directory:</strong> each file <code>&lt;slug&gt;.yaml</code>. The loader computes the fingerprint
+from <code>object_type + field + drift_kinds</code> — contributors do not hand-write fingerprint
+strings.</p>
+<p><strong>YAML schema (draft — joint sign-off required on final):</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Interface</span><span class="nv"> </span><span class="s">admin-down</span><span class="nv"> </span><span class="s">when</span><span class="nv"> </span><span class="s">intent</span><span class="nv"> </span><span class="s">says</span><span class="nv"> </span><span class="s">up&quot;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="nt">object_type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">interface</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="nt">field</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">enabled</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="nt">drift_kinds</span><span class="p">:</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">value_mismatch</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="nt">vendors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[]</span><span class="w">          </span><span class="c1"># empty list = all vendors; named entries = vendor-specific only</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="nt">cause</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Interface</span><span class="nv"> </span><span class="s">was</span><span class="nv"> </span><span class="s">manually</span><span class="nv"> </span><span class="s">shut</span><span class="nv"> </span><span class="s">down</span><span class="nv"> </span><span class="s">or</span><span class="nv"> </span><span class="s">put</span><span class="nv"> </span><span class="s">into</span><span class="nv"> </span><span class="s">err-disable</span><span class="nv"> </span><span class="s">state&quot;</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="nt">fix</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;Re-enable</span><span class="nv"> </span><span class="s">the</span><span class="nv"> </span><span class="s">interface</span><span class="nv"> </span><span class="s">(no</span><span class="nv"> </span><span class="s">shutdown</span><span class="nv"> </span><span class="s">/</span><span class="nv"> </span><span class="s">admin-state</span><span class="nv"> </span><span class="s">enable)&quot;</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="nt">remediation</span><span class="p">:</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">restore_intent</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="c1"># For raw_snippet remediations use by_platform:</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="c1"># kind: raw_snippet</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="c1"># by_platform:</span>
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="c1">#   arista_eos:</span>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">  </span><span class="c1">#     transport: cli</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">  </span><span class="c1">#     body: &quot;interface {interface}\n   no shutdown&quot;</span>
+</code></pre></div>
+<p>Schema validation: Pydantic v2 <code>PatternSchema</code> model in <code>netdrift/patterns/schema.py</code>.
+<code>yaml.safe_load</code> is required — <code>yaml.load</code> is banned. A CI lint rule flags it.</p>
+<p><strong><code>driftcheck import-patterns [path]</code>:</strong>
+Reads all <code>.yaml</code> files, validates, upserts into <code>known_issues</code> (fingerprint as upsert key).
+Idempotent. <strong>Always imports with <code>auto_apply_enabled=False</code></strong> — operators must manually
+enable auto-apply after the <code>CONFIRM_THRESHOLD</code> gate is satisfied. File paths only in
+v4.0; no remote URL support.</p>
+<p><strong><code>GET /known-issues/export</code>:</strong> returns all <code>known_issues</code> as importable YAML.
+Round-trip export → wipe → import → export produces identical output. Requires API key.</p>
+<p><strong>Initial bundled patterns (≥20):</strong></p>
+<p><em>Interface (8):</em> admin-down vs intent-up, description mismatch, missing in reality,
+undocumented interface, IP address mismatch, access VLAN mismatch, tagged VLAN list
+mismatch, mode mismatch.</p>
+<p><em>VLAN (3):</em> VLAN missing in reality, undocumented VLAN, VLAN name mismatch.</p>
+<p><em>BGP (5):</em> session down (diagnose-only — remediation kind null), remote_as mismatch,
+BGP neighbor missing in reality, neighbor admin-shutdown, neighbor description mismatch.</p>
+<p><em>OSPF (4):</em> adjacency down (diagnose-only), adjacency missing in reality, area mismatch,
+interface mismatch.</p>
+<p>Note: MTU mismatch (a high-value pattern) requires adding <code>interfaces[].mtu: int | null</code>
+to <code>docs/schema.md</code>. This is deferred to a post-v4.0 schema call with joint sign-off.</p>
+<h4 id="v40-ownership-table">v4.0 Ownership Table<a class="headerlink" href="#v40-ownership-table" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Work stream</th>
+<th>Owner</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>patterns/</code> YAML schema design</td>
+<td>Joint sign-off</td>
+<td>Must agree before implementation</td>
+</tr>
+<tr>
+<td><code>netdrift/patterns/schema.py</code> — <code>PatternSchema</code> Pydantic model</td>
+<td>Matthew</td>
+<td></td>
+</tr>
+<tr>
+<td><code>driftcheck import-patterns</code> CLI command</td>
+<td>Matthew</td>
+<td><code>cli.py</code> extension</td>
+</tr>
+<tr>
+<td><code>GET /known-issues/export</code> endpoint</td>
+<td>Matthew</td>
+<td>Requires API key</td>
+</tr>
+<tr>
+<td>CI lint rule: flag <code>yaml.load(</code> without safe Loader</td>
+<td>Matthew</td>
+<td></td>
+</tr>
+<tr>
+<td>CI job: <code>validate-patterns</code> (separate from pytest)</td>
+<td>Matthew</td>
+<td><code>driftcheck import-patterns --dry-run patterns/</code></td>
+</tr>
+<tr>
+<td>Initial patterns — interfaces and VLANs</td>
+<td>Matthew</td>
+<td></td>
+</tr>
+<tr>
+<td>Initial patterns — BGP and OSPF</td>
+<td>Matthew</td>
+<td></td>
+</tr>
+<tr>
+<td>Vendor accuracy review of all patterns</td>
+<td>Liam</td>
+<td>Sign-off on all vendor-specific fields before merge</td>
+</tr>
+<tr>
+<td>Arista-specific patterns (MLAG, EOS defaults, etc.)</td>
+<td>Liam</td>
+<td></td>
+</tr>
+<tr>
+<td><code>patterns/README.md</code> — YAML field reference</td>
+<td>Matthew</td>
+<td>Required before <code>CONTRIBUTING.md</code> links to it</td>
+</tr>
+<tr>
+<td><code>CONTRIBUTING.md</code> — pattern submission section</td>
+<td>Matthew (draft) + Liam (vendor section)</td>
+<td>Must merge before release tag</td>
+</tr>
+<tr>
+<td>README + CHANGELOG.md v4.0 + <code>docs/PROJECT_PLAN.md §15</code></td>
+<td>Matthew (release shepherd)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h4 id="paired-seams">Paired Seams<a class="headerlink" href="#paired-seams" title="Permanent link">&para;</a></h4>
+<ol>
+<li>
+<p><strong><code>patterns/</code> YAML schema</strong> — joint design call required. Key open questions:
+   <code>vendors: []</code> semantics (empty = all vs explicit list), whether <code>auto_apply</code> field
+   in YAML is honoured on import, exact <code>fingerprint</code> computation formula.</p>
+</li>
+<li>
+<p><strong>Fingerprint computation from YAML fields</strong> — the loader computes fingerprint from
+   <code>object_type + field + drift_kinds</code>. Must match exactly what <code>differ.py</code> produces.</p>
+</li>
+</ol>
+<h4 id="v40-definition-of-done">v4.0 Definition of Done<a class="headerlink" href="#v40-definition-of-done" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] <code>patterns/</code> contains ≥20 YAML files, all valid against <code>PatternSchema</code>. At least 5 interface, 4 VLAN, 5 BGP, 4 OSPF patterns. Each includes <code>object_type</code>, <code>field</code>, <code>drift_kinds</code>, <code>cause</code>, <code>fix</code>. Liam has signed off on accuracy of all vendor-specific fields.</li>
+<li>[ ] <code>driftcheck import-patterns patterns/</code> is idempotent: running it twice on a fresh Postgres instance produces identical DB state. Verified in test using in-memory SQLite.</li>
+<li>[ ] All patterns imported with <code>auto_apply_enabled=False</code> regardless of any YAML content. Verified in test.</li>
+<li>[ ] <code>GET /known-issues/export</code> round-trip produces identical output. Verified by export → wipe → import → export → assert identical YAML.</li>
+<li>[ ] CI <code>validate-patterns</code> job passes on every PR. Adding a valid <code>.yaml</code> to <code>patterns/</code> requires no Python change.</li>
+<li>[ ] CI lint rule flags <code>yaml.load(</code> without safe Loader. Verified by the lint job itself.</li>
+<li>[ ] <code>CONTRIBUTING.md</code> pattern submission section merged and reviewed by both partners.</li>
+<li>[ ] README, CHANGELOG.md v4.0, <code>docs/PROJECT_PLAN.md §15</code> updated.</li>
+</ul>
+<hr />
+<h3 id="v45-advanced-sla-juniper-advanced-features">v4.5 — Advanced SLA + Juniper Advanced Features<a class="headerlink" href="#v45-advanced-sla-juniper-advanced-features" title="Permanent link">&para;</a></h3>
+<p><strong>Theme:</strong> Deepen the SLA layer and round out JunOS platform coverage.</p>
+<p><em>(Scope to be agreed jointly before v4.0 ships. Do not open a v4.5 branch until both
+v3.5 and v3.75 are tagged and both partners have agreed on scope.)</em></p>
+<p><strong>Likely features (not yet committed):</strong>
+- Per-interface and per-VLAN SLA windows (Matthew-heavy)
+- Escalation tiers: warning-level and critical-level SLA thresholds with separate webhook events
+- Alert deduplication: SLA alert fires once per breach window, not every scheduler cycle
+- <code>sla_resolved</code> webhook event when drift clears after an SLA breach was fired
+- JunOS IRB→VLAN mapping if deferred from v3.75 (Liam)
+- QFX-specific datacenter features if there is demand (Liam)</p>
+<hr />
+<h2 id="tier-3-the-genuinely-novel-direction">Tier 3 — The genuinely novel direction<a class="headerlink" href="#tier-3-the-genuinely-novel-direction" title="Permanent link">&para;</a></h2>
+<h3 id="v50-fuzzy-semantic-fingerprint-matching">v5.0 — Fuzzy / Semantic Fingerprint Matching<a class="headerlink" href="#v50-fuzzy-semantic-fingerprint-matching" title="Permanent link">&para;</a></h3>
+<p><strong>Theme:</strong> The hard, original engineering that separates this tool from every other drift
+detector. A known issue recorded for device A matches a structurally identical drift on
+device B, even when IP addresses, hostnames, and VLAN IDs differ.</p>
+<p><strong>DO NOT START</strong> until the corpus prerequisite is met. Building this without real drift
+data will produce an arbitrary and untestable matching threshold.</p>
+<p><strong>Prerequisite (hard gate):</strong>
+Liam confirms ≥500 labeled drift events from ≥2 months of production-scale operation.
+Corpus must be curated with ground-truth labels (correct match pairs and incorrect match
+pairs). Both partners agree the corpus is sufficient before the branch opens.</p>
+<h4 id="algorithm-recommendation">Algorithm recommendation<a class="headerlink" href="#algorithm-recommendation" title="Permanent link">&para;</a></h4>
+<p><strong>Template-based normalization</strong> (deterministic, no corpus needed to implement):</p>
+<p>Before fingerprinting, replace variable parts of the <code>object</code> identifier with tokens:
+- <code>interface:Ethernet1</code> → <code>interface:{ETHERNET}</code> (strip port number / slot notation)
+- <code>bgp_neighbor:10.0.0.2</code> → <code>bgp_neighbor:{IP}</code>
+- <code>vlan:10</code> → <code>vlan:{VLAN_ID}</code>
+- <code>ospf_adjacency:2.2.2.2</code> → <code>ospf_adjacency:{ROUTER_ID}</code></p>
+<p>The normalized fingerprint <code>bgp_neighbor:{IP}|session_state|value_mismatch</code> matches the
+same structural drift on any device with any peer IP.</p>
+<p>After normalization, use <strong>Jaccard similarity</strong> on normalized components as a
+tie-breaking measure for near-identical patterns. Threshold is tuned against the corpus.</p>
+<p><em>Rejected alternatives:</em>
+- TF-IDF: treats structured key-value drift records as bags of words — wrong model.
+- Embedding models: require a resident LLM dependency; incompatible with the self-hosted
+  promise of running on a 2-vCPU VM.</p>
+<p>The exact-match fingerprint (<code>object_type|field|drift_kind</code>) remains the default.
+Fuzzy matching is behind a feature flag <code>FUZZY_MATCHING_ENABLED</code> (default <code>false</code>).</p>
+<h4 id="v50-ownership-table">v5.0 Ownership Table<a class="headerlink" href="#v50-ownership-table" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Work stream</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Corpus assembly (label ≥500 drift event pairs)</td>
+<td>Liam</td>
+</tr>
+<tr>
+<td>Fuzzy fingerprint algorithm design</td>
+<td>Both (pair before any code is written)</td>
+</tr>
+<tr>
+<td><code>netdrift/fingerprint.py</code> fuzzy normalization</td>
+<td>Both (paired)</td>
+</tr>
+<tr>
+<td>Matching threshold tuning against corpus</td>
+<td>Both (paired)</td>
+</tr>
+<tr>
+<td>Alembic migration: re-fingerprint <code>known_issues</code> + <code>legacy_fingerprint</code> column</td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td>UI: confidence score badge on known-fix matches</td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td><code>GET /drifts</code> response: <code>match_confidence: float | null</code></td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td><code>docs/v5.0-corpus-eval.md</code> — evaluation results and sign-off</td>
+<td>Both</td>
+</tr>
+</tbody>
+</table>
+<h4 id="v50-definition-of-done">v5.0 Definition of Done<a class="headerlink" href="#v50-definition-of-done" title="Permanent link">&para;</a></h4>
+<ul>
+<li>[ ] On a labeled corpus of ≥500 drift events, the fuzzy matcher achieves false-positive rate ≤5% and false-negative rate ≤20% at the accepted threshold. Results documented in <code>docs/v5.0-corpus-eval.md</code> and signed off by both partners before the release tag.</li>
+<li>[ ] A known issue for <code>bgp_neighbor:10.0.0.1|session_state|value_mismatch</code> matches a structurally identical drift with <code>bgp_neighbor:10.1.1.1</code>. Verified by a hand-crafted test pair.</li>
+<li>[ ] <code>FUZZY_MATCHING_ENABLED=false</code> (the default) leaves existing behaviour entirely unchanged. Verified by running all existing <code>test_fixtures.py</code> tests with no modification.</li>
+<li>[ ] <code>GET /drifts</code> includes <code>match_confidence: float | null</code> (null = no match, 1.0 = exact, 0.0–1.0 = fuzzy). Verified in <code>test_api.py</code>.</li>
+<li>[ ] Migration re-fingerprints <code>known_issues</code>; <code>legacy_fingerprint</code> column preserves the original value; migration is reversible via Alembic downgrade.</li>
+<li>[ ] UI confidence score badge visible alongside known-fix suggestions; scores &lt; 0.7 show a visual warning indicator.</li>
+</ul>
+<hr />
+<h2 id="test-infrastructure-changes-add-as-each-version-ships">Test Infrastructure Changes (add as each version ships)<a class="headerlink" href="#test-infrastructure-changes-add-as-each-version-ships" title="Permanent link">&para;</a></h2>
+<h3 id="v30-add-to-dev-extras-in-pyprojecttoml">v3.0 — add to <code>dev</code> extras in <code>pyproject.toml</code><a class="headerlink" href="#v30-add-to-dev-extras-in-pyprojecttoml" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">[project.optional-dependencies]</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="n">dev</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="s2">&quot;pytest&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="s2">&quot;ruff&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="s2">&quot;httpx&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="s2">&quot;pytest-cov&gt;=5.0&quot;</span><span class="p">,</span><span class="w">        </span><span class="c1"># coverage enforcement</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="s2">&quot;pytest-httpserver&gt;=1.0&quot;</span><span class="p">,</span><span class="w"> </span><span class="c1"># webhook dispatch testing</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="p">]</span>
+</code></pre></div>
+<p>Add to CI:
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Run tests with coverage</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pytest --cov=netdrift --cov-report=term-missing --cov-fail-under=80</span>
+</code></pre></div></p>
+<h3 id="v35-add-to-dev-extras">v3.5 — add to <code>dev</code> extras<a class="headerlink" href="#v35-add-to-dev-extras" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="s2">&quot;time-machine&gt;=2.0&quot;</span><span class="err">,</span><span class="w">  </span><span class="c1"># SLA clock injection (if needed beyond parameter injection)</span>
+</code></pre></div>
+<h3 id="v40-add-separate-ci-job">v4.0 — add separate CI job<a class="headerlink" href="#v40-add-separate-ci-job" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Validate bundled patterns</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">run</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">python -m netdrift.cli validate-patterns patterns/</span>
+</code></pre></div>
+<h3 id="testing-principles-non-negotiable">Testing principles (non-negotiable)<a class="headerlink" href="#testing-principles-non-negotiable" title="Permanent link">&para;</a></h3>
+<ol>
+<li>
+<p><strong>No <code>time.sleep()</code> in any test.</strong> Any function with timing behaviour accepts a
+   <code>now: datetime</code> injectable parameter. SLA evaluator and auto-apply loop are the new
+   cases. The syslog cooldown CI flake (fixed in PR #71) is the precedent to not repeat.</p>
+</li>
+<li>
+<p><strong>Any test that spawns a background thread must <code>.join(timeout=5.0)</code> the handle
+   and assert <code>not t.is_alive()</code>.</strong> No <code>event.wait()</code> + deadline races.</p>
+</li>
+<li>
+<p><strong>Webhook tests use <code>pytest-httpserver</code></strong> — a real local HTTP server, not a
+   monkey-patched HTTP client. Transport-agnostic and more trustworthy.</p>
+</li>
+</ol>
+<hr />
+<h2 id="open-questions-resolve-before-each-version-branch-opens">Open Questions (resolve before each version branch opens)<a class="headerlink" href="#open-questions-resolve-before-each-version-branch-opens" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Question</th>
+<th>When to resolve</th>
+<th>Who</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>acknowledgements</code> table schema — <code>(device, fingerprint)</code> key or <code>(device, object_type, field)</code> key?</td>
+<td>Before v3.5 branch opens</td>
+<td>Joint</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>GET /drifts</code> auth exemption — confirm drift data is public-by-default for self-hosted, document rationale</td>
+<td>Before v3.5 branch opens</td>
+<td>Joint</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>GigabitEthernet0</code> on CSR 1000v — management or data interface for the Cisco lab targets?</td>
+<td>Before v3.0 merges</td>
+<td>Liam</td>
+</tr>
+<tr>
+<td>4</td>
+<td>JunOS lab target availability — vQFX, vJunos-switch, or physical EX?</td>
+<td>Before v3.75 branch opens</td>
+<td>Liam</td>
+</tr>
+<tr>
+<td>5</td>
+<td>MTU schema proposal — add <code>interfaces[].mtu: int | null</code> to <code>docs/schema.md</code>?</td>
+<td>Before v4.0 ships</td>
+<td>Joint</td>
+</tr>
+<tr>
+<td>6</td>
+<td><code>raw_snippet.body</code> as literal or template in v4.0? (<code>{PLACEHOLDER}</code> substitution has security implications)</td>
+<td>Before v4.0 branch opens</td>
+<td>Joint</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="emergent-issues-found-during-review">Emergent Issues Found During Review<a class="headerlink" href="#emergent-issues-found-during-review" title="Permanent link">&para;</a></h2>
+<p>These are bugs or gaps in the current codebase (not roadmap features) that should be
+addressed as chore PRs:</p>
+<ol>
+<li>
+<p><strong><code>database.py</code> engine singleton</strong> — <code>get_engine()</code> is not a singleton; the scheduler
+   opens a new connection pool on every call. 10-line fix before v3.0 feature work starts.</p>
+</li>
+<li>
+<p><strong><code>AUTO_REMEDIATION_ENABLED</code> missing from <code>docker-compose.yml</code></strong> — the env var exists
+   in code but is never passed to the <code>api</code> or <code>scheduler</code> services in compose. Auto-apply
+   can never be enabled in the compose deployment today. Fix in the v3.0 docker-compose PR.</p>
+</li>
+<li>
+<p><strong>No <code>restart: unless-stopped</code> on <code>api</code> and <code>scheduler</code> services</strong> in
+   <code>docker-compose.yml</code>. A crash requires manual restart. Add to both services.</p>
+</li>
+<li>
+<p><strong><code>devices.yml</code> cache in <code>api/app.py</code> is never invalidated</strong> — adding a new device
+   requires an API restart to be visible. Add <code>?reload=true</code> to <code>/health</code> or document
+   the restart requirement prominently.</p>
+</li>
+<li>
+<p><strong>Webhook rate limiting</strong> — if 50 drift events fire in one poll cycle, the dispatcher
+   enqueues 50 HTTP POSTs. Slack will 429 after ~1/second. Design <code>WebhookDispatcher</code> in
+   v3.0 to accept a <code>rate_limit_per_minute</code> parameter (even if the default is generous),
+   so rate limiting can be tightened in v3.5 without an API change.</p>
+</li>
+</ol>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.top", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

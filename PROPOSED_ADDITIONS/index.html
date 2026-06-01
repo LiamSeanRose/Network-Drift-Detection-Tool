@@ -1,0 +1,1491 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source network drift detection — the self-hosted alternative to NetBox Assurance.">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
+    
+    
+      
+        <title>Proposed Additions — Post-Roadmap Ideas - Network Drift Detection Tool</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#proposed-additions-post-roadmap-ideas" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Network Drift Detection Tool" class="md-header__button md-logo" aria-label="Network Drift Detection Tool" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Network Drift Detection Tool
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Proposed Additions — Post-Roadmap Ideas
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/LiamSeanRose/Network-Drift-Detection-Tool" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LiamSeanRose/Network-Drift-Detection-Tool
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../lab/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../schema/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Schema Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../PROJECT_PLAN/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Network Drift Detection Tool" class="md-nav__button md-logo" aria-label="Network Drift Detection Tool" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Network Drift Detection Tool
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/LiamSeanRose/Network-Drift-Detection-Tool" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LiamSeanRose/Network-Drift-Detection-Tool
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROJECT_PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Overview
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#portfolio-site" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Portfolio Site
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Portfolio Site">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#what" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        What
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#structure" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Structure
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#hosting" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hosting
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#multi-project-org" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Multi-project org
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-1-build-these-no-sequencing-dependency" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 1 — Build these (no sequencing dependency)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 1 — Build these (no sequencing dependency)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-netfind-ipmac-trace-cli" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. netfind — IP/MAC trace CLI
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-pre-change-snapshot-compare" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Pre-Change Snapshot / Compare
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-firmware-version-drift-schema-sign-off-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Firmware Version Drift ⚠ schema sign-off required
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-2-add-to-roadmap-build-after-v40" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 2 — Add to roadmap (build after v4.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 2 — Add to roadmap (build after v4.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#4-compliance-hardening-checker" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Compliance / Hardening Checker
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#5-ansible-netdrift_facts-module" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Ansible netdrift_facts Module
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#6-change-window-suppression" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Change Window Suppression
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#tier-3-longer-term-sequencing-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Tier 3 — Longer-term (sequencing dependencies)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Tier 3 — Longer-term (sequencing dependencies)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#7-network-topology-map-schema-sign-off-required" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        7. Network Topology Map ⚠ schema sign-off required
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#8-lldp-topology-crawler-netmap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        8. LLDP Topology Crawler (netmap)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#9-git-based-intent-source-source_of_truthgit" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        9. Git-Based Intent Source (SOURCE_OF_TRUTH=git)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#dashboard-ux-improvements" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Dashboard UX Improvements
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Dashboard UX Improvements">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#ui-1-per-device-health-summary-cards" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UI-1. Per-Device Health Summary Cards
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ui-2-remediation-audit-trail-first-class-view" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UI-2. Remediation Audit Trail — First-Class View
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#ui-3-drift-timeline-what-changed-when" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        UI-3. Drift Timeline — "What Changed When"
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#public-hosting-running-the-app-beyond-localhost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Public Hosting — Running the App Beyond Localhost
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Public Hosting — Running the App Beyond Localhost">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-challenge" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The challenge
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-a-demo-mode-with-pre-seeded-fixture-data-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option A — Demo mode with pre-seeded fixture data (recommended)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-b-full-live-instance-on-a-vps-with-vpn-to-lab" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option B — Full live instance on a VPS (with VPN to lab)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#option-c-read-only-public-api-write-operations-gated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Option C — Read-only public API, write operations gated
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommended-path" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Recommended path
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#summary-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Summary Table
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="proposed-additions-post-roadmap-ideas">Proposed Additions — Post-Roadmap Ideas<a class="headerlink" href="#proposed-additions-post-roadmap-ideas" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Status:</strong> Proposal — not yet integrated into <code>docs/PROJECT_PLAN.md</code> or <code>docs/ROADMAP_POST_V2.5.md</code>.
+Reviewed by design council 2026-06-01. Both Liam and Matthew have agreed these are
+worth building. Sequencing and ownership to be agreed before any branch is created.</p>
+<p><strong>Last updated:</strong> 2026-06-01</p>
+</blockquote>
+<hr />
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>Nine feature ideas and one portfolio site recommendation, sourced from a design council
+session. Grouped into three tiers by sequencing dependency. None require a new language
+or a new tech stack — all fit the existing Python/React/NAPALM/FastAPI foundation.</p>
+<p>Items marked <strong>⚠ schema sign-off required</strong> touch <code>docs/schema.md</code> and need a joint
+review PR before implementation begins (same process as any other schema change).</p>
+<hr />
+<h2 id="portfolio-site">Portfolio Site<a class="headerlink" href="#portfolio-site" title="Permanent link">&para;</a></h2>
+<h3 id="what">What<a class="headerlink" href="#what" title="Permanent link">&para;</a></h3>
+<p>A static landing page (<code>index.html</code>, plain HTML/CSS) separate from the MkDocs docs site
+Matthew already has planned. The two serve different jobs:</p>
+<ul>
+<li><strong>Landing page</strong> — for someone who found the GitHub link and needs to understand what
+  the tool does in 30 seconds. Not a docs page.</li>
+<li><strong>Docs site</strong> — for someone who installed the tool and needs to configure it.</li>
+</ul>
+<h3 id="structure">Structure<a class="headerlink" href="#structure" title="Permanent link">&para;</a></h3>
+<p>Landing page content, in order:</p>
+<ol>
+<li>One-line pitch: <em>"The open-source alternative to NetBox Assurance, with an
+   institutional memory."</em></li>
+<li>A 10–15 second looping WebM/GIF of the dashboard showing a drift event detected,
+   the known fix surfaced, dry-run run, apply confirmed.</li>
+<li>Architecture diagram SVG (NetBox → intent + Device → reality → differ → Postgres).</li>
+<li>Vendor/OS tested table (exact versions — more credible than logos).</li>
+<li>Schema contract snippet (15 lines of JSON showing the normalized shape).</li>
+<li><code>docker compose up</code> quickstart (3 commands).</li>
+<li>Two CTAs: <code>Get started →</code> (links to docs) and <code>GitHub</code>.</li>
+</ol>
+<h3 id="hosting">Hosting<a class="headerlink" href="#hosting" title="Permanent link">&para;</a></h3>
+<p>GitHub Pages or Cloudflare Pages — both free, zero ops burden, better uptime than
+the lab VM. <code>mkdocs gh-deploy</code> handles the docs site. The landing page is a separate
+<code>index.html</code> in the same repo.</p>
+<h3 id="multi-project-org">Multi-project org<a class="headerlink" href="#multi-project-org" title="Permanent link">&para;</a></h3>
+<p>Create a GitHub org (e.g. <code>netops-tools</code> or similar). All future tools live there.
+The org README becomes the portfolio index — a short table: Tool | What it does | Status.
+Each tool gets its own landing page. Future employers see a pattern of shipping, not
+just one project.</p>
+<p><strong>Do NOT:</strong> self-host on the lab VM; build a live hosted demo (screen capture is better);
+describe it as a "NetBox plugin" (it is a standalone service); build a multi-tool React SPA.</p>
+<hr />
+<h2 id="tier-1-build-these-no-sequencing-dependency">Tier 1 — Build these (no sequencing dependency)<a class="headerlink" href="#tier-1-build-these-no-sequencing-dependency" title="Permanent link">&para;</a></h2>
+<h3 id="1-netfind-ipmac-trace-cli">1. <code>netfind</code> — IP/MAC trace CLI<a class="headerlink" href="#1-netfind-ipmac-trace-cli" title="Permanent link">&para;</a></h3>
+<p><strong>What it solves:</strong> "Which port is this IP on?" is the most common question in a network
+ops team — asked 10+ times a day. Today the answer requires manual ARP table lookup,
+MAC table cross-reference, LLDP neighbor trace, and NetBox cross-reference. No good
+open-source tool does this in one command.</p>
+<p><strong>What it is:</strong> A standalone CLI tool in a separate repo. Given an IP or MAC address:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>netfind<span class="w"> </span><span class="m">10</span>.1.1.50
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="c1"># → 10.1.1.50 is at MAC aa:bb:cc:dd:ee:ff</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1">#   Learned on Ethernet3 of access-sw-04 (172.20.20.14)</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1">#   Connected to core-sw-01 Ethernet12 via LLDP</span>
+</code></pre></div>
+<p>Uses NAPALM <code>get_arp_table()</code>, <code>get_mac_address_table()</code>, <code>get_lldp_neighbors()</code> —
+all four current vendors already support these. Reads from the same <code>devices.yml</code>
+format. Dependencies: <code>napalm</code>, <code>pyyaml</code>, <code>typer</code>. No database, no API, no Docker.</p>
+<p><strong>Ownership:</strong> Liam (network-side data collection; Matthew can add a JSON output flag
+if he wants a machine-readable mode).</p>
+<p><strong>Effort:</strong> 2–3 weeks.</p>
+<p><strong>Why it matters for the portfolio:</strong> Gets GitHub stars independently of netdrift.
+Any network engineer can understand the use case in one sentence and install it in
+two minutes.</p>
+<hr />
+<h3 id="2-pre-change-snapshot-compare">2. Pre-Change Snapshot / Compare<a class="headerlink" href="#2-pre-change-snapshot-compare" title="Permanent link">&para;</a></h3>
+<p><strong>What it solves:</strong> Before a maintenance window, engineers want a baseline. After the
+change, they want to know: did anything break that wasn't supposed to? Today netdrift
+has no way to take an ad-hoc snapshot outside the poll schedule or compare two
+specific points in time.</p>
+<p><strong>What it is:</strong> Two new <code>driftcheck</code> subcommands:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Tag a snapshot before the maintenance window</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>driftcheck<span class="w"> </span>snapshot<span class="w"> </span>core-sw-01<span class="w"> </span>--tag<span class="w"> </span>pre-maint-2026-06-01
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="c1"># After the window, compare</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>driftcheck<span class="w"> </span>compare<span class="w"> </span>pre-maint-2026-06-01<span class="w"> </span>post-maint-2026-06-01
+</code></pre></div>
+<p>The snapshot is a normal collector run stored with a user-supplied tag. The compare
+uses the existing <code>differ.diff()</code> against two stored snapshots. One new CLI subcommand,
+a <code>snapshot_tag</code> column on a new <code>DeviceSnapshot</code> table (or as a column on the
+existing drift event groups), and a <code>GET /snapshots</code> endpoint for the dashboard.</p>
+<p><strong>Schema impact:</strong> New <code>DeviceSnapshot</code> table — does not touch the normalized schema
+contract in <code>docs/schema.md</code>. Matthew owns the migration; Liam owns the snapshot
+collection call.</p>
+<p><strong>Ownership:</strong> Joint — Liam (CLI + collector trigger), Matthew (storage + API + dashboard view).</p>
+<p><strong>Effort:</strong> 3–4 weeks.</p>
+<p><strong>Why it matters:</strong> Maintenance windows are where tools earn trust. "Here is what
+changed vs. the pre-maintenance baseline, and here is one thing that drifted outside
+the change ticket" is understood by everyone on the bridge call.</p>
+<hr />
+<h3 id="3-firmware-version-drift-schema-sign-off-required">3. Firmware Version Drift ⚠ schema sign-off required<a class="headerlink" href="#3-firmware-version-drift-schema-sign-off-required" title="Permanent link">&para;</a></h3>
+<p><strong>What it solves:</strong> Nobody has a complete, up-to-date list of what software version
+is running on each device. NetBox has a <code>platform</code> field but it rarely tracks the
+running OS version reliably. Finding out which devices are behind on a software
+update requires logging into each one.</p>
+<p><strong>What it is:</strong> NAPALM's <code>get_facts()</code> returns <code>os_version</code> for all four current
+vendors. Add <code>software_version</code> as a collected field. NetBox's <code>platform</code> or
+<code>config_context</code> stores the desired version. The existing <code>differ.diff()</code> produces a
+<code>software_version|value_mismatch</code> drift event when they diverge. Shows up in the
+existing dashboard with zero new UI work.</p>
+<p><strong>Schema impact:</strong> Add <code>software_version: str</code> to the top-level schema dict in
+<code>docs/schema.md</code>. <strong>Requires joint sign-off PR before implementation.</strong></p>
+<p><strong>Ownership:</strong> Liam (schema proposal + <code>get_facts()</code> call in all 4 collectors),
+Matthew (differ + schema.md co-sign).</p>
+<p><strong>Effort:</strong> 1–2 days of coding once schema is agreed.</p>
+<p><strong>Why it matters:</strong> Highest value-to-effort ratio of anything in this document.
+Visible from day one on any existing netdrift install.</p>
+<hr />
+<h2 id="tier-2-add-to-roadmap-build-after-v40">Tier 2 — Add to roadmap (build after v4.0)<a class="headerlink" href="#tier-2-add-to-roadmap-build-after-v40" title="Permanent link">&para;</a></h2>
+<h3 id="4-compliance-hardening-checker">4. Compliance / Hardening Checker<a class="headerlink" href="#4-compliance-hardening-checker" title="Permanent link">&para;</a></h3>
+<p><strong>What it solves:</strong> No self-hosted, multi-vendor compliance checker exists in open
+source that does this continuously and stores history. Batfish requires a heavy JVM
+stack and is pre-deployment only. Commercial tools (CNA, NetMRI) are expensive and
+closed-source.</p>
+<p><strong>What it is:</strong> A <code>netcompliance</code> module (or <code>netdrift</code> extension) that defines
+compliance rules as YAML:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">SSH version 2 required</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="nt">check</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ssh_version == 2</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="nt">severity</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">critical</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="nt">reference</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">CIS_EOS_1.1_Section_2.3</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="nt">vendors</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">arista_eos</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">cisco_iosxe</span><span class="p p-Indicator">]</span>
+</code></pre></div>
+<p>The rule format mirrors the v4.0 community pattern library schema — shared design,
+shared YAML validator. The differ produces <code>drift_kind: compliance_violation</code>. History,
+alerting, and auto-remediation all reuse existing infrastructure.</p>
+<p><strong>Dependency:</strong> Build after v4.0 community patterns — the YAML schema design is shared.
+The compliance rule format is a superset of the drift pattern format.</p>
+<p><strong>Ownership:</strong> Both (joint YAML schema design), Liam (vendor-specific rule accuracy),
+Matthew (differ + storage + dashboard compliance view).</p>
+<p><strong>Effort:</strong> 6–8 weeks for engine + initial CIS-aligned rule sets for Arista and Cisco.</p>
+<p><strong>Why it matters:</strong> Expands the user base to security and compliance teams — a
+different buyer than network ops. Community rule-set model (same as v4.0 patterns)
+means others contribute rules over time.</p>
+<hr />
+<h3 id="5-ansible-netdrift_facts-module">5. Ansible <code>netdrift_facts</code> Module<a class="headerlink" href="#5-ansible-netdrift_facts-module" title="Permanent link">&para;</a></h3>
+<p><strong>What it solves:</strong> 70%+ of network automation teams already use Ansible. They want
+netdrift to surface drift as Ansible facts so their existing playbooks can act on it.
+Today there is no connection between the two tools.</p>
+<p><strong>What it is:</strong> A standalone Ansible collection in a separate repo (<code>netdrift-ansible</code>),
+published to Ansible Galaxy:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Get current drift for this device</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">netdrift_facts</span><span class="p">:</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="nt">api_url</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">netdrift_api</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="nt">device</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">inventory_hostname</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">  </span><span class="nt">register</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">drift_data</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">Apply known fix if one exists</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">  </span><span class="nt">arista.eos.eos_config</span><span class="p">:</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">    </span><span class="nt">lines</span><span class="p">:</span><span class="w"> </span><span class="s">&quot;{{</span><span class="nv"> </span><span class="s">drift_data.facts.known_fix.rendered_commands</span><span class="nv"> </span><span class="s">}}&quot;</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">  </span><span class="nt">when</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">drift_data.facts | selectattr(&#39;known_fix&#39;, &#39;defined&#39;) | list | length &gt; 0</span>
+</code></pre></div>
+<p>The module is a thin HTTP wrapper: calls <code>GET /drifts?device=...</code>, registers the
+response as Ansible facts. No new netdrift backend code required — the API already
+exists. Add <code>POST /devices/{name}/repoll</code> as a companion endpoint so Ansible can
+trigger a fresh check post-change.</p>
+<p><strong>Ownership:</strong> Matthew (new repoll API endpoint), Liam (Ansible collection, since he
+understands the vendor-side data shape).</p>
+<p><strong>Effort:</strong> 1–2 weeks.</p>
+<p><strong>Why it matters:</strong> Single integration most likely to increase install rate for
+automation-mature teams. An Ansible collection on Galaxy is also a credible portfolio
+artifact in its own right.</p>
+<hr />
+<h3 id="6-change-window-suppression">6. Change Window Suppression<a class="headerlink" href="#6-change-window-suppression" title="Permanent link">&para;</a></h3>
+<p><strong>What it solves:</strong> Alert fatigue. When drift fires during a scheduled maintenance
+window, engineers already know about it — the alert is noise, not signal. Ignoring
+repeated false positives trains teams to ignore all alerts. This is the #1 reason
+monitoring tools lose adoption.</p>
+<p><strong>What it is:</strong> A lightweight <code>change_windows</code> table in netdrift:</p>
+<table>
+<thead>
+<tr>
+<th>Column</th>
+<th>Type</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>int PK</td>
+<td></td>
+</tr>
+<tr>
+<td><code>device</code></td>
+<td>str (nullable)</td>
+<td>null = applies to all devices</td>
+</tr>
+<tr>
+<td><code>start_time</code></td>
+<td>datetime UTC</td>
+<td></td>
+</tr>
+<tr>
+<td><code>end_time</code></td>
+<td>datetime UTC</td>
+<td></td>
+</tr>
+<tr>
+<td><code>description</code></td>
+<td>str</td>
+<td>change ticket reference, free text</td>
+</tr>
+<tr>
+<td><code>created_by</code></td>
+<td>str</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>When a drift webhook would fire, the dispatcher checks if an open change window covers
+the device at the current time. If yes: suppress the notification and tag the drift
+event <code>expected_change</code>. The drift is still recorded — just not alerted.</p>
+<p>CRUD endpoints: <code>POST/GET/DELETE /change-windows</code>. A simple UI panel (list + form).
+No ITSM sync — document webhook→Jira as a worked example in the docs instead.</p>
+<p><strong>Ownership:</strong> Matthew (table + API + UI panel), Liam (validate timing against lab).</p>
+<p><strong>Effort:</strong> 2–3 days.</p>
+<p><strong>Why it matters:</strong> Prevents the false-positive fatigue that kills adoption of every
+monitoring tool. Short to build, high operational impact.</p>
+<hr />
+<h2 id="tier-3-longer-term-sequencing-dependencies">Tier 3 — Longer-term (sequencing dependencies)<a class="headerlink" href="#tier-3-longer-term-sequencing-dependencies" title="Permanent link">&para;</a></h2>
+<h3 id="7-network-topology-map-schema-sign-off-required">7. Network Topology Map ⚠ schema sign-off required<a class="headerlink" href="#7-network-topology-map-schema-sign-off-required" title="Permanent link">&para;</a></h3>
+<p><strong>What it solves:</strong> The drift table tells you <em>what</em> is drifting. A topology map tells
+you <em>where</em> it is in the network and whether a drifting device is on a critical path.</p>
+<p><strong>What it is:</strong> A new dashboard tab showing a D3.js or <code>reactflow</code> force graph of the
+network with devices as nodes. Drifting devices glow red/amber; clean devices are grey.
+Clicking a node opens the drift table filtered to that device.</p>
+<p><strong>Data source:</strong> NAPALM <code>get_lldp_neighbors()</code> is available on all four current vendors.
+Add an <code>lldp_neighbors</code> field to the reality schema — the differ can detect LLDP
+topology drift (missing or unexpected neighbors) as a bonus.</p>
+<p><strong>Dependency:</strong> Requires <code>lldp_neighbors</code> added to <code>docs/schema.md</code> — <strong>joint sign-off
+PR required.</strong> Then a new <code>GET /topology</code> API endpoint. Then the React component.
+These are three sequential steps; the component comes last.</p>
+<p><strong>Ownership:</strong> Liam (<code>lldp_neighbors</code> in collectors), Matthew (API + React component).</p>
+<p><strong>Effort:</strong> 4–6 weeks end-to-end (schema → collector → API → React).</p>
+<hr />
+<h3 id="8-lldp-topology-crawler-netmap">8. LLDP Topology Crawler (<code>netmap</code>)<a class="headerlink" href="#8-lldp-topology-crawler-netmap" title="Permanent link">&para;</a></h3>
+<p><strong>What it solves:</strong> "Is what's in NetBox actually how devices are connected?" LLDP
+neighbor tables are the ground truth for physical topology, but most teams never
+export them systematically. Devices get recabled without NetBox updates.</p>
+<p><strong>What it is:</strong> A standalone CLI / scheduled tool that walks LLDP neighbors from a
+seed device, builds a full topology graph, and either writes it to NetBox
+(<code>dcim.cables</code> API) or diffs it against the existing NetBox topology. Surfaces:
+new neighbors (unauthorized device?), missing neighbors (link down or recabled?),
+system-name mismatches (device renamed in NetBox but not on wire).</p>
+<p><strong>Relationship to #7:</strong> This is the data-collection companion to the topology map.
+The crawler populates NetBox; the topology map visualizes it. They can be built
+independently — the crawler has standalone value without the map.</p>
+<p><strong>Ownership:</strong> Liam (NAPALM LLDP collection + NetBox write), Matthew (NetBox cable
+API integration if needed).</p>
+<p><strong>Effort:</strong> 2–3 weeks for the crawler; another 1–2 weeks for the NetBox write-back.</p>
+<hr />
+<h3 id="9-git-based-intent-source-source_of_truthgit">9. Git-Based Intent Source (<code>SOURCE_OF_TRUTH=git</code>)<a class="headerlink" href="#9-git-based-intent-source-source_of_truthgit" title="Permanent link">&para;</a></h3>
+<p><strong>What it solves:</strong> Some teams manage network intent as code (YAML files in a git
+repo) rather than in NetBox. A PR to the intent repo represents an intended state
+change; CI should validate it against live device state before merging.</p>
+<p><strong>What it is:</strong> A third source-of-truth adapter alongside <code>netbox</code> and <code>nautobot</code>.
+<code>pipeline.py</code>'s <code>_resolve_intent_fn()</code> already dispatches on <code>SOURCE_OF_TRUTH</code> — add
+a <code>git</code> case that reads a YAML file from a local checkout of the intent repo.</p>
+<p>The schema contract is unchanged. The new work is:
+- <code>git_client.get_intent(device_name) -&gt; dict</code> that reads <code>intent/&lt;device&gt;.yaml</code>
+- A differ change to handle <em>partial</em> intent files (skip missing top-level keys
+  rather than treating them as <code>missing_in_intent</code>) — <strong>requires joint design
+  discussion before implementation</strong>
+- Documentation for the GitOps workflow: PR → CI runs <code>driftcheck</code> → report shows
+  what would change → merge gate</p>
+<p><strong>Dependency:</strong> The partial-intent differ change needs a design discussion between
+Liam and Matthew before any code is written. This is the most design-heavy item
+in this document.</p>
+<p><strong>Ownership:</strong> Liam (<code>git_client.py</code>), Matthew (differ partial-intent handling +
+docs), Joint (design discussion on the differ change).</p>
+<p><strong>Effort:</strong> 3–4 weeks once the differ question is resolved.</p>
+<hr />
+<h2 id="dashboard-ux-improvements">Dashboard UX Improvements<a class="headerlink" href="#dashboard-ux-improvements" title="Permanent link">&para;</a></h2>
+<p>Three additions to the existing React dashboard identified by the design council.
+All three work with data the tool already collects — no new backend seams required
+beyond what is noted. These are Matthew's frontend domain; Liam reviews for
+operational correctness.</p>
+<h3 id="ui-1-per-device-health-summary-cards">UI-1. Per-Device Health Summary Cards<a class="headerlink" href="#ui-1-per-device-health-summary-cards" title="Permanent link">&para;</a></h3>
+<p><strong>What it solves:</strong> The current dashboard opens on a flat list of drift events across
+all devices. There is no answer to "which device is in the worst shape right now"
+without scanning the full table.</p>
+<p><strong>What it is:</strong> Replace the 24h history panel with a grid of device cards — one per
+device — each showing:
+- Device name (monospace)
+- Current drift count broken down by severity: <code>2 critical · 3 warning · 1 info</code>
+- A mini sparkline for 24h trend (reuses existing history data)
+- A status dot: grey (clean), amber (warning drift), red pulse (critical drift)
+- Auto-apply status: <code>auto-apply: ON / OFF</code> in muted text</p>
+<p>Clicking a card filters the drift table to that device. A clear-filter affordance
+returns to all devices.</p>
+<p><strong>Implementation:</strong> Refactor the existing <code>HistoryPanel</code> component. Group drift events
+by device on the client side, or add a <code>/drifts/summary</code> endpoint returning current
+counts per device. CSS grid, no new dependencies.</p>
+<p><strong>Ownership:</strong> Matthew (frontend + optional API endpoint).</p>
+<p><strong>Effort:</strong> 1–2 weeks.</p>
+<hr />
+<h3 id="ui-2-remediation-audit-trail-first-class-view">UI-2. Remediation Audit Trail — First-Class View<a class="headerlink" href="#ui-2-remediation-audit-trail-first-class-view" title="Permanent link">&para;</a></h3>
+<p><strong>What it solves:</strong> The remediation audit log is currently buried inside an expanded
+row in the drift table. When a manager, post-incident review, or change-management
+process asks "what did the tool apply and when?", there is no easy answer. Invisible
+audit trails make auto-apply feel unsafe to enable.</p>
+<p><strong>What it is:</strong> A new <code>/audit</code> route (or a tab in the header) showing all remediation
+events across all devices chronologically:</p>
+<table>
+<thead>
+<tr>
+<th>When</th>
+<th>Device</th>
+<th>Drift pattern</th>
+<th>Action</th>
+<th>Result</th>
+<th>Applied by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>2m ago</td>
+<td>core-sw-01</td>
+<td>interface·description·value_mismatch</td>
+<td>apply</td>
+<td>✓ success</td>
+<td>auto</td>
+</tr>
+<tr>
+<td>14m ago</td>
+<td>core-sw-02</td>
+<td>vlan·name·value_mismatch</td>
+<td>dry-run</td>
+<td>✓</td>
+<td>liam</td>
+</tr>
+</tbody>
+</table>
+<p>Failure rows get a red left-edge bar (mirrors the severity bar on the drift table).
+Filter bar: by device, by result, by date range.</p>
+<p><strong>Implementation:</strong> New route in the React app. The <code>RemediationEvent</code> rows are
+already written to Postgres on every apply — this is purely a new view over existing
+data. Add a <code>GET /remediation-events</code> endpoint or reuse <code>GET /known-issues/{id}/remediation-events</code>.</p>
+<p><strong>Ownership:</strong> Matthew (frontend + API endpoint if needed).</p>
+<p><strong>Effort:</strong> 1–2 weeks.</p>
+<hr />
+<h3 id="ui-3-drift-timeline-what-changed-when">UI-3. Drift Timeline — "What Changed When"<a class="headerlink" href="#ui-3-drift-timeline-what-changed-when" title="Permanent link">&para;</a></h3>
+<p><strong>What it solves:</strong> The 24h sparklines show drift counts but not the events behind
+them. "This device went from 0 to 7 drift events at 14:32 — what happened?" is
+currently unanswerable without scanning the full events table with a timestamp filter.</p>
+<p><strong>What it is:</strong> An SVG timeline panel (sits between the device summary cards and the
+drift table) showing drift events as dots on a per-device horizontal timeline. The
+x-axis is time (last 24h), one row per device. Each dot is coloured by severity.
+Hovering a dot shows a tooltip: timestamp, field, severity, known fix attached?
+Remediation events that resolved drift appear as a checkmark on the same timeline.</p>
+<p><strong>Implementation:</strong> SVG component in React. Requires the <code>/drifts/history</code> response
+to include event-level data (currently returns aggregated 5-minute buckets only) — a
+small backend change to add individual events alongside the bucket data, or a new
+<code>/drifts/timeline</code> endpoint.</p>
+<p><strong>Ownership:</strong> Matthew (frontend SVG component + minor API change).</p>
+<p><strong>Effort:</strong> 2–3 weeks.</p>
+<hr />
+<h2 id="public-hosting-running-the-app-beyond-localhost">Public Hosting — Running the App Beyond Localhost<a class="headerlink" href="#public-hosting-running-the-app-beyond-localhost" title="Permanent link">&para;</a></h2>
+<p>Right now netdrift only runs on the local lab VM and is accessible at
+<code>localhost:5173</code> / <code>localhost:8001</code>. For a portfolio demo, employer review, or
+community testing, it needs to be reachable from outside.</p>
+<h3 id="the-challenge">The challenge<a class="headerlink" href="#the-challenge" title="Permanent link">&para;</a></h3>
+<p>A live netdrift instance needs:
+1. A running NetBox (or Nautobot) instance for intent
+2. Live network devices for reality collection (the cEOS/SR Linux lab)
+3. A Postgres database
+4. The FastAPI backend + APScheduler scheduler
+5. The React frontend</p>
+<p>The lab devices are on <code>172.20.20.x</code> — only reachable from within the lab VM. A
+public instance can't poll them directly unless there's a VPN or the VM is the host.</p>
+<h3 id="option-a-demo-mode-with-pre-seeded-fixture-data-recommended">Option A — Demo mode with pre-seeded fixture data (recommended)<a class="headerlink" href="#option-a-demo-mode-with-pre-seeded-fixture-data-recommended" title="Permanent link">&para;</a></h3>
+<p>Add a <code>DEMO_MODE=true</code> environment variable. When set, the API serves from a static
+pre-seeded Postgres database instead of polling live devices. The scheduler is
+disabled. The dashboard shows real-looking drift history, known issues, remediation
+events, and the full UI — but nothing changes unless you manually trigger it.</p>
+<p>The pre-seeded data comes from the existing lab fixture JSON files in <code>tests/fixtures/</code>
+plus a few hand-crafted <code>RemediationEvent</code> rows to show the full cycle. A one-time
+<code>driftcheck seed-demo</code> CLI command populates the demo database.</p>
+<p>The demo instance then runs on a cheap VPS (Hetzner CAX11 at ~€4/month, or Oracle
+Cloud always-free ARM tier at €0). Only the API and frontend containers need to run —
+no scheduler, no lab devices. The Postgres database is small (fixture data only).</p>
+<p><strong>This is the recommended approach.</strong> A hosted demo where employers can click through
+the real UI is significantly more compelling than screenshots — and with demo mode it's
+zero-maintenance (no live devices, no NetBox to keep running, static data).</p>
+<p><strong>Ownership:</strong> Matthew (demo mode flag in API + scheduler, seed-demo CLI), Liam
+(lab fixture data curation for the demo dataset).</p>
+<p><strong>Effort:</strong> 1–2 weeks for demo mode + seeding. VPS setup: 1–2 hours.</p>
+<hr />
+<h3 id="option-b-full-live-instance-on-a-vps-with-vpn-to-lab">Option B — Full live instance on a VPS (with VPN to lab)<a class="headerlink" href="#option-b-full-live-instance-on-a-vps-with-vpn-to-lab" title="Permanent link">&para;</a></h3>
+<p>Run the full stack on a public VPS with a WireGuard VPN tunnel back to the lab VM
+so the scheduler can reach the cEOS/Nokia devices. Shows real live drift from the
+real lab.</p>
+<p><strong>Pros:</strong> The demo is real — actual drift from actual devices.
+<strong>Cons:</strong> The lab VM must be online 24/7. The VPN must stay up. A lab device
+misconfiguration shows up in the public demo. Requires hardening the public API
+(the v3.5 API key auth is a prerequisite before this is safe).</p>
+<p><strong>Recommended only after v3.5 ships</strong> (API key auth + per-device SLA alerting make
+this safe to run publicly). Not the first step.</p>
+<hr />
+<h3 id="option-c-read-only-public-api-write-operations-gated">Option C — Read-only public API, write operations gated<a class="headerlink" href="#option-c-read-only-public-api-write-operations-gated" title="Permanent link">&para;</a></h3>
+<p>Run the full stack on a VPS but configure the demo API key as read-only. <code>GET /drifts</code>,
+<code>GET /known-issues</code>, <code>GET /health</code>, and <code>GET /audit</code> are public. All write/apply
+endpoints require a real API key that isn't published. This is the right long-term
+posture once v3.5 ships.</p>
+<hr />
+<h3 id="recommended-path">Recommended path<a class="headerlink" href="#recommended-path" title="Permanent link">&para;</a></h3>
+<ol>
+<li><strong>Now:</strong> Build Option A (demo mode) and deploy to a free/cheap VPS. Link to it
+   from the landing page as "Live demo →".</li>
+<li><strong>After v3.5:</strong> Switch to Option C (real data, read-only public API, writes require
+   key). This becomes the permanent hosted instance.</li>
+</ol>
+<p>The custom domain (<code>netdrift.dev</code> or similar, ~$10/year) points to the VPS. The
+static landing page and docs site are on GitHub/Cloudflare Pages. The live demo is
+on the VPS. Three separate things, all linked.</p>
+<hr />
+<h2 id="summary-table">Summary Table<a class="headerlink" href="#summary-table" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Item</th>
+<th>Type</th>
+<th>Effort</th>
+<th>Dependency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><code>netfind</code> IP/MAC trace CLI</td>
+<td>New standalone tool</td>
+<td>2–3 weeks</td>
+<td>None</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Pre-change snapshot/compare</td>
+<td>netdrift + CLI</td>
+<td>3–4 weeks</td>
+<td>None</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Firmware version drift</td>
+<td>netdrift extension</td>
+<td>1–2 days</td>
+<td>Schema sign-off ⚠</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Compliance/hardening checker</td>
+<td>netdrift extension</td>
+<td>6–8 weeks</td>
+<td>After v4.0 patterns</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Ansible <code>netdrift_facts</code> module</td>
+<td>Standalone collection</td>
+<td>1–2 weeks</td>
+<td>After v3.5 auth</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Change window suppression</td>
+<td>netdrift extension</td>
+<td>2–3 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Network topology map</td>
+<td>netdrift + React</td>
+<td>4–6 weeks</td>
+<td>Schema sign-off ⚠ + #8 optional</td>
+</tr>
+<tr>
+<td>8</td>
+<td>LLDP topology crawler (<code>netmap</code>)</td>
+<td>New standalone tool</td>
+<td>2–4 weeks</td>
+<td>None</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Git-based intent source</td>
+<td>netdrift extension</td>
+<td>3–4 weeks</td>
+<td>Joint design discussion</td>
+</tr>
+<tr>
+<td>UI-1</td>
+<td>Per-device health summary cards</td>
+<td>React (Matthew)</td>
+<td>1–2 weeks</td>
+<td>None</td>
+</tr>
+<tr>
+<td>UI-2</td>
+<td>Remediation audit trail view</td>
+<td>React + API (Matthew)</td>
+<td>1–2 weeks</td>
+<td>None</td>
+</tr>
+<tr>
+<td>UI-3</td>
+<td>Drift timeline with event dots</td>
+<td>React + minor API (Matthew)</td>
+<td>2–3 weeks</td>
+<td>None</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Portfolio landing page</td>
+<td>Static HTML</td>
+<td>1–2 days</td>
+<td>None</td>
+</tr>
+<tr>
+<td>—</td>
+<td>Demo mode + VPS hosting</td>
+<td>Backend flag + VPS</td>
+<td>1–2 weeks</td>
+<td>None (Option A)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Schema sign-off required (⚠):</strong> Items 3 and 7 add fields to <code>docs/schema.md</code>.
+Both require a joint-review PR with sign-off from Liam and Matthew before any
+implementation branch is created — same process as all previous schema changes.</p>
+<p><strong>Items with no dependencies (start any time):</strong> 1, 2, 6, 8, all three UI items,
+the portfolio landing page, and demo mode hosting.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.top", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
