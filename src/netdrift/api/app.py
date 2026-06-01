@@ -40,9 +40,12 @@ from netdrift.webhook import WebhookDispatcher
 from netdrift.storage.repository import (
     confirmed_count,
     create_acknowledgement,
+    create_alert_rule,
     create_api_key,
+    delete_alert_rule,
     delete_api_key,
     get_drift_event,
+    list_alert_rules,
     list_api_keys,
     get_known_issue_by_id,
     get_remediation_events,
@@ -146,6 +149,14 @@ class ApiKeyIn(BaseModel):
 class AcknowledgeIn(BaseModel):
     """Request body for POST /drifts/{id}/acknowledge."""
     acknowledged_until: datetime | None = None  # null = permanent
+
+
+class AlertRuleIn(BaseModel):
+    """Request body for POST /alert-rules."""
+    device: str | None = None  # null = all devices
+    severity: str
+    window_minutes: int
+    enabled: bool = True
 
 
 # ---------------------------------------------------------------------------
@@ -789,3 +800,53 @@ def delete_api_key_endpoint(key_id: int, session: Session = Depends(get_session)
     session.commit()
     logger.info("API key revoked: id=%d", key_id)
     return {"deleted": True, "id": key_id}
+
+
+# ---------------------------------------------------------------------------
+# Routes — SLA alert rules (v3.5)
+# ---------------------------------------------------------------------------
+
+_VALID_SEVERITIES = {"critical", "warning", "info"}
+
+
+def _alert_rule_dict(rule) -> dict:
+    return {
+        "id": rule.id,
+        "device": rule.device,
+        "severity": rule.severity,
+        "window_minutes": rule.window_minutes,
+        "enabled": rule.enabled,
+        "created_at": rule.created_at.isoformat(),
+    }
+
+
+@app.post("/alert-rules")
+def create_alert_rule_endpoint(body: AlertRuleIn, session: Session = Depends(get_session)):
+    """Create an SLA alert rule. device=null applies to all devices."""
+    if body.severity not in _VALID_SEVERITIES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"severity must be one of {sorted(_VALID_SEVERITIES)!r}.",
+        )
+    if body.window_minutes <= 0:
+        raise HTTPException(status_code=422, detail="window_minutes must be positive.")
+    rule = create_alert_rule(
+        session, body.device, body.severity, body.window_minutes, enabled=body.enabled
+    )
+    session.commit()
+    return _alert_rule_dict(rule)
+
+
+@app.get("/alert-rules")
+def list_alert_rules_endpoint(session: Session = Depends(get_session)):
+    """List all SLA alert rules, oldest first."""
+    return [_alert_rule_dict(r) for r in list_alert_rules(session)]
+
+
+@app.delete("/alert-rules/{rule_id}")
+def delete_alert_rule_endpoint(rule_id: int, session: Session = Depends(get_session)):
+    """Delete an SLA alert rule."""
+    if not delete_alert_rule(session, rule_id):
+        raise HTTPException(status_code=404, detail=f"Alert rule {rule_id} not found.")
+    session.commit()
+    return {"deleted": True, "id": rule_id}
