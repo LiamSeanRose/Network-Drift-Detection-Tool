@@ -218,6 +218,10 @@ def test_parse_interface_missing_description_is_empty_string():
 
 
 # --- _build_bgp_neighbors ----------------------------------------------------
+# NOTE: the BGP/OSPF tests below run against FakeGNMIClient payloads modelled from
+# the SR Linux YANG spec, not a live routing node. conftest.py tags them with the
+# `unvalidated_fixture` marker — re-verify the fixture shapes against the device
+# when routing is first configured on the Nokia (see CLAUDE.md).
 
 def test_build_bgp_neighbors_empty_when_unconfigured():
     # No BGP configured -> gNMI returns empty notification -> empty dict.
