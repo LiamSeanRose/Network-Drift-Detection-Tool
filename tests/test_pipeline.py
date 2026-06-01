@@ -16,7 +16,7 @@ from sqlalchemy.pool import StaticPool
 
 from netdrift.pipeline import run_drift_check
 from netdrift.storage.models import Base
-from netdrift.storage.repository import get_drifts
+from netdrift.storage.repository import get_drifts, set_device_paused
 
 
 def _state(interfaces=None, vlans=None, bgp_neighbors=None, ospf=None, platform="arista_eos"):
@@ -145,3 +145,93 @@ def test_pipeline_raises_on_unknown_platform(session_factory):
             collectors={"arista_eos": lambda dev: intent},
             session_factory=session_factory,
         )
+
+
+# ---------------------------------------------------------------------------
+# v3.0 — auto-apply wiring
+# ---------------------------------------------------------------------------
+
+def test_pipeline_invokes_auto_apply_after_save(session_factory):
+    """run_drift_check calls the auto-apply function with the persisted drifts,
+    the device, and the session factory — after saving."""
+    device = {"name": "core-sw-01", "hostname": "x", "username": "u", "password": "p"}
+    intent = _state({"Ethernet1": _iface(enabled=True)})
+    reality = _state({"Ethernet1": _iface(enabled=False)})
+
+    captured = {}
+
+    def fake_auto_apply(drifts, dev, sf, *, is_device_paused_fn, schedule_repoll_fn):
+        captured.update(
+            drifts=drifts, device=dev, session_factory=sf,
+            is_device_paused_fn=is_device_paused_fn,
+            schedule_repoll_fn=schedule_repoll_fn,
+        )
+        return []
+
+    repoll_sentinel = object()
+    run_drift_check(
+        device,
+        get_intent=lambda name: intent,
+        collectors={"arista_eos": lambda dev: reality},
+        session_factory=session_factory,
+        auto_apply_fn=fake_auto_apply,
+        schedule_repoll_fn=repoll_sentinel,
+    )
+
+    assert captured["drifts"][0]["field"] == "enabled"
+    assert captured["device"] == device
+    assert captured["session_factory"] is session_factory
+    # The repoll helper supplied by the caller (scheduler) is forwarded through.
+    assert captured["schedule_repoll_fn"] is repoll_sentinel
+    assert callable(captured["is_device_paused_fn"])
+
+
+def test_pipeline_is_device_paused_adapter_maps_to_repository(session_factory):
+    """The is_device_paused_fn handed to run_auto_apply must call the repository
+    in (session, name) order while exposing run_auto_apply's (name, session)
+    contract — verify it actually reflects device_settings state."""
+    device = {"name": "core-sw-01"}
+    state = _state()
+    captured = {}
+
+    def fake_auto_apply(drifts, dev, sf, *, is_device_paused_fn, schedule_repoll_fn):
+        captured["fn"] = is_device_paused_fn
+        return []
+
+    run_drift_check(
+        device,
+        get_intent=lambda name: state,
+        collectors={"arista_eos": lambda dev: state},
+        session_factory=session_factory,
+        auto_apply_fn=fake_auto_apply,
+    )
+
+    # Pause the device via a committed session so the adapter reads it back.
+    with session_factory._Session() as s:
+        set_device_paused(s, "core-sw-01", True, "test")
+        s.commit()
+
+    adapter = captured["fn"]
+    with session_factory._Session() as s:
+        assert adapter("core-sw-01", s) is True   # (name, session) order
+        assert adapter("other-device", s) is False
+
+
+def test_pipeline_default_auto_apply_is_noop_without_env(session_factory, monkeypatch):
+    """With AUTO_REMEDIATION_ENABLED unset, the real default auto-apply runs but
+    writes nothing — pipeline still returns and persists drifts normally."""
+    monkeypatch.delenv("AUTO_REMEDIATION_ENABLED", raising=False)
+    device = {"name": "core-sw-01"}
+    intent = _state({"Ethernet1": _iface(enabled=True)})
+    reality = _state({"Ethernet1": _iface(enabled=False)})
+
+    drifts = run_drift_check(
+        device,
+        get_intent=lambda name: intent,
+        collectors={"arista_eos": lambda dev: reality},
+        session_factory=session_factory,
+    )
+
+    assert len(drifts) == 1
+    with session_factory._Session() as s:
+        assert len(get_drifts(s)) == 1
