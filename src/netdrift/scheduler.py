@@ -37,6 +37,8 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from netdrift.auto_apply import run_auto_apply
 from netdrift.cli import load_devices
 from netdrift.pipeline import run_drift_check
+from netdrift.sla import evaluate_sla
+from netdrift.storage.database import get_sessionmaker
 from netdrift.syslog_receiver import SyslogReceiver, DEFAULT_PORT as DEFAULT_SYSLOG_PORT
 from netdrift.webhook import WebhookDispatcher
 
@@ -156,6 +158,37 @@ def start_syslog_receiver(devices, check=_check_one, port=DEFAULT_SYSLOG_PORT,
     return receiver
 
 
+def _run_sla_evaluation(dispatcher, session_factory, *, evaluate=evaluate_sla):
+    """Open a session, evaluate SLA rules, dispatch breaches, close the session.
+
+    Swallows errors so one bad evaluation cycle never kills the scheduler — the
+    same resilience the per-device drift check has. Uses the real wall clock
+    (evaluate_sla's default now); only the unit tests inject a fixed now.
+    """
+    try:
+        session = session_factory()
+        try:
+            breaches = evaluate(session, dispatcher)
+            if breaches:
+                logger.info("SLA evaluation fired %d breach alert(s).", len(breaches))
+        finally:
+            session.close()
+    except Exception as e:  # noqa: BLE001 — a scheduler job must not die on one cycle
+        logger.error("SLA evaluation failed: %s", e)
+
+
+def schedule_sla_evaluation(scheduler, job, interval_minutes=DEFAULT_INTERVAL_MINUTES):
+    """Register the single recurring SLA-evaluation job. Returns its job id.
+
+    `job` is a no-arg callable (main() binds the dispatcher and session factory
+    into it); tests inject a fake to assert registration without firing.
+    """
+    j = scheduler.add_job(
+        job, trigger="interval", minutes=interval_minutes, id="sla-evaluation",
+    )
+    return j.id
+
+
 def _log_job_executed(event):
     logger.info("Job %s executed.", event.job_id)
 
@@ -223,11 +256,20 @@ def main():
     ids = schedule_drift_checks(scheduler, devices, interval_minutes=args.interval,
                                 check=check)
     start_syslog_receiver(devices, check=check, port=args.syslog_port)
+
+    # SLA evaluation runs on the same cadence, dispatching breach webhooks for
+    # drift that has outlived an alert rule's window.
+    session_factory = get_sessionmaker()
+
+    def sla_job():
+        _run_sla_evaluation(dispatcher, session_factory)
+
+    schedule_sla_evaluation(scheduler, sla_job, interval_minutes=args.interval)
     logger.info(
         "Scheduled %d device(s) every %d min: %s. Syslog trigger on UDP:%d. "
-        "Webhooks %s. Ctrl+C to stop.",
+        "SLA evaluation every %d min. Webhooks %s. Ctrl+C to stop.",
         len(ids), args.interval, ", ".join(sorted(devices)), args.syslog_port,
-        "enabled" if dispatcher.enabled else "disabled",
+        args.interval, "enabled" if dispatcher.enabled else "disabled",
     )
     try:
         scheduler.start()
