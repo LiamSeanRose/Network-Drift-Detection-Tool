@@ -89,11 +89,19 @@ def get_drift_history(session, hours=24, device=None):
     return sorted(buckets.values(), key=lambda x: (x["detected_at"], x["device"]))
 
 
-def get_drifts(session, device=None, limit=None):
-    """Return stored drift events, newest first."""
+def get_drifts(session, device=None, limit=None, since=None, offset=None):
+    """Return stored drift events, newest first.
+
+    since: optional datetime; only events with detected_at >= since are returned.
+    offset/limit: simple pagination (offset applied before limit).
+    """
     query = session.query(DriftEvent).order_by(DriftEvent.detected_at.desc())
     if device is not None:
         query = query.filter(DriftEvent.device == device)
+    if since is not None:
+        query = query.filter(DriftEvent.detected_at >= since)
+    if offset:
+        query = query.offset(offset)
     if limit is not None:
         query = query.limit(limit)
     return query.all()
