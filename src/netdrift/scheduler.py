@@ -29,6 +29,7 @@ Ctrl+C.
 
 import argparse
 import logging
+import os
 from datetime import datetime, timedelta, timezone
 
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
@@ -39,6 +40,7 @@ from netdrift.cli import load_devices
 from netdrift.pipeline import run_drift_check
 from netdrift.sla import evaluate_sla
 from netdrift.storage.database import get_sessionmaker
+from netdrift.storage.repository import delete_drifts_older_than
 from netdrift.syslog_receiver import SyslogReceiver, DEFAULT_PORT as DEFAULT_SYSLOG_PORT
 from netdrift.webhook import WebhookDispatcher
 
@@ -46,6 +48,8 @@ logger = logging.getLogger("netdrift.scheduler")
 
 DEFAULT_INTERVAL_MINUTES = 5
 REPOLL_DELAY_SECONDS = 60
+DEFAULT_RETENTION_DAYS = 90
+RETENTION_INTERVAL_HOURS = 24
 
 
 def _fire_critical_drifts(dispatcher, device_name, drifts):
@@ -189,6 +193,40 @@ def schedule_sla_evaluation(scheduler, job, interval_minutes=DEFAULT_INTERVAL_MI
     return j.id
 
 
+def _run_retention(session_factory, retention_days, *, now=None,
+                   delete=delete_drifts_older_than):
+    """Delete drift events older than ``retention_days``, then commit and close.
+
+    Swallows errors so one bad cycle never kills the scheduler. Cutoff is derived
+    from ``now`` (injectable); production uses the wall clock.
+    """
+    if now is None:
+        now = datetime.now(tz=timezone.utc)
+    cutoff = now - timedelta(days=retention_days)
+    try:
+        session = session_factory()
+        try:
+            deleted = delete(session, cutoff)
+            session.commit()
+            if deleted:
+                logger.info(
+                    "Drift retention: deleted %d event(s) older than %d day(s).",
+                    deleted, retention_days,
+                )
+        finally:
+            session.close()
+    except Exception as e:  # noqa: BLE001 — a scheduler job must not die on one cycle
+        logger.error("Drift retention failed: %s", e)
+
+
+def schedule_retention(scheduler, job, hours=RETENTION_INTERVAL_HOURS):
+    """Register the single recurring drift-retention job. Returns its job id."""
+    j = scheduler.add_job(
+        job, trigger="interval", hours=hours, id="drift-retention",
+    )
+    return j.id
+
+
 def _log_job_executed(event):
     logger.info("Job %s executed.", event.job_id)
 
@@ -265,11 +303,21 @@ def main():
         _run_sla_evaluation(dispatcher, session_factory)
 
     schedule_sla_evaluation(scheduler, sla_job, interval_minutes=args.interval)
+
+    # Drift retention: prune events older than DRIFT_RETENTION_DAYS (default 90)
+    # once a day, so the unbounded drift_events table never degrades history queries.
+    retention_days = int(os.environ.get("DRIFT_RETENTION_DAYS", DEFAULT_RETENTION_DAYS))
+
+    def retention_job():
+        _run_retention(session_factory, retention_days)
+
+    schedule_retention(scheduler, retention_job)
     logger.info(
         "Scheduled %d device(s) every %d min: %s. Syslog trigger on UDP:%d. "
-        "SLA evaluation every %d min. Webhooks %s. Ctrl+C to stop.",
+        "SLA evaluation every %d min. Drift retention %d day(s). Webhooks %s. "
+        "Ctrl+C to stop.",
         len(ids), args.interval, ", ".join(sorted(devices)), args.syslog_port,
-        args.interval, "enabled" if dispatcher.enabled else "disabled",
+        args.interval, retention_days, "enabled" if dispatcher.enabled else "disabled",
     )
     try:
         scheduler.start()
