@@ -12,9 +12,12 @@ This tool is the checker. It polls your devices on a schedule, diffs what it fin
 
 ## Features
 
-- **Multi-vendor** — Arista EOS, Nokia SR Linux, and Cisco IOS-XE out of the box. Add new vendors via the plugin registry with no edits to core code.
+- **Multi-vendor** — Arista EOS, Cisco IOS-XE, Nokia SR Linux, and Juniper Junos out of the box. Add new vendors via the plugin registry with no edits to core code.
+- **NetBox or Nautobot** — either can be the source of intended state.
 - **Interface, VLAN, and routing drift** — descriptions, admin state, IP addresses, VLANs, BGP neighbors, and OSPF adjacencies.
 - **Config-level drift** — compares the device's running config against a NetBox-rendered intended config.
+- **Opt-in auto-remediation** — push a fix back to a device to restore intent. Off by default, gated (global switch, per-issue flag, per-device pause), with management interfaces and operational-symptom fields on a hard do-not-apply list, and a dry-run before every apply.
+- **Webhook notifications** — dispatch apply outcomes to Slack, PagerDuty, or a custom endpoint.
 - **React dashboard** — per-device drift history with severity levels (critical / warning / info).
 - **Syslog trigger** — a device event triggers an immediate targeted poll rather than waiting for the next cycle.
 - **One command to run** — `docker compose up` starts the full stack: Postgres, API, scheduler, and frontend.
@@ -56,4 +59,4 @@ The dashboard is then available at `http://localhost:5173`. See [Getting Started
 
 ## Status
 
-**v1.0** — config-level drift, plugin collector registry. See the [Roadmap](PROJECT_PLAN.md) for the full version history and what's planned next.
+**v3.0** — multi-vendor detection (Arista, Cisco, Nokia, Juniper), routing and config-level drift, opt-in auto-remediation, and webhook notifications. See the [Roadmap](PROJECT_PLAN.md) for the full version history and what's planned next. Before exposing the API publicly, read the [security policy](https://github.com/LiamSeanRose/Network-Drift-Detection-Tool/blob/main/SECURITY.md) — the API ships without authentication until v3.5.

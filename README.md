@@ -5,10 +5,14 @@ Open-source network drift detection. Compares the *intended* state of a network
 surfaces the differences ("drift").
 
 The open-source alternative to NetBox Assurance.
-**Status:** v1.0 — config-level drift (running config vs NetBox-rendered intended
-config), plugin collector registry (add vendors without editing core dispatch),
-and a published documentation site. See [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md)
-for the full roadmap.
+
+**Status:** v3.0 — multi-vendor drift detection across Arista EOS, Cisco IOS-XE,
+Nokia SR Linux, and Juniper Junos; interface, VLAN, routing (BGP/OSPF), and
+running-config drift; optional auto-remediation that can push fixes back to
+devices (**off by default**, gated, with a hard do-not-apply list); webhook
+notifications; Postgres history; and a FastAPI + React dashboard. Intent can come
+from NetBox or Nautobot. See [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) for the
+roadmap and [`SECURITY.md`](SECURITY.md) before exposing the API.
 
 ## Architecture
 
@@ -31,14 +35,15 @@ flowchart TD
 ```
 
 The five logical components: a **source-of-truth client** wrapping the NetBox
-API, **collectors** for per-vendor device connections, a pure-function **diff
-engine**, **storage + API** (Postgres + FastAPI), and a **web UI**. In v0.1 only
-the NetBox client, the Arista collector, the diff engine, and the CLI exist.
+(or Nautobot) API, **collectors** for per-vendor device connections, a
+pure-function **diff engine**, **storage + API** (Postgres + FastAPI), and a
+**web UI**. As of v3.0 all five exist, with collectors and appliers for four
+vendors and an opt-in remediation path.
 
 ## Quickstart
 
-v0.1 runs against a local lab: Containerlab with two Arista cEOS nodes, plus a
-local NetBox.
+The development lab runs against Containerlab (two Arista cEOS nodes and a Nokia
+SR Linux node), plus a local NetBox.
 
 Prerequisites: Python 3.11+, Docker, Containerlab, a running NetBox, and the
 Arista cEOS image imported.
@@ -67,6 +72,18 @@ driftcheck core-sw-01
 
 If intent and reality match, `driftcheck` prints `OK — no drift`. Change a field
 on the device (or in NetBox) and re-run to see a drift record.
+
+## Remediation (opt-in)
+
+Beyond detection, netdrift can push a fix back to a device to restore intent.
+This is **off by default** and gated at three levels — a global switch, a
+per-issue flag, and a per-device pause — with operational-symptom fields and
+management interfaces on a hard do-not-apply list. Every fix can be dry-run
+before it is applied.
+
+The HTTP API that triggers applies ships **without authentication before v3.5**.
+Do not expose it to an untrusted network; run it behind your own auth layer or
+expose only the read-only deployment. See [`SECURITY.md`](SECURITY.md).
 
 ## Frontend (development)
 
