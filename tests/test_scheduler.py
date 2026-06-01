@@ -195,3 +195,52 @@ def test_register_listeners_adds_executed_and_error():
     scheduler_mod.register_listeners(FakeScheduler())
     assert EVENT_JOB_EXECUTED in masks
     assert EVENT_JOB_ERROR in masks
+
+
+# ---------------------------------------------------------------------------
+# v3.5 — SLA evaluation job
+# ---------------------------------------------------------------------------
+
+class _FakeSession:
+    def __init__(self):
+        self.closed = False
+
+    def close(self):
+        self.closed = True
+
+
+def test_schedule_sla_evaluation_registers_single_job():
+    sched = _fresh_scheduler()
+    job_id = scheduler_mod.schedule_sla_evaluation(sched, job=lambda: None, interval_minutes=5)
+    assert job_id == "sla-evaluation"
+    assert sched.get_job("sla-evaluation") is not None
+
+
+def test_run_sla_evaluation_calls_evaluate_then_closes_session():
+    captured = {}
+    sess = _FakeSession()
+    disp = FakeDispatcher()
+
+    def fake_eval(session, dispatcher, **kw):
+        captured["session"] = session
+        captured["dispatcher"] = dispatcher
+        return [{"device": "core-sw-01"}]
+
+    scheduler_mod._run_sla_evaluation(disp, lambda: sess, evaluate=fake_eval)
+
+    assert captured["session"] is sess
+    assert captured["dispatcher"] is disp
+    assert sess.closed is True
+
+
+def test_run_sla_evaluation_swallows_errors_and_closes_session(caplog):
+    sess = _FakeSession()
+
+    def boom(session, dispatcher, **kw):
+        raise RuntimeError("sla boom")
+
+    with caplog.at_level("ERROR"):
+        scheduler_mod._run_sla_evaluation(FakeDispatcher(), lambda: sess, evaluate=boom)
+
+    assert sess.closed is True  # finally still closed it
+    assert any("sla boom" in r.message for r in caplog.records)
