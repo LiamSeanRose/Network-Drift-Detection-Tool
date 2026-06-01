@@ -99,6 +99,19 @@ def get_drifts(session, device=None, limit=None):
     return query.all()
 
 
+def get_drifts_older_than(session, *, severity, older_than, device=None):
+    """Return drift events of a severity whose detected_at is at or before
+    ``older_than``, oldest first. device=None matches all devices. Used by the
+    SLA evaluator to find breaches."""
+    query = session.query(DriftEvent).filter(
+        DriftEvent.severity == severity,
+        DriftEvent.detected_at <= older_than,
+    )
+    if device is not None:
+        query = query.filter(DriftEvent.device == device)
+    return query.order_by(DriftEvent.detected_at).all()
+
+
 def get_drift_event(session, event_id):
     """Return a single DriftEvent by primary key, or None."""
     return session.query(DriftEvent).filter(DriftEvent.id == event_id).one_or_none()
