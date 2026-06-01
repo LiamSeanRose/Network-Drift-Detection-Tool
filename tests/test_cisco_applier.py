@@ -173,8 +173,33 @@ def test_block_mgmt_interface_raises_for_management1():
         _block_mgmt_interface(drift)
 
 
+def test_block_mgmt_interface_raises_for_gigabitethernet0_0_0():
+    # ISR 4000 series OOB management port
+    drift = {"object": "interface:GigabitEthernet0/0/0", "field": "description", "intent": "mgmt"}
+    with pytest.raises(RemediationBlockedError, match="GigabitEthernet0/0/0"):
+        _block_mgmt_interface(drift)
+
+
+def test_block_mgmt_interface_raises_for_management_chassis_variant():
+    drift = {"object": "interface:Management0/0", "field": "description", "intent": "mgmt"}
+    with pytest.raises(RemediationBlockedError, match="Management0/0"):
+        _block_mgmt_interface(drift)
+
+
+def test_block_mgmt_interface_raises_for_management_subinterface():
+    drift = {"object": "interface:Management0.0", "field": "description", "intent": "mgmt"}
+    with pytest.raises(RemediationBlockedError, match="Management0.0"):
+        _block_mgmt_interface(drift)
+
+
 def test_block_mgmt_interface_allows_data_interface():
     drift = {"object": "interface:GigabitEthernet1/0/1", "field": "description", "intent": "Uplink"}
+    _block_mgmt_interface(drift)  # must not raise
+
+
+def test_block_mgmt_interface_allows_gigabitethernet1():
+    # GigabitEthernet1 is a data interface on CSR 1000v — must not be blocked
+    drift = {"object": "interface:GigabitEthernet1", "field": "description", "intent": "WAN"}
     _block_mgmt_interface(drift)  # must not raise
 
 

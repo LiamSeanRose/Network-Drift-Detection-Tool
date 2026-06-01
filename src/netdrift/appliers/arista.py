@@ -26,16 +26,15 @@ from netdrift.appliers.base import (
 )
 
 # Management interfaces that must never be auto-remediated — touching these
-# risks losing the connection the tool itself uses.
-_MGMT_INTERFACES = frozenset({"Management0", "Management1"})
-
-
+# risks losing the connection the tool itself uses.  The prefix check catches
+# Management0, Management1, chassis variants (Management0/0, Management1/1),
+# and sub-interfaces (Management0.0).
 def _block_mgmt_interface(drift: dict) -> None:
     """Raise RemediationBlockedError if the drift targets a management interface."""
     obj = drift.get("object", "")
     if obj.startswith("interface:"):
         iface = obj.split(":", 1)[1]
-        if iface in _MGMT_INTERFACES:
+        if iface.startswith("Management"):
             raise RemediationBlockedError(
                 f"Interface '{iface}' is a management interface; "
                 "remediation of management interfaces is prohibited."
@@ -91,7 +90,7 @@ def _napalm_conn(device: dict):
         hostname=device["hostname"],
         username=device["username"],
         password=device["password"],
-        optional_args={"enforce_verification": False},
+        optional_args={"enforce_verification": False, "timeout": 30},
     )
     conn.open()
     return conn

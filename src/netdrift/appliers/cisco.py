@@ -32,11 +32,18 @@ from netdrift.appliers.base import (
 _log = logging.getLogger(__name__)
 
 # Management interfaces that must never be auto-remediated.
-# IOS-XE uses GigabitEthernet0 or GigabitEthernet0/0 for out-of-band management
-# depending on platform; some platforms also expose Management0/1.
+# GigabitEthernet0 / GigabitEthernet0/0 — ISR/ASR dedicated OOB management port.
+# GigabitEthernet0/0/0 — ISR 4000 series OOB management port.
+# NOTE: On CSR 1000v and C8000v, GigabitEthernet0 is a *data* interface, not
+# management. If your deployment uses these platforms, set `mgmt_interface` in
+# devices.yml for that device and handle the override at the call site. This is
+# a known limitation flagged for a future per-device override mechanism.
+# Management* prefix — catches Management0, Management1, chassis variants
+# (Management0/0, Management1/1) and sub-interfaces (Management0.0).
 _MGMT_INTERFACES = frozenset({
     "GigabitEthernet0",
     "GigabitEthernet0/0",
+    "GigabitEthernet0/0/0",
     "Management0",
     "Management1",
 })
@@ -47,7 +54,7 @@ def _block_mgmt_interface(drift: dict) -> None:
     obj = drift.get("object", "")
     if obj.startswith("interface:"):
         iface = obj.split(":", 1)[1]
-        if iface in _MGMT_INTERFACES:
+        if iface in _MGMT_INTERFACES or iface.startswith("Management"):
             raise RemediationBlockedError(
                 f"Interface '{iface}' is a management interface; "
                 "remediation of management interfaces is prohibited."
@@ -103,7 +110,7 @@ def _napalm_conn(device: dict):
         hostname=device["hostname"],
         username=device["username"],
         password=device["password"],
-        optional_args={"secret": device.get("secret", "")},
+        optional_args={"secret": device.get("secret", ""), "timeout": 30},
     )
     conn.open()
     return conn
