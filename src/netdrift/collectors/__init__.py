@@ -11,4 +11,4 @@ stays cheap and does not pull in napalm/pygnmi; the heavy imports happen when
 registry.py loads each module on demand.
 """
 
-COLLECTOR_MODULES = ("arista", "cisco", "nokia")
+COLLECTOR_MODULES = ("arista", "cisco", "nokia", "junos")
