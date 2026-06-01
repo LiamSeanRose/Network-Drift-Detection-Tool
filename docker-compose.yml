@@ -66,10 +66,16 @@ services:
   api:
     build: .
     command: uvicorn netdrift.api.app:app --host 0.0.0.0 --port 8001
+    restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:devpassword@postgres:5432/netdrift
       NETBOX_URL: ${NETBOX_URL:-}
       NETBOX_TOKEN: ${NETBOX_TOKEN:-}
+      # v2.5/v3.0 auto-remediation + webhooks. See .env.example for meanings.
+      AUTO_REMEDIATION_ENABLED: ${AUTO_REMEDIATION_ENABLED:-false}
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
+      WEBHOOK_EVENTS: ${WEBHOOK_EVENTS:-critical_drift,apply_success,apply_failure}
+      WEBHOOK_ALLOW_PRIVATE: ${WEBHOOK_ALLOW_PRIVATE:-false}
     volumes:
       # See top-of-file comment: cli.DEVICES_FILE resolves here inside the
       # container. Read-only because the app never writes to this file.
@@ -90,10 +96,16 @@ services:
   scheduler:
     build: .
     command: python -m netdrift.scheduler --interval 5
+    restart: unless-stopped
     environment:
       DATABASE_URL: postgresql+psycopg://postgres:devpassword@postgres:5432/netdrift
       NETBOX_URL: ${NETBOX_URL:-}
       NETBOX_TOKEN: ${NETBOX_TOKEN:-}
+      # v2.5/v3.0 auto-remediation + webhooks. See .env.example for meanings.
+      AUTO_REMEDIATION_ENABLED: ${AUTO_REMEDIATION_ENABLED:-false}
+      WEBHOOK_URL: ${WEBHOOK_URL:-}
+      WEBHOOK_EVENTS: ${WEBHOOK_EVENTS:-critical_drift,apply_success,apply_failure}
+      WEBHOOK_ALLOW_PRIVATE: ${WEBHOOK_ALLOW_PRIVATE:-false}
     volumes:
       - ./devices.yml:/usr/local/lib/python3.11/devices.yml:ro
     ports:
