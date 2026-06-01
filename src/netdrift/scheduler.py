@@ -162,19 +162,24 @@ def start_syslog_receiver(devices, check=_check_one, port=DEFAULT_SYSLOG_PORT,
     return receiver
 
 
-def _run_sla_evaluation(dispatcher, session_factory, *, evaluate=evaluate_sla):
+def _run_sla_evaluation(dispatcher, session_factory, unreachable_after_minutes=None,
+                        *, evaluate=evaluate_sla):
     """Open a session, evaluate SLA rules, dispatch breaches, close the session.
 
     Swallows errors so one bad evaluation cycle never kills the scheduler — the
     same resilience the per-device drift check has. Uses the real wall clock
     (evaluate_sla's default now); only the unit tests inject a fixed now.
+    ``unreachable_after_minutes`` flips a breach to device_unreachable when the
+    device's collector has been silent that long (main() passes 2x the interval).
     """
     try:
         session = session_factory()
         try:
-            breaches = evaluate(session, dispatcher)
+            breaches = evaluate(
+                session, dispatcher, unreachable_after_minutes=unreachable_after_minutes
+            )
             if breaches:
-                logger.info("SLA evaluation fired %d breach alert(s).", len(breaches))
+                logger.info("SLA evaluation fired %d alert(s).", len(breaches))
         finally:
             session.close()
     except Exception as e:  # noqa: BLE001 — a scheduler job must not die on one cycle
@@ -299,8 +304,12 @@ def main():
     # drift that has outlived an alert rule's window.
     session_factory = get_sessionmaker()
 
+    # A device silent for 2 poll cycles is treated as unreachable, so a stale
+    # drift never produces a false SLA breach.
+    unreachable_after = 2 * args.interval
+
     def sla_job():
-        _run_sla_evaluation(dispatcher, session_factory)
+        _run_sla_evaluation(dispatcher, session_factory, unreachable_after)
 
     schedule_sla_evaluation(scheduler, sla_job, interval_minutes=args.interval)
 
