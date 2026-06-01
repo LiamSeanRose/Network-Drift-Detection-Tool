@@ -125,6 +125,20 @@ def get_drift_event(session, event_id):
     return session.query(DriftEvent).filter(DriftEvent.id == event_id).one_or_none()
 
 
+def delete_drifts_older_than(session, cutoff):
+    """Delete drift events with detected_at strictly before ``cutoff``.
+
+    Returns the number of rows deleted. Does NOT commit. Backs the retention
+    job that keeps the unbounded drift_events table from degrading history
+    queries over time.
+    """
+    return (
+        session.query(DriftEvent)
+        .filter(DriftEvent.detected_at < cutoff)
+        .delete(synchronize_session=False)
+    )
+
+
 # ---------------------------------------------------------------------------
 # known_issues
 # ---------------------------------------------------------------------------
