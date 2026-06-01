@@ -31,6 +31,14 @@ COPY migrations ./migrations
 # this is an isolated container, not a managed host OS.
 RUN pip install --no-cache-dir .
 
+# Drop root. The app only reads its installed package, the read-only devices.yml
+# mount, and the migrations dir — it never writes to the image filesystem — so an
+# unprivileged user is sufficient and limits blast radius if a process is
+# compromised. Both runtime ports (API 8001, syslog 1514) are above 1024, so no
+# privileged bind is needed.
+RUN useradd --system --create-home netdrift
+USER netdrift
+
 # No CMD here on purpose: this image is a base for two roles. docker-compose
 # supplies the command for each (uvicorn for the API, python -m for the
 # scheduler), so one image serves both without baking in a single entrypoint.
