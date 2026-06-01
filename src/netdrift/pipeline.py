@@ -22,9 +22,10 @@ Public function:
 import os
 
 from netdrift import differ, netbox_client
+from netdrift.auto_apply import run_auto_apply
 from netdrift.collectors import registry
 from netdrift.storage.database import get_sessionmaker
-from netdrift.storage.repository import save_drifts
+from netdrift.storage.repository import is_device_paused, save_drifts
 
 # Single source of truth for vendor dispatch: the collector registry (shared
 # with cli.py). Adding a vendor is a new self-registering collector module
@@ -51,7 +52,8 @@ def _resolve_intent_fn():
 
 
 def run_drift_check(device, *, get_intent=None,
-                    collectors=None, session_factory=None):
+                    collectors=None, session_factory=None,
+                    auto_apply_fn=None, schedule_repoll_fn=None):
     """Run the full drift pipeline for one device and persist the result.
 
     Args:
@@ -63,6 +65,14 @@ def run_drift_check(device, *, get_intent=None,
             COLLECTORS table; tests inject fakes.
         session_factory: callable() -> Session context manager. Defaults to the
             real sessionmaker; tests inject an in-memory one.
+        auto_apply_fn: callable invoked after drifts are saved to run the
+            scheduler auto-apply loop. Defaults to auto_apply.run_auto_apply,
+            which self-gates on AUTO_REMEDIATION_ENABLED (a no-op when the
+            kill-switch is off). Tests inject a fake.
+        schedule_repoll_fn: optional callable(device) forwarded to the
+            auto-apply loop; called once after any successful apply to trigger
+            a one-shot re-poll. The scheduler passes its own helper; left None
+            for the CLI/one-shot path.
 
     Returns the list of drift records produced by differ.diff (also persisted).
 
@@ -75,6 +85,8 @@ def run_drift_check(device, *, get_intent=None,
         session_factory = get_sessionmaker()
     if get_intent is None:
         get_intent = _resolve_intent_fn()
+    if auto_apply_fn is None:
+        auto_apply_fn = run_auto_apply
 
     device_name = device["name"]
 
@@ -104,5 +116,18 @@ def run_drift_check(device, *, get_intent=None,
     with session_factory() as session:
         save_drifts(session, drifts)
         session.commit()
+
+    # v3.0: after persisting, run the auto-apply loop. It opens its own session
+    # via session_factory, self-gates on AUTO_REMEDIATION_ENABLED, and is a
+    # no-op on empty drifts. The is_device_paused adapter bridges this module's
+    # (session, name) repository convention to run_auto_apply's
+    # (name, session) injectable contract.
+    auto_apply_fn(
+        drifts,
+        device,
+        session_factory,
+        is_device_paused_fn=lambda name, sess: is_device_paused(sess, name),
+        schedule_repoll_fn=schedule_repoll_fn,
+    )
 
     return drifts
