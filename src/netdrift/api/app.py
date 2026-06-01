@@ -22,10 +22,11 @@ v2.5 environment variables:
 
 import logging
 import os
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -34,6 +35,7 @@ from netdrift.appliers.registry import get_applier
 from netdrift.diagnose import diagnose
 from netdrift.fingerprint import fingerprint as make_fingerprint
 from netdrift.storage.database import get_sessionmaker
+from netdrift.webhook import WebhookDispatcher
 from netdrift.storage.repository import (
     confirmed_count,
     get_drift_event,
@@ -146,6 +148,27 @@ def get_session():
         yield session
     finally:
         session.close()
+
+
+# ---------------------------------------------------------------------------
+# Webhook dispatcher (v3.0) — one per API process, same class the scheduler uses
+# ---------------------------------------------------------------------------
+
+_webhook_dispatcher = None
+
+
+def _get_dispatcher():
+    """Return the process-wide WebhookDispatcher, starting it on first use.
+
+    Reads WEBHOOK_URL / WEBHOOK_EVENTS from the environment; with no WEBHOOK_URL
+    it is disabled and fire() is a no-op. Memoized so the API process keeps a
+    single daemon worker. Tests monkeypatch the module global with a fake.
+    """
+    global _webhook_dispatcher
+    if _webhook_dispatcher is None:
+        _webhook_dispatcher = WebhookDispatcher()
+        _webhook_dispatcher.start()
+    return _webhook_dispatcher
 
 
 # ---------------------------------------------------------------------------
@@ -483,6 +506,7 @@ def remediate_dry_run(issue_id: int, body: RemediateRequest,
 
 @app.post("/known-issues/{issue_id}/remediate/apply")
 def remediate_apply(issue_id: int, body: RemediateRequest,
+                    background_tasks: BackgroundTasks,
                     session: Session = Depends(get_session)):
     """Apply a known-issue fix to the affected device.
 
@@ -559,8 +583,26 @@ def remediate_apply(issue_id: int, body: RemediateRequest,
     )
     session.commit()
 
+    # v3.0: notify on the apply result via the same dispatcher the scheduler uses.
+    dispatcher = _get_dispatcher()
+    webhook_payload = {
+        "device": drift_event.device,
+        "timestamp": datetime.now(tz=timezone.utc).isoformat(),
+        "detail": (
+            f"known_issue_id={issue_id} platform={platform} "
+            f"drift_event_id={body.drift_event_id}"
+        ),
+    }
+
     if event_result == "failure":
+        # The 502 below replaces the response, so a BackgroundTask would never
+        # run — fire directly. fire() only enqueues, so it does not block.
+        dispatcher.fire("apply_failure", webhook_payload)
         raise HTTPException(status_code=502, detail=f"Apply failed: {apply_error}")
+
+    # Success returns normally; defer the (already non-blocking) dispatch to a
+    # BackgroundTask per the v3.0 design.
+    background_tasks.add_task(dispatcher.fire, "apply_success", webhook_payload)
 
     # Schedule a post-apply re-poll to verify the fix took effect.
     try:
