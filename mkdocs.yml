@@ -27,6 +27,7 @@ theme:
 nav:
   - Home: index.md
   - Getting Started: lab.md
+  - Deployment & Hardening: deployment.md
   - Schema Reference: schema.md
   - Roadmap: PROJECT_PLAN.md
   - Contributing: contributing.md
