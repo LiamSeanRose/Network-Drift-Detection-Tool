@@ -12,7 +12,14 @@ v2.5 additions:
 
 from datetime import datetime, timedelta, timezone
 
-from netdrift.storage.models import DeviceSetting, DriftEvent, KnownIssue, RemediationEvent
+from netdrift.auth import KEY_PREFIX, generate_api_key, hash_api_key
+from netdrift.storage.models import (
+    ApiKey,
+    DeviceSetting,
+    DriftEvent,
+    KnownIssue,
+    RemediationEvent,
+)
 
 
 def _parse_detected_at(value):
@@ -271,3 +278,83 @@ def set_device_paused(session, device_name, paused, reason=None):
 
     session.flush()
     return setting
+
+
+# ---------------------------------------------------------------------------
+# v3.5 — api_keys (REST API authentication)
+# ---------------------------------------------------------------------------
+
+def create_api_key(session, name, expires_at=None):
+    """Mint a new API key.
+
+    Returns ``(raw_key, ApiKey)``. The raw key is returned to the caller exactly
+    once — only its SHA-256 hash is persisted. key_hint stores the first 8 chars
+    of the random token (after the prefix) so the key is distinguishable in
+    listings without exposing anything usable. Does NOT commit.
+    """
+    raw_key = generate_api_key()
+    token = raw_key[len(KEY_PREFIX):]
+    key = ApiKey(
+        key_hash=hash_api_key(raw_key),
+        name=name,
+        key_hint=token[:8],
+        created_at=datetime.now(tz=timezone.utc),
+        expires_at=expires_at,
+    )
+    session.add(key)
+    session.flush()
+    return raw_key, key
+
+
+def verify_api_key(session, raw_key, now=None):
+    """Return the ApiKey for a presented raw key, or None if invalid.
+
+    Invalid means: no row matches the key's hash, or the key has expired
+    (``expires_at`` non-null and in the past). On success, stamps
+    ``last_used_at`` with ``now`` (injectable for tests; defaults to UTC now).
+    Does NOT commit.
+    """
+    if now is None:
+        now = datetime.now(tz=timezone.utc)
+
+    key = (
+        session.query(ApiKey)
+        .filter(ApiKey.key_hash == hash_api_key(raw_key))
+        .one_or_none()
+    )
+    if key is None:
+        return None
+
+    if key.expires_at is not None:
+        expires_at = key.expires_at
+        if expires_at.tzinfo is None:
+            expires_at = expires_at.replace(tzinfo=timezone.utc)
+        if expires_at <= now:
+            return None
+
+    key.last_used_at = now
+    session.flush()
+    return key
+
+
+def get_api_key_by_id(session, key_id):
+    """Return an ApiKey by primary key, or None."""
+    return session.query(ApiKey).filter(ApiKey.id == key_id).one_or_none()
+
+
+def list_api_keys(session):
+    """Return all ApiKey rows, oldest first. Rows never carry the raw key."""
+    return session.query(ApiKey).order_by(ApiKey.created_at).all()
+
+
+def delete_api_key(session, key_id):
+    """Revoke (hard-delete) an API key. Returns True if a row was removed.
+
+    A revoked key fails verify_api_key on the very next request. Does NOT commit.
+    """
+    key = get_api_key_by_id(session, key_id)
+    if key is None:
+        return False
+    session.delete(key)
+    session.flush()
+    return True
