@@ -247,7 +247,7 @@ def test_parse_ospf_skips_header():
 class FakeNapalmJunosConn:
     """Stand-in for NAPALM's JunOS driver connection object."""
 
-    def __init__(self):
+    def __init__(self, os_version="22.4R1.10"):
         self._interfaces = {
             "ge-0/0/0": {"description": "Uplink to core", "is_enabled": True, "is_up": True},
             "ge-0/0/1": {"description": "", "is_enabled": True, "is_up": False},
@@ -277,12 +277,18 @@ class FakeNapalmJunosConn:
             "show ospf neighbor": OSPF_OUTPUT,
         }
         self._running_config = "set system host-name junos-sw-01"
+        self._os_version = os_version
 
     def open(self):
         pass
 
     def close(self):
         pass
+
+    def get_facts(self):
+        return {"os_version": self._os_version, "hostname": "junos-sw-01",
+                "vendor": "Juniper", "model": "vQFX", "uptime": 0,
+                "serial_number": "", "fqdn": "", "interface_list": []}
 
     def get_interfaces(self):
         return self._interfaces
@@ -320,6 +326,8 @@ def _fake_conn_factory(fake):
             pass
         def close(self):
             pass
+        def get_facts(self):
+            return fake.get_facts()
         def get_interfaces(self):
             return fake.get_interfaces()
         def get_interfaces_ip(self):
@@ -434,3 +442,11 @@ def test_get_reality_collected_at_utc_z():
                return_value=_fake_conn_factory(fake)):
         result = get_reality(DEVICE)
     assert result["collected_at"].endswith("Z")
+
+
+def test_get_reality_software_version():
+    fake = FakeNapalmJunosConn()
+    with patch("netdrift.collectors.junos.get_network_driver",
+               return_value=_fake_conn_factory(fake)):
+        result = get_reality(DEVICE)
+    assert result["software_version"] == "22.4R1.10"

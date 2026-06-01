@@ -266,6 +266,11 @@ def get_reality(device):
         subif_to_macvrf = _build_macvrf_map(gc)
         bgp_neighbors = _build_bgp_neighbors(gc)
         ospf_adjacencies = _build_ospf_adjacencies(gc)
+        # SR Linux software version via the platform control card path.
+        # _safe_gnmi_get returns None if the path is absent on this chassis.
+        # NOTE: fixture unvalidated against a live device (same caveat as BGP/OSPF).
+        _ver_raw = _safe_gnmi_get(gc, "/platform/control/software-version")
+        software_version = str(_ver_raw) if _ver_raw else ""
 
     interfaces = {}
     vlans = {}
@@ -292,6 +297,7 @@ def get_reality(device):
         "vlans": vlans,
         "bgp_neighbors": bgp_neighbors,
         "ospf": {"adjacencies": ospf_adjacencies},
+        "software_version": software_version,
         # v1.0 config-level drift (schema `running_config`): SR Linux is
         # gNMI/structured and exposes no Cisco-style text running-config that
         # would match a NetBox text-rendered intent — comparing would emit
