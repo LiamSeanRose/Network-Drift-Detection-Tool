@@ -139,6 +139,18 @@ def test_block_mgmt_interface_raises_for_management1():
         _block_mgmt_interface(drift)
 
 
+def test_block_mgmt_interface_raises_for_management_chassis_variant():
+    drift = {"object": "interface:Management0/0", "field": "description", "intent": "mgmt"}
+    with pytest.raises(RemediationBlockedError, match="Management0/0"):
+        _block_mgmt_interface(drift)
+
+
+def test_block_mgmt_interface_raises_for_management_subinterface():
+    drift = {"object": "interface:Management0.0", "field": "description", "intent": "mgmt"}
+    with pytest.raises(RemediationBlockedError, match="Management0.0"):
+        _block_mgmt_interface(drift)
+
+
 def test_block_mgmt_interface_allows_ethernet():
     drift = {"object": "interface:Ethernet1", "field": "description", "intent": "Uplink"}
     _block_mgmt_interface(drift)  # must not raise
