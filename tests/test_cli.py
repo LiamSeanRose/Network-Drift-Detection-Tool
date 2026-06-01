@@ -6,8 +6,14 @@ function are patched, so no devices.yml, NetBox, or device is touched.
 """
 
 import pytest
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from sqlalchemy.pool import StaticPool
 
 from netdrift import cli
+from netdrift.auth import KEY_PREFIX
+from netdrift.storage.models import Base
+from netdrift.storage.repository import verify_api_key
 
 
 def _state(platform):
@@ -63,3 +69,53 @@ def test_main_exits_on_unknown_platform(fake_inventory, monkeypatch):
         cli.main(argv=["sw"], collectors={"arista_eos": lambda d: intent})
 
     assert "no collector for platform 'mystery_platform'" in str(exc.value)
+
+
+# ---------------------------------------------------------------------------
+# create-api-key subcommand
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def db_session_factory():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    return sessionmaker(bind=engine)
+
+
+def test_create_api_key_prints_key_once(db_session_factory, capsys):
+    cli._cmd_create_api_key(["--name", "admin"], session_factory=db_session_factory)
+    out = capsys.readouterr().out.strip()
+    assert out.startswith(KEY_PREFIX)
+
+
+def test_create_api_key_key_verifies_against_db(db_session_factory, capsys):
+    cli._cmd_create_api_key(["--name", "ci"], session_factory=db_session_factory)
+    raw_key = capsys.readouterr().out.strip()
+    with db_session_factory() as session:
+        assert verify_api_key(session, raw_key) is not None
+
+
+def test_create_api_key_raw_key_not_in_db(db_session_factory, capsys):
+    cli._cmd_create_api_key(["--name", "test"], session_factory=db_session_factory)
+    raw_key = capsys.readouterr().out.strip()
+    from netdrift.storage.models import ApiKey
+    with db_session_factory() as session:
+        row = session.query(ApiKey).one()
+        assert row.key_hash != raw_key
+        assert raw_key not in (row.key_hint or "")
+
+
+def test_create_api_key_missing_name_exits(db_session_factory):
+    with pytest.raises(SystemExit):
+        cli._cmd_create_api_key([], session_factory=db_session_factory)
+
+
+def test_main_routes_create_api_key(db_session_factory, monkeypatch, capsys):
+    monkeypatch.setattr(cli, "_cmd_create_api_key",
+                        lambda argv, **_: print("routed"))
+    cli.main(argv=["create-api-key", "--name", "admin"])
+    assert "routed" in capsys.readouterr().out
