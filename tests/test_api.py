@@ -15,7 +15,7 @@ from sqlalchemy.pool import StaticPool
 
 from netdrift.api.app import app, get_session
 from netdrift.storage.models import Base
-from netdrift.storage.repository import save_drifts
+from netdrift.storage.repository import create_api_key, save_drifts
 
 
 @pytest.fixture
@@ -48,6 +48,8 @@ def client():
              "drift_kind": "value_mismatch", "severity": "info",
              "detected_at": "2026-05-26T14:32:01Z"},
         ])
+        # v3.5: mutating endpoints require X-API-Key; seed a key for this client.
+        raw_key, _ = create_api_key(s, name="test")
         s.commit()
 
     # Override the app's real session dependency with the test database.
@@ -56,7 +58,7 @@ def client():
             yield s
 
     app.dependency_overrides[get_session] = override_get_session
-    yield TestClient(app)
+    yield TestClient(app, headers={"X-API-Key": raw_key})
     app.dependency_overrides.clear()  # cleanup so tests don't leak
 
 
