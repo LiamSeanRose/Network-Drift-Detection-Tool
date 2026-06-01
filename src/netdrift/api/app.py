@@ -26,7 +26,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -49,6 +50,7 @@ from netdrift.storage.repository import (
     set_auto_apply_enabled,
     set_device_paused,
     update_known_issue_remediation,
+    verify_api_key,
 )
 
 logger = logging.getLogger(__name__)
@@ -148,6 +150,49 @@ def get_session():
         yield session
     finally:
         session.close()
+
+
+# ---------------------------------------------------------------------------
+# API-key authentication middleware (v3.5 Feature 5)
+# ---------------------------------------------------------------------------
+
+_MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+@app.middleware("http")
+async def require_api_key(request: Request, call_next):
+    """Require a valid X-API-Key on every mutating request.
+
+    Auth model — a deliberate joint decision (Matthew + Liam), not an oversight:
+    GET/HEAD/OPTIONS requests are unauthenticated. Drift data (``GET /drifts``)
+    and the ``/health`` probe are public-by-default for self-hosted deployments.
+    Only mutating methods (POST/PUT/PATCH/DELETE) require a key, so every
+    current and future write endpoint is protected without per-route wiring.
+
+    The X-API-Key header value is never logged.
+    """
+    if request.method.upper() in _MUTATING_METHODS:
+        presented = request.headers.get("X-API-Key")
+        if not presented:
+            return JSONResponse(
+                status_code=401,
+                content={"detail": "Missing API key. Provide a valid X-API-Key header."},
+            )
+        # Resolve a session the same way routes do, honoring dependency
+        # overrides so tests authenticate against their in-memory database.
+        session_factory = app.dependency_overrides.get(get_session, get_session)
+        gen = session_factory()
+        session = next(gen)
+        try:
+            if verify_api_key(session, presented) is None:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Invalid or expired API key."},
+                )
+            session.commit()  # persist last_used_at
+        finally:
+            gen.close()
+    return await call_next(request)
 
 
 # ---------------------------------------------------------------------------

@@ -17,6 +17,7 @@ from netdrift.appliers import registry as applier_registry
 from netdrift.storage.models import Base
 from netdrift.storage.repository import (
     confirmed_count,
+    create_api_key,
     save_drifts,
     save_known_issue,
     save_remediation_event,
@@ -86,6 +87,8 @@ def client(db_session, monkeypatch):
             "platform": "arista_eos",
         },
     ])
+    # v3.5: mutating endpoints require X-API-Key; seed a key for this client.
+    raw_key, _ = create_api_key(db_session, name="test")
     db_session.commit()
 
     # Register a fake applier for arista_eos
@@ -105,7 +108,7 @@ def client(db_session, monkeypatch):
             yield s
 
     app.dependency_overrides[get_session] = override_get_session
-    yield TestClient(app)
+    yield TestClient(app, headers={"X-API-Key": raw_key})
     app.dependency_overrides.clear()
 
 
