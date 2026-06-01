@@ -13,6 +13,7 @@ from sqlalchemy.pool import StaticPool
 
 from netdrift.api.app import app, get_session
 from netdrift.storage.models import Base
+from netdrift.storage.repository import create_api_key
 
 
 @pytest.fixture
@@ -25,6 +26,11 @@ def client(monkeypatch):
     Base.metadata.create_all(engine)
     TestingSession = sessionmaker(bind=engine)
 
+    # v3.5: mutating endpoints require X-API-Key; seed a key for this client.
+    with TestingSession() as s:
+        raw_key, _ = create_api_key(s, name="test")
+        s.commit()
+
     # Only core-sw-01 exists in the inventory; anything else should 404.
     monkeypatch.setattr(
         "netdrift.api.app._devices_cache",
@@ -36,7 +42,7 @@ def client(monkeypatch):
             yield s
 
     app.dependency_overrides[get_session] = override_get_session
-    yield TestClient(app)
+    yield TestClient(app, headers={"X-API-Key": raw_key})
     app.dependency_overrides.clear()
 
 
