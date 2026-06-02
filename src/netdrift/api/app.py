@@ -453,6 +453,20 @@ def get_all_known_issues(session: Session = Depends(get_session)):
     return [_issue_dict(i, confirmed_count(session, i.id)) for i in issues]
 
 
+@app.get("/known-issues/export")
+def export_known_issues_endpoint(session: Session = Depends(get_session)):
+    """Export all known issues as importable pattern YAML.
+
+    Round-trips with ``driftcheck import-patterns``: export → import → export is
+    byte-identical. This is a public GET, consistent with ``GET /known-issues``,
+    which already serves the same known-issue data (remediation included)
+    unauthenticated under the deliberate GET-is-public auth model.
+    """
+    from netdrift.patterns.exporter import export_known_issues
+
+    return Response(content=export_known_issues(session), media_type="application/x-yaml")
+
+
 @app.patch("/known-issues/{issue_id}")
 def patch_known_issue(issue_id: int, body: RemediationPayloadIn,
                       session: Session = Depends(get_session)):
