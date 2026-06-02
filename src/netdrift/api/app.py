@@ -56,6 +56,7 @@ from netdrift.storage.repository import (
     get_remediation_events,
     get_drifts,
     get_drift_history,
+    get_explanations,
     is_acknowledged,
     list_known_issues,
     save_known_issue,
@@ -327,6 +328,19 @@ def _known_fix_dict(issue, count: int) -> dict | None:
     }
 
 
+def _explanation_dict(exp) -> dict | None:
+    """Return the AI-explanation payload for a GET /drifts entry, or None when no
+    explanation has been generated for this fingerprint (the default — the UI
+    falls back to the deterministic `causes`)."""
+    if exp is None:
+        return None
+    return {
+        "text": exp.explanation,
+        "source": exp.source,
+        "generated_at": exp.generated_at.isoformat(),
+    }
+
+
 def _remediation_event_dict(ev) -> dict:
     return {
         "id": ev.id,
@@ -396,9 +410,19 @@ def list_drifts(request: Request, response: Response,
     known = {i.fingerprint: i for i in all_issues}
     counts = confirmed_counts(session, [i.id for i in all_issues])
 
+    # Fingerprint each event once, then bulk-fetch any stored AI explanations in
+    # a single query (never generated here — read path only).
+    event_fps = {
+        e.id: make_fingerprint(
+            {"object": e.object_ref, "field": e.field, "drift_kind": e.drift_kind}
+        )
+        for e in events
+    }
+    explanations = get_explanations(session, set(event_fps.values()))
+
     rows = []
     for e in events:
-        fp = make_fingerprint({"object": e.object_ref, "field": e.field, "drift_kind": e.drift_kind})
+        fp = event_fps[e.id]
         issue = known.get(fp)
         rows.append({
             "id": e.id,
@@ -416,6 +440,7 @@ def list_drifts(request: Request, response: Response,
                 "field": e.field,
                 "drift_kind": e.drift_kind,
             }),
+            "explanation": _explanation_dict(explanations.get(fp)),
             "known_fix": _known_fix_dict(issue, counts.get(issue.id, 0) if issue else 0),
             "acknowledged": is_acknowledged(session, e.device, fp),
         })

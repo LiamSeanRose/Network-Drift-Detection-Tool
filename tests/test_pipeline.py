@@ -252,3 +252,106 @@ def test_pipeline_default_auto_apply_is_noop_without_env(session_factory, monkey
     assert len(drifts) == 1
     with session_factory._Session() as s:
         assert len(get_drifts(s)) == 1
+
+
+# --- AI1 explanation generation on the scheduler cycle ----------------------
+
+def _drifting():
+    """A device + intent/reality pair that produces exactly one enabled drift."""
+    device = {"name": "core-sw-01", "hostname": "x", "username": "u", "password": "p"}
+    intent = _state({"Ethernet1": _iface(enabled=True)})
+    reality = _state({"Ethernet1": _iface(enabled=False)})
+    return device, intent, reality
+
+
+def test_no_explanations_generated_when_feature_off(session_factory):
+    from netdrift.storage.repository import get_explanations
+
+    device, intent, reality = _drifting()
+
+    def explain_must_not_run(*a, **k):
+        raise AssertionError("explain must not be called when the feature is off")
+
+    run_drift_check(
+        device,
+        get_intent=lambda name: intent,
+        collectors={"arista_eos": lambda dev: reality},
+        session_factory=session_factory,
+        auto_apply_fn=lambda *a, **k: None,
+        explain_fn=explain_must_not_run,  # no explain_llm -> resolves off -> never called
+    )
+
+    with session_factory._Session() as s:
+        assert get_explanations(s) == {}
+
+
+def test_explanations_generated_when_llm_configured(session_factory):
+    from netdrift.storage.repository import get_explanations
+
+    device, intent, reality = _drifting()
+
+    run_drift_check(
+        device,
+        get_intent=lambda name: intent,
+        collectors={"arista_eos": lambda dev: reality},
+        session_factory=session_factory,
+        auto_apply_fn=lambda *a, **k: None,
+        explain_llm=lambda prompt: "Ethernet1 was shut during a maintenance window.",
+    )
+
+    with session_factory._Session() as s:
+        stored = get_explanations(s)
+    assert "interface|enabled|value_mismatch" in stored
+    row = stored["interface|enabled|value_mismatch"]
+    assert row.explanation == "Ethernet1 was shut during a maintenance window."
+    assert row.source == "llm"
+
+
+def test_explanation_generated_once_per_fingerprint(session_factory):
+    from netdrift.storage.repository import get_explanations, upsert_explanation
+
+    device, intent, reality = _drifting()
+    fp = "interface|enabled|value_mismatch"
+
+    # Pre-seed an explanation; the run must not overwrite it (generate-once).
+    with session_factory() as s:
+        upsert_explanation(s, fp, "original explanation", "llm")
+        s.commit()
+
+    run_drift_check(
+        device,
+        get_intent=lambda name: intent,
+        collectors={"arista_eos": lambda dev: reality},
+        session_factory=session_factory,
+        auto_apply_fn=lambda *a, **k: None,
+        explain_llm=lambda prompt: "DIFFERENT — should not be stored",
+    )
+
+    with session_factory._Session() as s:
+        assert get_explanations(s)[fp].explanation == "original explanation"
+
+
+def test_explanation_failure_does_not_break_the_poll(session_factory):
+    from netdrift.storage.repository import get_drifts, get_explanations
+
+    device, intent, reality = _drifting()
+
+    def boom(*a, **k):
+        raise RuntimeError("explain blew up")
+
+    # Even though explanation generation raises, the drift is still saved and
+    # run_drift_check returns normally — best-effort, never breaks the poll.
+    drifts = run_drift_check(
+        device,
+        get_intent=lambda name: intent,
+        collectors={"arista_eos": lambda dev: reality},
+        session_factory=session_factory,
+        auto_apply_fn=lambda *a, **k: None,
+        explain_fn=boom,
+        explain_llm=lambda prompt: "x",  # truthy -> generation is attempted
+    )
+
+    assert len(drifts) == 1
+    with session_factory._Session() as s:
+        assert len(get_drifts(s)) == 1
+        assert get_explanations(s) == {}
