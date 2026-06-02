@@ -200,6 +200,23 @@ def _build_routing_from_context(device):
     return bgp, ospf
 
 
+def _build_tunnels_from_context(device):
+    """Extract tunnel intent (v4.75) from a device's config context.
+
+    Like BGP/OSPF, tunnel intent lives in `local_context_data` — NetBox has no
+    native tunnel model. The expected shape mirrors the device-state schema's
+    optional `tunnels` block:
+
+        {"tunnels": {"Tunnel0": {type, source, destination, enabled,
+                                  tunnel_state}}}
+
+    A device with no context, or one that omits `tunnels`, yields an empty
+    dict — never None. Absent on both sides means no diff noise.
+    """
+    context = device.local_context_data or {}
+    return context.get("tunnels", {}) or {}
+
+
 def get_intent(device_name):
     """
     Return the intended state of `device_name` from NetBox, in the normalized
@@ -242,10 +259,7 @@ def get_intent(device_name):
     bgp_neighbors, ospf = _build_routing_from_context(device)
     context = device.local_context_data or {}
     software_version = context.get("software_version", "") or ""
-    # v4.75: tunnel intent, like BGP/OSPF, lives in local_context_data (NetBox
-    # has no native tunnel model). Optional — absent means the device declares no
-    # tunnels, which the differ treats as no diff noise.
-    tunnels = context.get("tunnels", {}) or {}
+    tunnels = _build_tunnels_from_context(device)
 
     return {
         "device": device.name,
