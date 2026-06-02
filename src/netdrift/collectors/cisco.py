@@ -16,15 +16,8 @@ from datetime import datetime, timezone
 
 from napalm import get_network_driver
 
+from netdrift.collectors._common import build_ip_list as _build_ip_list
 from netdrift.collectors.base import register
-
-
-def _build_ip_list(ip_raw):
-    """Shape NAPALM get_interfaces_ip() value into sorted CIDR list."""
-    ips = []
-    for address, detail in ip_raw.get("ipv4", {}).items():
-        ips.append(f"{address}/{detail['prefix_length']}")
-    return sorted(ips)
 
 
 def _build_vlans(napalm_vlans):
