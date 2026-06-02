@@ -301,3 +301,61 @@ def test_drifts_no_link_header_on_last_page(client):
     # limit exceeds the 2 seeded events → no next page.
     resp = client.get("/drifts?limit=100")
     assert "Link" not in resp.headers
+
+
+# ---------------------------------------------------------------------------
+# SEC2 — bound limit/hours so an unauthenticated client can't force a
+# full-history scan into memory (?hours=876000, ?limit=999999).
+# ---------------------------------------------------------------------------
+
+def test_drifts_limit_below_minimum_returns_422(client):
+    assert client.get("/drifts?limit=0").status_code == 422
+
+
+def test_drifts_limit_above_maximum_returns_422(client):
+    assert client.get("/drifts?limit=99999").status_code == 422
+
+
+def test_drifts_offset_negative_returns_422(client):
+    assert client.get("/drifts?offset=-1").status_code == 422
+
+
+def test_drifts_limit_at_upper_bound_is_accepted(client):
+    assert client.get("/drifts?limit=1000").status_code == 200
+
+
+def test_history_hours_above_maximum_returns_422(client):
+    assert client.get("/drifts/history?hours=999999").status_code == 422
+
+
+def test_history_hours_below_minimum_returns_422(client):
+    assert client.get("/drifts/history?hours=0").status_code == 422
+
+
+def test_history_hours_at_upper_bound_is_accepted(client):
+    assert client.get("/drifts/history?hours=168").status_code == 200
+
+
+# ---------------------------------------------------------------------------
+# SEC1 — pin CORS posture. The origin list is parsed from CORS_ALLOW_ORIGINS;
+# a wildcard must never be honored while the mutating API is unauthenticated.
+# ---------------------------------------------------------------------------
+
+def test_parse_cors_origins_empty_is_no_cross_origin():
+    from netdrift.api.app import _parse_cors_origins
+    assert _parse_cors_origins("") == []
+    assert _parse_cors_origins(None) == []
+
+
+def test_parse_cors_origins_parses_comma_separated_list():
+    from netdrift.api.app import _parse_cors_origins
+    assert _parse_cors_origins("https://a.example, https://b.example") == [
+        "https://a.example",
+        "https://b.example",
+    ]
+
+
+def test_parse_cors_origins_drops_wildcard():
+    from netdrift.api.app import _parse_cors_origins
+    assert _parse_cors_origins("*") == []
+    assert _parse_cors_origins("https://a.example, *") == ["https://a.example"]

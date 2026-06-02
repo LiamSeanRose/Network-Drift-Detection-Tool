@@ -191,9 +191,9 @@ SSRF guard is confirmed singular (SEC5).
 
 - [ ] **B4** `SECURITY.md` with a private disclosure channel.
 - [ ] **B3** No default credentials; DB bound to localhost; containers non-root.
-- [ ] **SEC1** CORS posture pinned (same-origin preferred); wildcard forbidden.
-- [ ] **SEC2** `limit`/`hours` bounded at the API boundary.
-- [ ] **SEC4** Apply/dry-run error responses sanitised.
+- [x] **SEC1** CORS posture pinned (same-origin preferred); wildcard forbidden.
+- [x] **SEC2** `limit`/`hours` bounded at the API boundary.
+- [x] **SEC4** Apply/dry-run error responses sanitised.
 - [ ] **SEC6** `httpx` moved to runtime dependencies (prod import path works).
 - [ ] **DOC3** Deployment/hardening guide published.
 

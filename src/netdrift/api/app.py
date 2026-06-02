@@ -22,11 +22,13 @@ v2.5 environment variables:
 
 import logging
 import os
+import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import yaml
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request, Response
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
@@ -66,6 +68,49 @@ from netdrift.storage.repository import (
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="netdrift API", version="0.2.0")
+
+
+# ---------------------------------------------------------------------------
+# SEC1 — CORS posture. Pinned explicitly so a future change can't silently
+# enable `allow_origins=["*"]` over an unauthenticated, mutating API.
+# Origins come from CORS_ALLOW_ORIGINS (comma-separated); default empty means
+# no cross-origin access (same-origin only), identical to having no middleware.
+# A wildcard is never honored while the API ships without auth on GET.
+# ---------------------------------------------------------------------------
+
+def _parse_cors_origins(raw: str | None) -> list[str]:
+    """Parse CORS_ALLOW_ORIGINS into an explicit origin list, dropping `*`.
+
+    Returns [] for an unset/empty value (no cross-origin). Any `*` entry is
+    discarded with a warning rather than honored — wildcard CORS over an
+    unauthenticated mutating API would turn it into a drive-by target.
+    """
+    if not raw:
+        return []
+    origins = []
+    for part in raw.split(","):
+        origin = part.strip()
+        if not origin:
+            continue
+        if origin == "*":
+            logger.warning(
+                "CORS_ALLOW_ORIGINS contains '*'; wildcard CORS is refused while "
+                "the API is unauthenticated. Set explicit origins instead."
+            )
+            continue
+        origins.append(origin)
+    return origins
+
+
+_CORS_ORIGINS = _parse_cors_origins(os.environ.get("CORS_ALLOW_ORIGINS"))
+if _CORS_ORIGINS:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_CORS_ORIGINS,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
 # ---------------------------------------------------------------------------
 # v2.5 configuration
@@ -316,7 +361,8 @@ def health():
 
 
 @app.get("/drifts/history")
-def list_drift_history(device: str | None = None, hours: int = 24,
+def list_drift_history(device: str | None = None,
+                       hours: int = Query(24, ge=1, le=168),
                        session: Session = Depends(get_session)):
     """Return drift counts bucketed into 5-minute intervals, oldest first."""
     return get_drift_history(session, hours=hours, device=device)
@@ -324,7 +370,9 @@ def list_drift_history(device: str | None = None, hours: int = 24,
 
 @app.get("/drifts")
 def list_drifts(request: Request, response: Response,
-                device: str | None = None, limit: int = 100, offset: int = 0,
+                device: str | None = None,
+                limit: int = Query(100, ge=1, le=1000),
+                offset: int = Query(0, ge=0),
                 since: str | None = None,
                 session: Session = Depends(get_session)):
     """Return stored drift events as JSON, newest first.
@@ -693,7 +741,15 @@ def remediate_dry_run(issue_id: int, body: RemediateRequest,
     except RemediationBlockedError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     except Exception as exc:
-        raise HTTPException(status_code=502, detail=f"Dry-run failed: {exc}")
+        # SEC4: never echo raw NAPALM/gNMI text (hostnames, IPs, partial config)
+        # to the client. Log the detail server-side under a ref the operator can
+        # correlate; return a generic message.
+        ref = uuid.uuid4().hex[:8]
+        logger.warning("Dry-run failed (ref=%s) for known issue %s: %s", ref, issue_id, exc)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Dry-run failed; see server logs (ref={ref}).",
+        )
 
     save_remediation_event(
         session,
@@ -809,7 +865,14 @@ def remediate_apply(issue_id: int, body: RemediateRequest,
         # The 502 below replaces the response, so a BackgroundTask would never
         # run — fire directly. fire() only enqueues, so it does not block.
         dispatcher.fire("apply_failure", webhook_payload)
-        raise HTTPException(status_code=502, detail=f"Apply failed: {apply_error}")
+        # SEC4: log the raw applier error server-side; return a generic message
+        # so device hostnames/IPs/config never reach the client.
+        ref = uuid.uuid4().hex[:8]
+        logger.warning("Apply failed (ref=%s) for known issue %s: %s", ref, issue_id, apply_error)
+        raise HTTPException(
+            status_code=502,
+            detail=f"Apply failed; see server logs (ref={ref}).",
+        )
 
     # Success returns normally; defer the (already non-blocking) dispatch to a
     # BackgroundTask per the v3.0 design.
