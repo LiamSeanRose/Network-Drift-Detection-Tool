@@ -46,12 +46,15 @@ from netdrift.storage.repository import (
     create_acknowledgement,
     create_alert_rule,
     create_api_key,
+    create_maintenance_window,
     delete_acknowledgements_for,
     delete_alert_rule,
     delete_api_key,
+    delete_maintenance_window,
     get_device_setting,
     get_drift_event,
     list_alert_rules,
+    list_maintenance_windows,
     list_api_keys,
     get_known_issue_by_id,
     get_remediation_events,
@@ -208,6 +211,14 @@ class AlertRuleIn(BaseModel):
     severity: str
     window_minutes: int
     enabled: bool = True
+
+
+class MaintenanceWindowIn(BaseModel):
+    """Request body for POST /maintenance-windows."""
+    device: str | None = None  # null = all devices (a global change freeze)
+    starts_at: datetime
+    ends_at: datetime
+    reason: str | None = None
 
 
 # ---------------------------------------------------------------------------
@@ -1043,3 +1054,53 @@ def delete_alert_rule_endpoint(rule_id: int, session: Session = Depends(get_sess
         raise HTTPException(status_code=404, detail=f"Alert rule {rule_id} not found.")
     session.commit()
     return {"deleted": True, "id": rule_id}
+
+
+def _maintenance_window_dict(window) -> dict:
+    return {
+        "id": window.id,
+        "device": window.device,
+        "starts_at": window.starts_at.isoformat(),
+        "ends_at": window.ends_at.isoformat(),
+        "reason": window.reason,
+        "created_at": window.created_at.isoformat(),
+    }
+
+
+@app.post("/maintenance-windows")
+def create_maintenance_window_endpoint(body: MaintenanceWindowIn,
+                                       session: Session = Depends(get_session)):
+    """Open a maintenance window. While it is active, drift on the device
+    (or every device, when device is null) is suppressed from SLA-breach
+    alerting and auto-apply. ends_at must be after starts_at."""
+    starts_at = body.starts_at
+    ends_at = body.ends_at
+    if starts_at.tzinfo is None:
+        starts_at = starts_at.replace(tzinfo=timezone.utc)
+    if ends_at.tzinfo is None:
+        ends_at = ends_at.replace(tzinfo=timezone.utc)
+    if ends_at <= starts_at:
+        raise HTTPException(status_code=422, detail="ends_at must be after starts_at.")
+    window = create_maintenance_window(
+        session, body.device, starts_at, ends_at, reason=body.reason
+    )
+    session.commit()
+    return _maintenance_window_dict(window)
+
+
+@app.get("/maintenance-windows")
+def list_maintenance_windows_endpoint(session: Session = Depends(get_session)):
+    """List all maintenance windows, soonest start first."""
+    return [_maintenance_window_dict(w) for w in list_maintenance_windows(session)]
+
+
+@app.delete("/maintenance-windows/{window_id}")
+def delete_maintenance_window_endpoint(window_id: int,
+                                       session: Session = Depends(get_session)):
+    """Cancel a maintenance window."""
+    if not delete_maintenance_window(session, window_id):
+        raise HTTPException(
+            status_code=404, detail=f"Maintenance window {window_id} not found."
+        )
+    session.commit()
+    return {"deleted": True, "id": window_id}

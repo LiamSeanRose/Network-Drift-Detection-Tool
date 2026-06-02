@@ -23,6 +23,7 @@ from netdrift.storage.models import (
     DriftEvent,
     DriftExplanation,
     KnownIssue,
+    MaintenanceWindow,
     RemediationEvent,
 )
 
@@ -241,6 +242,62 @@ def upsert_explanation(session, fingerprint, explanation, source):
         row.generated_at = datetime.now(tz=timezone.utc)
     session.flush()
     return row
+
+
+def create_maintenance_window(session, device, starts_at, ends_at, reason=None):
+    """Insert a maintenance window. device=None means all devices. Does NOT commit."""
+    window = MaintenanceWindow(
+        device=device,
+        starts_at=starts_at,
+        ends_at=ends_at,
+        reason=reason,
+        created_at=datetime.now(tz=timezone.utc),
+    )
+    session.add(window)
+    session.flush()
+    return window
+
+
+def list_maintenance_windows(session):
+    """Return all maintenance windows, soonest start first."""
+    return (
+        session.query(MaintenanceWindow)
+        .order_by(MaintenanceWindow.starts_at)
+        .all()
+    )
+
+
+def delete_maintenance_window(session, window_id):
+    """Delete a window by id. Returns the number of rows removed (0 or 1).
+    Does NOT commit."""
+    return (
+        session.query(MaintenanceWindow)
+        .filter(MaintenanceWindow.id == window_id)
+        .delete()
+    )
+
+
+def active_maintenance_windows(session, now=None):
+    """Return the windows active at ``now`` (starts_at <= now < ends_at)."""
+    if now is None:
+        now = datetime.now(tz=timezone.utc)
+    return (
+        session.query(MaintenanceWindow)
+        .filter(MaintenanceWindow.starts_at <= now, MaintenanceWindow.ends_at > now)
+        .all()
+    )
+
+
+def is_in_maintenance_window(session, device, now=None) -> bool:
+    """True if ``device`` is inside an active window (or a global one).
+
+    Mirrors ``is_acknowledged`` as a suppression check: consulted before SLA
+    evaluation and auto-apply. A window with device=None matches every device.
+    """
+    for window in active_maintenance_windows(session, now=now):
+        if window.device is None or window.device == device:
+            return True
+    return False
 
 
 def get_explanations(session, fingerprints=None):
