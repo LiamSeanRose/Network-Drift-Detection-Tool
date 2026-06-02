@@ -90,6 +90,28 @@
   cursor: not-allowed;
 }
 
+/* ---- API key field (v3.5) ---------------------------------------- */
+.dashboard__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.dashboard__apikey {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.6rem;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  width: 12rem;
+}
+
+.dashboard__apikey:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
 /* ---- States: loading / error / empty ----------------------------- */
 
 .dashboard__state {
