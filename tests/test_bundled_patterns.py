@@ -13,9 +13,16 @@ the patterns silently never matching.
 
 from pathlib import Path
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from netdrift import differ
 from netdrift.fingerprint import fingerprint as make_fingerprint
+from netdrift.patterns.exporter import export_known_issues
+from netdrift.patterns.importer import import_patterns_dir, import_patterns_text
 from netdrift.patterns.loader import load_patterns_dir, pattern_fingerprints
+from netdrift.storage.models import Base
+from netdrift.storage.repository import list_known_issues
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PATTERNS_DIR = REPO_ROOT / "patterns"
@@ -171,3 +178,27 @@ def test_every_drift_the_bundle_covers_matches_differ_output():
     # Every drift this pair produces is covered by a bundled pattern, and the
     # bundle has no fingerprint that differ cannot produce.
     assert produced == bundle
+
+
+def test_real_bundle_imports_and_round_trips():
+    """The shipped patterns/ dir imports cleanly and survives an
+    export -> wipe -> import -> export cycle byte-for-byte. Guards the actual
+    bundle (including the config/device patterns) through the full I/O path."""
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    with Session() as s:
+        summary = import_patterns_dir(s, PATTERNS_DIR)
+        s.commit()
+        assert summary["created"] >= 24
+        assert summary["updated"] == 0
+        assert all(i.auto_apply_enabled is False for i in list_known_issues(s))
+
+        export1 = export_known_issues(s)
+        for issue in list_known_issues(s):
+            s.delete(issue)
+        s.commit()
+
+        import_patterns_text(s, export1)
+        s.commit()
+        assert export_known_issues(s) == export1
