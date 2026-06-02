@@ -5,6 +5,23 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2026-06-01 — Community Pattern Library
+
+### Added
+- **Bundled drift patterns** (`patterns/`, 20 files: interface, VLAN, BGP, OSPF)
+  validated against a Pydantic `PatternSchema`. The loader computes each
+  pattern's fingerprint with the differ's own function, so a pattern only ever
+  matches drift the differ actually produces.
+- **`driftcheck import-patterns`** — idempotent upsert of patterns into
+  `known_issues`; imports always land with auto-apply **off**.
+- **`driftcheck validate-patterns`** + a CI step — schema and
+  fingerprint-collision validation with no database, so adding a valid pattern
+  needs no Python change and a malformed one fails the build.
+- **`GET /known-issues/export`** — round-trippable YAML export of the knowledge
+  base (requires an API key).
+- `patterns/README.md` field reference and a `CONTRIBUTING.md` pattern-submission
+  section.
+
 ## [3.5.0] - 2026-06-01 — Security + SLA + Acknowledge
 
 ### Added
@@ -133,6 +150,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pure `differ.py` with unit tests; CI running ruff + pytest.
 - Containerlab topology and `seed_netbox.py` to reproduce the environment.
 
+[4.0.0]: https://github.com/LiamSeanRose/Network-Drift-Detection-Tool/releases/tag/v4.0
 [3.5.0]: https://github.com/LiamSeanRose/Network-Drift-Detection-Tool/releases/tag/v3.5
 [3.0.0]: https://github.com/LiamSeanRose/Network-Drift-Detection-Tool/releases/tag/v3.0
 [2.5.0]: https://github.com/LiamSeanRose/Network-Drift-Detection-Tool/releases/tag/v2.5
