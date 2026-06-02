@@ -583,6 +583,37 @@ Roadmap and ownership agreed in docs/ROADMAP_POST_V2.5.md (design council 2026-0
 | APScheduler event listener logging | Matthew (B) | Structured logging in `scheduler.py` |
 | README + CHANGELOG.md v3.0 + this §15 | Matthew (B) (release shepherd) | |
 
+v3.5 — Security + SLA + Acknowledge
+[x] An alert rule (device, severity, window) dispatches a webhook when matching, unacknowledged drift is older than the window. Evaluator takes an injected now (no sleep).
+[x] A device with no successful collection in the last 2 cycles is tagged device_unreachable, not sla_breached.
+[x] All mutating endpoints return 401 without a valid X-API-Key; GET /drifts and /health are public by design.
+[x] driftcheck create-api-key creates the first key, printed once; only the SHA-256 hash is stored; a revoked key 401s on the next request; GET /api-keys never returns the raw key.
+[x] POST /drifts/{id}/acknowledge rejects past/over-90-day expiries (422); an active acknowledgement suppresses SLA, webhook, and auto-apply; DELETE clears it.
+[x] Composite index drift_events(device, severity, detected_at) exists; drift retention prunes old events (DRIFT_RETENTION_DAYS, default 90).
+[x] GET /drifts?since= filter and Link pagination work.
+[x] Dashboard: alert-rules panel, per-device auto-apply toggle, acknowledge toggle (acknowledged rows dimmed); mutating calls send X-API-Key (paste-a-key).
+[x] README, CHANGELOG.md v3.5, and this §15 updated.
+
+v3.5 Ownership
+Roadmap and ownership agreed in docs/ROADMAP_POST_V2.5.md (design council 2026-06-01).
+Open questions #1 (acknowledgements keyed by (device, fingerprint)) and #2 (GET /drifts
+public-by-default) were resolved on Claude's recommendation, ratified by Matthew for both
+partners.
+
+| v3.5 work stream | Owner | Notes |
+|---|---|---|
+| `alert_rules` table + migration; `evaluate_sla` evaluator + scheduler wiring | Matthew (B) | Injectable clock; dedup per (device, fingerprint) |
+| `POST`/`GET`/`DELETE /alert-rules` endpoints | Matthew (B) | severity + window validated |
+| `device_unreachable` detection (`device_settings.last_collected_at`) | Matthew (B) | Stamped by `pipeline.run_drift_check` |
+| `api_keys` table + migration; `X-API-Key` middleware; `/api-keys` endpoints | Matthew (B) | Hash-only storage; GET-exempt auth model |
+| `driftcheck create-api-key` CLI | Liam (A) | First-key bootstrap, writes DB directly |
+| `acknowledgements` table; `POST`/`DELETE /drifts/{id}/acknowledge`; `acknowledged` on `GET /drifts` | Matthew (B) | `(device, fingerprint)` key |
+| Acknowledgement suppression in `run_auto_apply` | Joint | `is_acknowledged` check |
+| `GET /drifts?since=` + `Link` pagination | Matthew (B) | |
+| Drift retention TTL job + `drift_events(device, severity, detected_at)` index | Matthew (B) | `DRIFT_RETENTION_DAYS` default 90 |
+| Dashboard: alert-rules panel, device toggle, acknowledge toggle, paste-a-key auth | Matthew (B) | |
+| README + CHANGELOG.md v3.5 + this §15 | Matthew (B) (release shepherd) | |
+
 v3.75 — Juniper JunOS (parallel Liam track)
 [x] collectors/junos.py returns schema-valid interfaces, VLANs, BGP, OSPF.
 [x] appliers/junos.py implements restore_intent + raw_snippet with commit-confirmed auto-rollback.
