@@ -7,8 +7,8 @@ surfaces the differences ("drift").
 The open-source alternative to NetBox Assurance.
 
 **Status:** v4.0 — multi-vendor drift detection across Arista EOS, Cisco IOS-XE,
-Nokia SR Linux, and Juniper Junos; interface, VLAN, routing (BGP/OSPF), and
-running-config drift; optional auto-remediation that can push fixes back to
+Nokia SR Linux, and Juniper Junos; interface, VLAN, routing (BGP/OSPF),
+running-config, and tunnel/overlay (GRE/VTI) drift; optional auto-remediation that can push fixes back to
 devices (**off by default**, gated, with a hard do-not-apply list); webhook
 notifications; API-key authentication, per-device SLA alerting, and drift
 acknowledgement; a bundled community pattern library that seeds the knowledge
@@ -43,6 +43,21 @@ pure-function **diff engine**, **storage + API** (Postgres + FastAPI), and a
 vendors and an opt-in remediation path.
 
 ## Quickstart
+
+### See it work in one command (no setup)
+
+```bash
+pip install -e .
+driftcheck demo
+```
+
+`driftcheck demo` runs the real diff engine over a bundled fictional two-device
+network and prints the drift it finds — a downed uplink, VLAN documentation
+drift, a flapping BGP session, an OSPF area mismatch, a missing interface, and
+tunnel drift. No NetBox, no live device, no database. It is the fastest way to
+see what netdrift produces before wiring up your own network.
+
+### Run against your own network
 
 The development lab runs against Containerlab (two Arista cEOS nodes and a Nokia
 SR Linux node), plus a local NetBox.
