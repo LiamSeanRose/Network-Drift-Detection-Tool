@@ -100,6 +100,75 @@ def build_prompt(drift, co_occurring=None):
     return "\n".join(lines)
 
 
+def _deterministic_remediation_text(rendered_commands, dry_run_diff):
+    """Offline fallback for a remediation summary: a factual command count.
+
+    No model needed — counts the non-empty command lines so the operator at
+    least sees the size of the change without an LLM.
+    """
+    lines = [ln for ln in (rendered_commands or "").splitlines() if ln.strip()]
+    n = len(lines)
+    if n == 0:
+        return "This fix would make no configuration change."
+    if n == 1:
+        return f"This fix would run 1 configuration command: {lines[0].strip()}"
+    return f"This fix would run {n} configuration commands on the device."
+
+
+def build_remediation_prompt(rendered_commands, dry_run_diff, drift=None):
+    """Build the grounding prompt for an AI2 remediation summary.
+
+    Grounded in the actual rendered commands and the live dry-run diff. Asks for
+    a factual plain-English summary of *what the change does* — never advice on
+    whether to apply it, which stays a human decision.
+    """
+    lines = [
+        "You are a senior network engineer. In one or two plain sentences, "
+        "summarize what the following configuration change would do to the "
+        "device. Be factual and specific to the commands shown. Do NOT advise "
+        "whether to apply it, do not use markdown, do not restate the question.",
+        "",
+    ]
+    if drift:
+        lines.append(
+            f"It is the proposed fix for drift on {drift.get('object', '?')} "
+            f"field {drift.get('field', '?')} ({drift.get('drift_kind', '?')})."
+        )
+        lines.append("")
+    lines += ["Rendered commands:", (rendered_commands or "").strip() or "(none)"]
+    if dry_run_diff and dry_run_diff.strip():
+        lines += ["", "Dry-run diff:", dry_run_diff.strip()]
+    return "\n".join(lines)
+
+
+def summarize_remediation(rendered_commands, dry_run_diff, *, drift=None, llm=None):
+    """Return a natural-language summary of what a remediation would do (AI2).
+
+    Same opt-in / off-by-default / grounded-with-fallback contract as
+    ``explain()``, but for a fix rather than a drift. Generated at dry-run time
+    (an explicit, infrequent user action), so it is not cached — the diff is
+    live. Returns ``{"text", "source"}`` where source is ``"llm"`` or
+    ``"deterministic"``. ``llm`` is injectable for tests.
+    """
+    fallback = _deterministic_remediation_text(rendered_commands, dry_run_diff)
+
+    if llm is None:
+        llm = _resolve_llm(_config())
+    if llm is None:
+        return {"text": fallback, "source": "deterministic"}
+
+    prompt = build_remediation_prompt(rendered_commands, dry_run_diff, drift=drift)
+    try:
+        text = llm(prompt)
+    except Exception:
+        text = ""
+    text = (text or "").strip()
+    if not text:
+        return {"text": fallback, "source": "deterministic"}
+
+    return {"text": text, "source": "llm"}
+
+
 def _call_ollama(prompt, cfg):
     base = (cfg["url"] or _DEFAULT_OLLAMA_URL).rstrip("/")
     model = cfg["model"] or _DEFAULT_OLLAMA_MODEL

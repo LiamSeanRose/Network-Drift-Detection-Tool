@@ -147,6 +147,66 @@ def test_ollama_call_posts_to_generate_endpoint(monkeypatch):
     assert captured["json"]["stream"] is False
 
 
+# --- AI2 remediation summaries ----------------------------------------------
+
+_COMMANDS = "interface Ethernet1\n  no shutdown\n"
+_DIFF = "+  no shutdown"
+
+
+def test_remediation_off_by_default_returns_deterministic(monkeypatch):
+    for var in ("NETDRIFT_EXPLAIN_PROVIDER", "NETDRIFT_EXPLAIN_MODEL",
+                "NETDRIFT_EXPLAIN_URL", "NETDRIFT_EXPLAIN_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+
+    def explode(*a, **k):
+        raise AssertionError("must not call the network when off")
+
+    monkeypatch.setattr(explain.httpx, "post", explode)
+    result = explain.summarize_remediation(_COMMANDS, _DIFF)
+    assert result["source"] == "deterministic"
+    assert "command" in result["text"].lower()
+
+
+def test_remediation_deterministic_counts_commands():
+    # Two non-empty command lines -> a count summary.
+    text = explain._deterministic_remediation_text(_COMMANDS, _DIFF)
+    assert "2 configuration commands" in text
+
+
+def test_remediation_deterministic_single_command_shows_it():
+    text = explain._deterministic_remediation_text("vlan 99", "")
+    assert "1 configuration command" in text
+    assert "vlan 99" in text
+
+
+def test_remediation_deterministic_empty_is_no_change():
+    assert "no configuration change" in explain._deterministic_remediation_text("", "")
+
+
+def test_remediation_injected_llm_is_used():
+    result = explain.summarize_remediation(
+        _COMMANDS, _DIFF, llm=lambda p: "Re-enables Ethernet1.")
+    assert result["source"] == "llm"
+    assert result["text"] == "Re-enables Ethernet1."
+
+
+def test_remediation_llm_failure_falls_back():
+    def boom(p):
+        raise RuntimeError("down")
+
+    result = explain.summarize_remediation(_COMMANDS, _DIFF, llm=boom)
+    assert result["source"] == "deterministic"
+
+
+def test_remediation_prompt_includes_commands_and_diff():
+    prompt = explain.build_remediation_prompt(
+        _COMMANDS, _DIFF, drift={"object": "interface:Ethernet1",
+                                 "field": "enabled", "drift_kind": "value_mismatch"})
+    assert "no shutdown" in prompt
+    assert "Dry-run diff" in prompt
+    assert "interface:Ethernet1" in prompt
+
+
 def test_openai_call_sends_bearer_key(monkeypatch):
     captured = {}
 
