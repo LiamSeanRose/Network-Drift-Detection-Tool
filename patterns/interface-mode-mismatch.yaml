@@ -1,0 +1,8 @@
+name: "Switchport mode does not match intent"
+object_type: interface
+field: mode
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The interface mode (access, tagged, or routed) differs from intent. A port that should be a routed uplink running as an access port, or the reverse, breaks connectivity in a way that is easy to overlook."
+fix: "Reconfigure the port to the intended mode. A mode change wipes the other layer's config (switching access to routed drops VLAN settings), so re-apply the full intended interface config afterward."

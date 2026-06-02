@@ -1,0 +1,8 @@
+name: "Undocumented VLAN present on the device"
+object_type: vlan
+field: _vlan
+drift_kinds:
+  - missing_in_intent
+vendors: []
+cause: "The device has a VLAN NetBox does not model. Either a legitimate VLAN missing from the source of truth, or a leftover from a past change that was never cleaned up."
+fix: "Add the VLAN to NetBox if it belongs, or remove it from the device if it is stale. Resolve on the intent side."

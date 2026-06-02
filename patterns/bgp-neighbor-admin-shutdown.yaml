@@ -1,0 +1,8 @@
+name: "BGP neighbor administratively shut down"
+object_type: bgp_neighbor
+field: enabled
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The neighbor is configured but administratively shut down, while NetBox expects it enabled. Often left over from maintenance that drained the peer and was never reverted."
+fix: "Remove the shutdown on the neighbor (`no neighbor <ip> shutdown` or the platform equivalent). Confirm the maintenance that drained it is complete first."

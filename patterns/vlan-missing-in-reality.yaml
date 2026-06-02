@@ -1,0 +1,8 @@
+name: "VLAN in NetBox is absent on the device"
+object_type: vlan
+field: _vlan
+drift_kinds:
+  - missing_in_reality
+vendors: []
+cause: "NetBox defines a VLAN the device has not created. Hosts assigned to it have no path, and trunks will not forward it."
+fix: "Create the VLAN on the device. Confirm it belongs here first, since not every device in the source of truth carries every VLAN."
