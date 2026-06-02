@@ -242,6 +242,10 @@ def get_intent(device_name):
     bgp_neighbors, ospf = _build_routing_from_context(device)
     context = device.local_context_data or {}
     software_version = context.get("software_version", "") or ""
+    # v4.75: tunnel intent, like BGP/OSPF, lives in local_context_data (NetBox
+    # has no native tunnel model). Optional — absent means the device declares no
+    # tunnels, which the differ treats as no diff noise.
+    tunnels = context.get("tunnels", {}) or {}
 
     return {
         "device": device.name,
@@ -251,6 +255,7 @@ def get_intent(device_name):
         "vlans": _build_vlans(nb, device.site.id),
         "bgp_neighbors": bgp_neighbors,
         "ospf": ospf,
+        "tunnels": tunnels,
         "running_config": _fetch_rendered_config(nb, device),
         "software_version": software_version,
     }
