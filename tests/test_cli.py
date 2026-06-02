@@ -233,3 +233,57 @@ def test_main_routes_validate_patterns(monkeypatch, capsys):
                         lambda argv, **_: print("routed"))
     cli.main(argv=["validate-patterns", "patterns/"])
     assert "routed" in capsys.readouterr().out
+
+
+# demo subcommand (no NetBox, device, or database)
+
+def test_main_routes_demo(monkeypatch, capsys):
+    monkeypatch.setattr(cli, "_cmd_demo", lambda argv, **_: print("routed"))
+    cli.main(argv=["demo"])
+    assert "routed" in capsys.readouterr().out
+
+
+def test_demo_runs_with_no_setup(capsys):
+    # The whole point: demo touches no devices.yml, NetBox, or database.
+    cli._cmd_demo([])
+    out = capsys.readouterr().out
+    assert "netdrift demo" in out
+    assert "core-sw-01" in out
+    assert "edge-rtr-01" in out
+
+
+def test_demo_prints_real_differ_output(capsys):
+    # Output must be genuine differ records: the known critical interface-down
+    # and tunnel-down drifts on core-sw-01 should appear, with severities.
+    cli._cmd_demo([])
+    out = capsys.readouterr().out
+    assert "[CRITICAL]" in out
+    assert "[WARNING]" in out
+    assert "[INFO]" in out
+    assert "tunnel:Tunnel0" in out
+    assert "Demo complete:" in out
+
+
+def test_demo_drift_matches_differ_for_every_pair():
+    # Each bundled pair's printed count must equal what differ.diff() produces —
+    # the demo is a thin shell over the real engine, not a canned string.
+    from netdrift import differ
+    from netdrift.demo import demo_pairs
+
+    pairs = demo_pairs()
+    assert len(pairs) >= 2
+    for _name, intent, reality in pairs:
+        # Every demo pair is intentionally non-identical, so it must drift.
+        assert differ.diff(intent, reality)
+
+
+def test_demo_pairs_are_schema_complete():
+    # Demo states must carry the same keys a real collector returns, or the
+    # demo would mask a schema regression instead of exercising the engine.
+    from netdrift.demo import demo_pairs
+
+    required = {"platform", "interfaces", "vlans", "bgp_neighbors", "ospf",
+                "running_config", "software_version"}
+    for _name, intent, reality in demo_pairs():
+        assert required <= set(intent)
+        assert required <= set(reality)
