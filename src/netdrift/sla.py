@@ -17,6 +17,7 @@ from datetime import datetime, timedelta, timezone
 
 from netdrift.fingerprint import fingerprint as make_fingerprint
 from netdrift.storage.repository import (
+    active_maintenance_windows,
     device_last_collected,
     get_drifts_older_than,
     is_acknowledged,
@@ -66,6 +67,12 @@ def evaluate_sla(session, dispatcher, *, now=None, unreachable_after_minutes=Non
     seen: set[tuple[str, str]] = set()
     unreachable_fired: set[str] = set()
 
+    # A planned maintenance window suppresses all breach alerting on its device
+    # (or every device, for a global window). Computed once here, not per event.
+    windows = active_maintenance_windows(session, now=now)
+    maintenance_global = any(w.device is None for w in windows)
+    maintenance_devices = {w.device for w in windows if w.device is not None}
+
     for rule in list_alert_rules(session):
         if not rule.enabled:
             continue
@@ -80,6 +87,8 @@ def evaluate_sla(session, dispatcher, *, now=None, unreachable_after_minutes=Non
                 "drift_kind": event.drift_kind,
             })
             device = event.device
+            if maintenance_global or device in maintenance_devices:
+                continue
             if is_acknowledged(session, device, fp, now=now):
                 continue
 

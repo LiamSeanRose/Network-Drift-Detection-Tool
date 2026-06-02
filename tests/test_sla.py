@@ -106,6 +106,44 @@ def test_acknowledged_drift_is_suppressed(session):
     assert fake.fired == []
 
 
+def test_drift_in_maintenance_window_is_suppressed(session):
+    from netdrift.storage.repository import create_maintenance_window
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20)
+    create_maintenance_window(session, "core-sw-01",
+                              NOW - timedelta(minutes=30), NOW + timedelta(minutes=30))
+    session.commit()
+
+    fake = FakeDispatcher()
+    assert evaluate_sla(session, fake, now=NOW) == []
+    assert fake.fired == []
+
+
+def test_global_maintenance_window_suppresses_all_devices(session):
+    from netdrift.storage.repository import create_maintenance_window
+    create_alert_rule(session, device=None, severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20, device="core-sw-99")
+    create_maintenance_window(session, None,
+                              NOW - timedelta(minutes=5), NOW + timedelta(minutes=5))
+    session.commit()
+
+    fake = FakeDispatcher()
+    assert evaluate_sla(session, fake, now=NOW) == []
+
+
+def test_expired_maintenance_window_does_not_suppress(session):
+    from netdrift.storage.repository import create_maintenance_window
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20)
+    # Window already ended before NOW.
+    create_maintenance_window(session, "core-sw-01",
+                              NOW - timedelta(hours=2), NOW - timedelta(hours=1))
+    session.commit()
+
+    fake = FakeDispatcher()
+    assert len(evaluate_sla(session, fake, now=NOW)) == 1
+
+
 def test_expired_acknowledgement_does_not_suppress(session):
     create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
     _seed_drift(session, minutes_ago=20)
