@@ -287,3 +287,37 @@ def test_demo_pairs_are_schema_complete():
     for _name, intent, reality in demo_pairs():
         assert required <= set(intent)
         assert required <= set(reality)
+
+
+def test_demo_drift_records_stamped_for_save(capsys):
+    # Records handed to save_drifts() must carry device + platform, like the
+    # pipeline stamps — save_drifts indexes on both.
+    from netdrift.demo import demo_drift_records
+
+    records = demo_drift_records()
+    assert records
+    for r in records:
+        assert r["device"] in {"core-sw-01", "edge-rtr-01"}
+        assert r["platform"] in {"arista_eos", "cisco_iosxe"}
+        assert {"object", "field", "drift_kind", "severity"} <= set(r)
+
+
+def test_demo_seed_persists_every_record(db_session_factory):
+    from netdrift.demo import demo_drift_records
+    from netdrift.storage.repository import get_drifts
+
+    cli._seed_demo(session_factory=db_session_factory)
+
+    expected = len(demo_drift_records())
+    with db_session_factory() as session:
+        stored = get_drifts(session)
+    assert len(stored) == expected
+    devices = {e.device for e in stored}
+    assert devices == {"core-sw-01", "edge-rtr-01"}
+
+
+def test_demo_seed_reports_count(db_session_factory, capsys):
+    cli._seed_demo(session_factory=db_session_factory)
+    out = capsys.readouterr().out
+    assert "Seeded" in out
+    assert "dashboard" in out

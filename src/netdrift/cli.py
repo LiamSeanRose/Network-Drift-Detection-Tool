@@ -24,6 +24,7 @@ from netdrift.patterns.loader import PatternError, load_patterns_dir
 from netdrift.pipeline import _resolve_intent_fn
 from netdrift.storage.database import get_sessionmaker
 from netdrift.storage.repository import create_api_key as _create_api_key_in_db
+from netdrift.storage.repository import save_drifts
 
 # devices.yml lives at the repo root, two levels up from this file
 # (src/netdrift/cli.py -> src/netdrift -> src -> repo root).
@@ -68,12 +69,45 @@ def print_drift(device_name, drift):
         print()
 
 
+def _seed_demo(session_factory=None):
+    """Persist the bundled demo drift into the database so the dashboard shows it.
+
+    Opt-in (`--seed`). Unlike the terminal demo, this needs DATABASE_URL set and
+    the schema migrated (`alembic upgrade head`). Tests inject `session_factory`.
+    """
+    from netdrift.demo import demo_drift_records
+
+    if session_factory is None:
+        try:
+            session_factory = get_sessionmaker()
+        except RuntimeError as e:
+            sys.exit(
+                f"Error: {e}\n"
+                "Set DATABASE_URL (and run 'alembic upgrade head') to seed the "
+                "demo into a database."
+            )
+
+    records = demo_drift_records()
+    try:
+        with session_factory() as session:
+            save_drifts(session, records)
+            session.commit()
+    except Exception as e:
+        sys.exit(f"Error seeding demo drift: {e}")
+
+    print(f"\nSeeded {len(records)} demo drift record(s) into the database.")
+    print("Start the API and dashboard to see them:")
+    print("  uvicorn netdrift.api.app:app --port 8001")
+    print("  cd frontend && npm install && npm run dev   # http://localhost:5173")
+
+
 def _cmd_demo(argv):
     """Run drift detection on a bundled offline dataset — no NetBox, device, or DB.
 
     This is the zero-setup first-run experience: `driftcheck demo` shows real
     differ output on a fictional two-device network so a brand-new user sees what
-    drift looks like before wiring up NetBox and the lab.
+    drift looks like before wiring up NetBox and the lab. With `--seed` it also
+    persists that drift so the React dashboard lights up.
     """
     from netdrift.demo import demo_pairs
 
@@ -84,7 +118,13 @@ def _cmd_demo(argv):
             "device, no database required — the perfect first run."
         ),
     )
-    parser.parse_args(argv)
+    parser.add_argument(
+        "--seed",
+        action="store_true",
+        help="also persist the demo drift to the database so the dashboard "
+             "shows it (needs DATABASE_URL + 'alembic upgrade head')",
+    )
+    args = parser.parse_args(argv)
 
     pairs = demo_pairs()
     print(
@@ -100,10 +140,15 @@ def _cmd_demo(argv):
         print_drift(device_name, drift)
 
     print(f"Demo complete: {total} drift record(s) across {len(pairs)} device(s).")
-    print(
-        "Next: copy devices.example.yml to devices.yml and run "
-        "'driftcheck <device>' against your own network."
-    )
+
+    if args.seed:
+        _seed_demo()
+    else:
+        print(
+            "Next: copy devices.example.yml to devices.yml and run "
+            "'driftcheck <device>' against your own network,\n"
+            "or run 'driftcheck demo --seed' to populate the dashboard."
+        )
 
 
 def _cmd_create_api_key(argv, session_factory=None):

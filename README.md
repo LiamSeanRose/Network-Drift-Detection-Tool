@@ -57,6 +57,16 @@ drift, a flapping BGP session, an OSPF area mismatch, a missing interface, and
 tunnel drift. No NetBox, no live device, no database. It is the fastest way to
 see what netdrift produces before wiring up your own network.
 
+To see the same drift in the **dashboard**, run `driftcheck demo --seed` (needs
+`DATABASE_URL` set and `alembic upgrade head`), then start the API and frontend:
+
+```bash
+alembic upgrade head
+driftcheck demo --seed
+uvicorn netdrift.api.app:app --port 8001
+cd frontend && npm install && npm run dev   # http://localhost:5173
+```
+
 ### Run against your own network
 
 The development lab runs against Containerlab (two Arista cEOS nodes and a Nokia
