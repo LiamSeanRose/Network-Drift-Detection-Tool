@@ -1,0 +1,13 @@
+name: "VLAN name does not match intent"
+object_type: vlan
+field: name
+drift_kinds:
+  - value_mismatch
+vendors:
+  - arista_eos
+  - cisco_iosxe
+  - juniper_junos
+cause: "The VLAN exists on both sides but its name differs from NetBox. Harmless on the data plane, but it breaks audits and confuses operators reading the running config during an incident."
+fix: "Set the VLAN name to the intended value with `vlan <id>` then `name <name>`, or update NetBox if the live name is correct."
+remediation:
+  kind: restore_intent

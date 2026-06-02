@@ -1,0 +1,10 @@
+name: "Interface description does not match intent"
+object_type: interface
+field: description
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The live interface description differs from the documented one in NetBox. Usually a hand edit on the device that was never reflected in the source of truth."
+fix: "Set the interface description back to the intended value, or update NetBox if the live description is the correct one."
+remediation:
+  kind: restore_intent

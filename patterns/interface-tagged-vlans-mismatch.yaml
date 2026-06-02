@@ -1,0 +1,13 @@
+name: "Trunk allowed VLAN list does not match intent"
+object_type: interface
+field: tagged_vlans
+drift_kinds:
+  - value_mismatch
+vendors:
+  - arista_eos
+  - cisco_iosxe
+  - juniper_junos
+cause: "The set of tagged VLANs on the trunk differs from intent. A missing VLAN blocks that segment across the link; an extra VLAN leaks a broadcast domain where it should not reach."
+fix: "Restore the allowed VLAN list to the intended set with `switchport trunk allowed vlan <list>`. Confirm whether your platform treats the command as absolute or additive before applying."
+remediation:
+  kind: restore_intent

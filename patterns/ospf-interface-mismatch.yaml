@@ -1,0 +1,8 @@
+name: "OSPF adjacency formed on the wrong interface"
+object_type: ospf_adjacency
+field: interface
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The adjacency with this router-id is over a different interface than intent records. It points at a topology change: a link moved, or a backup path is carrying an adjacency the primary should."
+fix: "Confirm the physical and logical topology matches intent. If the new path is correct, update NetBox; if not, investigate why the intended link is not carrying the adjacency."

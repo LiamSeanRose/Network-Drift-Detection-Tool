@@ -1,0 +1,13 @@
+name: "Access (untagged) VLAN does not match intent"
+object_type: interface
+field: untagged_vlan
+drift_kinds:
+  - value_mismatch
+vendors:
+  - arista_eos
+  - cisco_iosxe
+  - juniper_junos
+cause: "The access VLAN on the port differs from intent, placing the attached host in the wrong broadcast domain."
+fix: "Set the access VLAN back to the intended ID with `switchport access vlan <id>` or the platform equivalent."
+remediation:
+  kind: restore_intent
