@@ -5,6 +5,37 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.5.0] - 2026-06-01 — Security + SLA + Acknowledge
+
+### Added
+- **API-key authentication.** `api_keys` table + migration; an `X-API-Key`
+  middleware that requires a valid key on every mutating request (401 otherwise)
+  while leaving `GET /drifts` and `/health` public by design; `POST`/`GET`/
+  `DELETE /api-keys` endpoints (raw key shown once, only its SHA-256 hash
+  stored); and a `driftcheck create-api-key` CLI to bootstrap the first key.
+- **Per-device drift SLA.** `alert_rules` table + `POST`/`GET`/`DELETE
+  /alert-rules`; an `evaluate_sla` evaluator (injectable clock) wired into the
+  scheduler that fires a `sla_breached` webhook for unresolved, unacknowledged
+  drift older than a rule's window; and `device_unreachable` detection
+  (`device_settings.last_collected_at`, stamped on every successful collection)
+  so stale drift on a silent device raises `device_unreachable` instead of a
+  false breach.
+- **Drift acknowledgement.** `acknowledgements` table keyed by
+  `(device, fingerprint)`; `POST`/`DELETE /drifts/{id}/acknowledge` (optional
+  expiry, capped at 90 days). Active acknowledgements suppress webhook dispatch,
+  SLA evaluation, and auto-apply; `GET /drifts` carries an `acknowledged` flag.
+- **`GET /drifts` query support.** `?since=<ISO8601>` filter and `Link`
+  pagination header.
+- **Drift retention.** A daily cleanup job pruning events older than
+  `DRIFT_RETENTION_DAYS` (default 90) and a composite index on
+  `drift_events(device, severity, detected_at)`.
+- **Dashboard.** Paste-a-key API-key field; an SLA alert-rules panel; a
+  per-device auto-apply Pause/Resume toggle (`GET /devices`); and an
+  acknowledge toggle that dims acknowledged rows.
+
+### Changed
+- `sla_breached` and `device_unreachable` added to the webhook default events.
+
 ## [3.0.0] - 2026-06-01 — Operational Loop
 
 ### Added
@@ -102,6 +133,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Pure `differ.py` with unit tests; CI running ruff + pytest.
 - Containerlab topology and `seed_netbox.py` to reproduce the environment.
 
+[3.5.0]: https://github.com/LiamSeanRose/Network-Drift-Detection-Tool/releases/tag/v3.5
 [3.0.0]: https://github.com/LiamSeanRose/Network-Drift-Detection-Tool/releases/tag/v3.0
 [2.5.0]: https://github.com/LiamSeanRose/Network-Drift-Detection-Tool/releases/tag/v2.5
 [2.0.0]: https://github.com/LiamSeanRose/Network-Drift-Detection-Tool/releases/tag/v2.0
