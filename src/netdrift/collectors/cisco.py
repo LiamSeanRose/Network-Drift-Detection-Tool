@@ -244,6 +244,79 @@ def _parse_ospf_neighbors(ospf_detail_text):
     return adjacencies
 
 
+def _parse_tunnels_cli(text):
+    """Parse `show interfaces tunnel` IOS-XE text into the schema's `tunnels` block.
+
+    UNVALIDATED FIXTURE SHAPE (v4.75): modelled from IOS-XE `show interfaces
+    tunnel` output, not captured from a live device (the lab has no tunnel). The
+    keys parsed here need re-verification against hardware, the same as the Nokia
+    routing fixtures.
+
+    Only GRE and VTI are in scope for v4.75 (tunnels schema proposal, Decision 2).
+    IOS reports the encapsulation on a `Tunnel protocol/transport GRE/IP` line;
+    `GRE` maps to `gre`, `IPSEC` to `vti`. Any other transport is skipped rather
+    than given an invented type.
+    """
+    tunnels = {}
+    cur_name = None
+    cur = {}
+
+    def _commit():
+        if cur_name and cur.get("type") in ("gre", "vti"):
+            tunnels[cur_name] = {
+                "type": cur["type"],
+                "source": cur.get("source", ""),
+                "destination": cur.get("destination", ""),
+                "enabled": cur.get("enabled", True),
+                "tunnel_state": cur.get("tunnel_state", ""),
+            }
+
+    for line in text.splitlines():
+        m = re.match(
+            r"^(Tunnel\d+) is (administratively down|up|down).*?line protocol is (\w+)",
+            line,
+        )
+        if m:
+            _commit()
+            cur_name = m.group(1)
+            cur = {
+                "enabled": m.group(2) != "administratively down",
+                "tunnel_state": m.group(3).lower(),
+            }
+            continue
+        if cur_name is None:
+            continue
+        m = re.search(r"Tunnel source (\S+?),?\s+destination (\S+)", line)
+        if m:
+            cur["source"] = m.group(1).rstrip(",")
+            cur["destination"] = m.group(2)
+            continue
+        m = re.search(r"Tunnel protocol/transport (\S+)", line)
+        if m:
+            transport = m.group(1).upper()
+            if "GRE" in transport:
+                cur["type"] = "gre"
+            elif "IPSEC" in transport:
+                cur["type"] = "vti"
+
+    _commit()
+    return tunnels
+
+
+def _collect_tunnels(conn):
+    """Run the tunnel show command defensively and shape the result.
+
+    `tunnels` is an optional schema block: most devices have none and the command
+    may not apply. A failure degrades to "no tunnels" rather than breaking the
+    rest of collection.
+    """
+    try:
+        result = conn.cli(["show interfaces tunnel"])
+        return _parse_tunnels_cli(result.get("show interfaces tunnel", ""))
+    except Exception:
+        return {}
+
+
 @register("cisco_iosxe", netbox_slugs=("cisco-ios-xe", "ios-xe"))
 def get_reality(device):
     driver = get_network_driver("ios")
@@ -269,6 +342,9 @@ def get_reality(device):
         # `running_config`). NAPALM's get_config returns a dict keyed by
         # running/startup/candidate; we keep the running config only.
         running_config = conn.get_config(retrieve="running")["running"]
+        # v4.75: optional tunnel block. Separate, defensive call so a device
+        # without tunnel support never breaks the rest of collection.
+        tunnels = _collect_tunnels(conn)
     finally:
         conn.close()
 
@@ -304,6 +380,7 @@ def get_reality(device):
                 cli_output.get("show ip ospf neighbor detail", "")
             ),
         },
+        "tunnels": tunnels,
         "running_config": running_config,
         "software_version": facts.get("os_version", ""),
     }

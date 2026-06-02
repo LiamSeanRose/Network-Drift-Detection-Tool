@@ -153,6 +153,51 @@ def _build_ospf_adjacencies(ospf_neighbor_json):
             }
     return adjacencies
 
+def _build_tunnels(show_tunnel_json):
+    """Shape `show interfaces tunnel` eAPI output into the schema's `tunnels` block.
+
+    UNVALIDATED FIXTURE SHAPE (v4.75): the exact eAPI keys for EOS tunnel
+    interfaces are modelled here from the council notes, not yet captured from a
+    live cEOS GRE/VTI tunnel (the lab has none configured). Re-verify
+    `tunnelMode` / `sourceAddress` / `destinationAddress` / `interfaceStatus` /
+    `lineProtocolStatus` against the device when the lab grows a tunnel, the same
+    way the Nokia routing fixtures are pending validation.
+
+    Only GRE and VTI are in scope for v4.75 (tunnels schema proposal, Decision 2);
+    any other `tunnelMode` (ipsec, mpls, ...) is skipped rather than given an
+    invented type. Tunnel interface names are already canonical ("Tunnel0").
+    """
+    tunnels = {}
+    for name, info in show_tunnel_json.get("interfaces", {}).items():
+        mode = info.get("tunnelMode", "").lower()
+        if mode not in ("gre", "vti"):
+            continue
+        tunnels[name] = {
+            "type": mode,
+            "source": info.get("sourceAddress", "") or "",
+            "destination": info.get("destinationAddress", "") or "",
+            # EOS reports an admin-shut interface as interfaceStatus "disabled".
+            "enabled": info.get("interfaceStatus", "") != "disabled",
+            "tunnel_state": info.get("lineProtocolStatus", "").lower(),
+        }
+    return tunnels
+
+
+def _collect_tunnels(conn):
+    """Run the tunnel show command defensively and shape the result.
+
+    `tunnels` is an optional schema block (proposal Decision 1): most devices
+    have none, and older EOS may not support the command at all. A failure here
+    must degrade to "no tunnels" — never break collection of the rest of the
+    device — so the 99% tunnel-less case is unaffected.
+    """
+    try:
+        result = conn.device.run_commands(["show interfaces tunnel"], encoding="json")
+        return _build_tunnels(result[0])
+    except Exception:
+        return {}
+
+
 @register("arista_eos", netbox_slugs=("arista-eos", "eos"))
 def get_reality(device):
     driver = get_network_driver("eos")
@@ -184,6 +229,9 @@ def get_reality(device):
         # `running_config`). NAPALM's get_config returns a dict keyed by
         # running/startup/candidate; we keep the running config only.
         running_config = conn.get_config(retrieve="running")["running"]
+        # v4.75: optional tunnel block. Separate, defensive call so a device
+        # without tunnel support never breaks the rest of collection.
+        tunnels = _collect_tunnels(conn)
     finally:
         conn.close()
 
@@ -222,6 +270,7 @@ def get_reality(device):
         "vlans": _build_vlans(show_vlan_json),
         "bgp_neighbors": _build_bgp_neighbors(raw_bgp, bgp_summary_json),
         "ospf": {"adjacencies": _build_ospf_adjacencies(ospf_neighbor_json)},
+        "tunnels": tunnels,
         "running_config": running_config,
         "software_version": facts.get("os_version", ""),
     }
