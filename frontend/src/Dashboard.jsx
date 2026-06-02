@@ -352,12 +352,31 @@ export default function Dashboard() {
 function RecordFixModal({ drift, onSubmit, onCancel }) {
   const [cause, setCause] = useState('')
   const [fix, setFix] = useState('')
+  const [suggested, setSuggested] = useState(false)
   const pattern = `${drift.object.split(':')[0]} · ${drift.field} · ${drift.drift_kind}`
+
+  // AI3: pre-fill the form with a suggested cause/fix the user can edit. Only
+  // fills fields the user has not already typed into.
+  useEffect(() => {
+    let cancelled = false
+    apiFetch(`/drifts/${drift.id}/suggested-fix`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return
+        setCause((c) => c || data.cause || '')
+        setFix((f) => f || data.fix || '')
+        setSuggested(true)
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [drift.id])
+
   return (
     <div className="modal-overlay" onClick={onCancel}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <h2 className="modal__title">Record fix</h2>
         <p className="modal__pattern">{pattern}</p>
+        {suggested && <p className="modal__hint">AI-suggested — review and edit before saving.</p>}
         <label className="modal__label">
           Cause
           <textarea className="modal__textarea" value={cause} onChange={(e) => setCause(e.target.value)}

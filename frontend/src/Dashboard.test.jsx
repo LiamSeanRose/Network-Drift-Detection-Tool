@@ -20,6 +20,7 @@ function mockFetchRouted(drifts, history, alertRules = [], devices = []) {
     if (url === '/drifts/history') body = history
     else if (url.startsWith('/alert-rules')) body = alertRules
     else if (url.startsWith('/devices')) body = devices
+    else if (url.includes('/suggested-fix')) body = { cause: 'Suggested cause', fix: 'Suggested fix', source: 'deterministic' }
     return Promise.resolve({
       ok: true,
       status: 200,
@@ -241,6 +242,29 @@ describe('Dashboard', () => {
     expect(screen.getByRole('heading', { name: /record fix/i })).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/what caused this drift/i)).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/how was it resolved/i)).toBeInTheDocument()
+  })
+
+  it('pre-fills the record fix form with an AI suggestion', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-31T12:00:00+00:00',
+        causes: [], known_fix: null,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+
+    fireEvent.click(screen.getByText('core-sw-01'))
+    fireEvent.click(screen.getByRole('button', { name: /record fix/i }))
+
+    // The suggestion is fetched and pre-filled into the editable fields.
+    expect(await screen.findByText(/AI-suggested/i)).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Suggested cause')).toBeInTheDocument()
+    expect(screen.getByDisplayValue('Suggested fix')).toBeInTheDocument()
   })
 
   it('lists alert rules from the API', async () => {
