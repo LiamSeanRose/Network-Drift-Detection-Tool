@@ -17,7 +17,23 @@ from netdrift import differ
 from netdrift.fingerprint import fingerprint as make_fingerprint
 from netdrift.patterns.loader import load_patterns_dir, pattern_fingerprints
 
-PATTERNS_DIR = Path(__file__).resolve().parents[1] / "patterns"
+REPO_ROOT = Path(__file__).resolve().parents[1]
+PATTERNS_DIR = REPO_ROOT / "patterns"
+SRC_DIR = REPO_ROOT / "src"
+
+
+def test_no_unsafe_yaml_load_in_source():
+    """Patterns are user-supplied YAML, so the loader must use yaml.safe_load.
+    This is the validate-patterns lint, folded into the test suite: no module
+    under src/ may call the unsafe yaml.load / yaml.full_load / yaml.unsafe_load.
+    """
+    banned = ("yaml.load(", "yaml.full_load(", "yaml.unsafe_load(")
+    offenders = []
+    for py in SRC_DIR.rglob("*.py"):
+        text = py.read_text()
+        if any(b in text for b in banned):
+            offenders.append(str(py.relative_to(REPO_ROOT)))
+    assert not offenders, f"unsafe YAML load found in: {offenders}; use yaml.safe_load"
 
 
 def _bundle_fingerprints():
