@@ -514,6 +514,19 @@ def list_acknowledgements(session):
     )
 
 
+def delete_acknowledgements_for(session, device, fingerprint) -> int:
+    """Delete every acknowledgement for a (device, fingerprint). Returns the
+    number removed. Backs the un-acknowledge (toggle-off) endpoint. No commit."""
+    return (
+        session.query(Acknowledgement)
+        .filter(
+            Acknowledgement.device == device,
+            Acknowledgement.fingerprint == fingerprint,
+        )
+        .delete(synchronize_session=False)
+    )
+
+
 def delete_acknowledgement(session, ack_id) -> bool:
     """Remove an acknowledgement (un-acknowledge). Returns True if a row was
     removed. Does NOT commit."""

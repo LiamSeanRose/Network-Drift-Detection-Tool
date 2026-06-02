@@ -150,6 +150,18 @@ export default function Dashboard() {
       .catch((err) => { setApplyError(err.message); setApplyLoading(false) })
   }, [dryRunFor, loadDrifts])
 
+  // v3.5 — toggle a drift acknowledgement (POST to acknowledge, DELETE to clear)
+  const handleToggleAck = useCallback((d) => {
+    const req = d.acknowledged
+      ? apiFetch(`/drifts/${d.id}/acknowledge`, { method: 'DELETE' })
+      : apiFetch(`/drifts/${d.id}/acknowledge`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ acknowledged_until: null }),
+        })
+    return req.then((r) => { if (r.ok) loadDrifts() }).catch(() => {})
+  }, [loadDrifts])
+
   // v2.5 — load audit log for a known issue
   const handleShowAuditLog = useCallback((issueId) => {
     if (auditLogFor === issueId) { setAuditLogFor(null); return }
@@ -207,13 +219,12 @@ export default function Dashboard() {
           <tbody>
             {drifts.map((d) => {
               const causes = d.causes || []
-              const hasContent = causes.length > 0 || !!d.known_fix
               const isExpanded = expandedId === d.id
               const hasExecutableFix = d.known_fix?.remediation?.kind != null
               return (
                 <Fragment key={d.id}>
                   <tr
-                    className={`sev-${d.severity} expandable`}
+                    className={`sev-${d.severity} expandable${d.acknowledged ? ' acknowledged' : ''}`}
                     onClick={() => setExpandedId(isExpanded ? null : d.id)}
                   >
                     <td>{d.device}</td>
@@ -224,12 +235,22 @@ export default function Dashboard() {
                     <td>{d.drift_kind}</td>
                     <td className="col-severity">{d.severity}</td>
                     <td className="col-detected">{d.detected_at}</td>
-                    <td className="col-expand">{hasContent ? (isExpanded ? '▾' : '▸') : ''}</td>
+                    <td className="col-expand">{isExpanded ? '▾' : '▸'}</td>
                   </tr>
 
-                  {isExpanded && hasContent && (
+                  {isExpanded && (
                     <tr className="causes-row">
                       <td colSpan={9}>
+                        <div className="ack-controls">
+                          <button
+                            type="button"
+                            className="ack-btn"
+                            onClick={(e) => { e.stopPropagation(); handleToggleAck(d) }}
+                          >
+                            {d.acknowledged ? 'Unacknowledge' : 'Acknowledge'}
+                          </button>
+                          {d.acknowledged && <span className="ack-note">acknowledged — alerts suppressed</span>}
+                        </div>
                         {d.known_fix && (
                           <div className="known-fix">
                             <span className="known-fix__label">known fix</span>
