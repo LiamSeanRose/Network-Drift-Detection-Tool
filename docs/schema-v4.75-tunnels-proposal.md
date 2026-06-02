@@ -1,10 +1,12 @@
 # `docs/schema-v4.75-tunnels-proposal.md` — Tunnel/Overlay Drift (Proposal)
 
-> **Status:** Proposal for joint sign-off. Not yet folded into `docs/schema.md`.
+> **Status:** Folded into `docs/schema.md` on branch `feat/v4.75-tunnel-drift`
+> (2026-06-02) — **pending Matthew's `schema-sign-off`** before that PR merges.
 > **Owner:** Liam (data-in). **Requires:** both partners' sign-off on the schema
-> shape before any v4.75 branch opens (`schema-sign-off`).
-> **Gate:** v4.0 tagged before the implementation branch opens. This document can
-> be reviewed and ratified now; the collector/differ work waits for the tag.
+> shape (`schema-sign-off`).
+> **Gate:** v4.0 is functionally complete (all DoD items checked) but not yet
+> tagged; Liam directed the implementation PR to proceed ahead of the tag,
+> accepting minor rework risk, consistent with the collectors already merged.
 
 ---
 

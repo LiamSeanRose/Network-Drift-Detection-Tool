@@ -22,14 +22,30 @@ def iface(**overrides):
     return base
 
 
+def tunnel(**overrides):
+    """A schema-complete tunnel dict (v4.75). Defaults to an enabled GRE tunnel
+    that is operationally up; override any field."""
+    base = {
+        "type": "gre",
+        "source": "192.0.2.1",
+        "destination": "198.51.100.1",
+        "enabled": True,
+        "tunnel_state": "up",
+    }
+    base.update(overrides)
+    return base
+
+
 def state(interfaces=None, vlans=None, bgp_neighbors=None, ospf=None,
-          running_config="", software_version=""):
+          running_config="", software_version="", tunnels=None):
     """A schema-complete device-state object wrapping the given interfaces
     and vlans (both default to empty). v0.3 adds bgp_neighbors and ospf;
     both default to the "no routing on this device" empty shape. v1.0 adds
     running_config; defaults to "" (no template / no config collected).
-    software_version defaults to "" (not tracked)."""
-    return {
+    software_version defaults to "" (not tracked). v4.75 adds the optional
+    `tunnels` block: when not passed the key is omitted entirely, matching a
+    collector/intent with no tunnels (so absent-on-both produces no drift)."""
+    base = {
         "interfaces": interfaces or {},
         "vlans": vlans or {},
         "bgp_neighbors": bgp_neighbors or {},
@@ -37,6 +53,9 @@ def state(interfaces=None, vlans=None, bgp_neighbors=None, ospf=None,
         "running_config": running_config,
         "software_version": software_version,
     }
+    if tunnels is not None:
+        base["tunnels"] = tunnels
+    return base
 
 
 # --- v0.1 fields: description, enabled, ip_addresses -------------------------
@@ -255,3 +274,125 @@ def test_software_version_skipped_when_reality_empty():
 
 def test_software_version_skipped_when_both_empty():
     assert diff(state(), state()) == []
+
+
+# --- v4.75 tunnels ----------------------------------------------------------
+
+def test_absent_tunnels_key_on_both_sides_no_drift():
+    # Neither side declares the optional tunnels block -> nothing to compare.
+    assert diff(state(), state()) == []
+
+
+def test_empty_tunnels_blocks_no_drift():
+    assert diff(state(tunnels={}), state(tunnels={})) == []
+
+
+def test_identical_tunnels_no_drift():
+    intent = state(tunnels={"Tunnel0": tunnel()})
+    reality = state(tunnels={"Tunnel0": tunnel()})
+    assert diff(intent, reality) == []
+
+
+def test_tunnel_missing_in_reality_is_critical():
+    intent = state(tunnels={"Tunnel0": tunnel()})
+    reality = state(tunnels={})
+    result = diff(intent, reality)
+    assert len(result) == 1
+    assert result[0]["object"] == "tunnel:Tunnel0"
+    assert result[0]["field"] == "_tunnel"
+    assert result[0]["drift_kind"] == "missing_in_reality"
+    assert result[0]["severity"] == "critical"
+
+
+def test_tunnel_undocumented_is_info():
+    intent = state(tunnels={})
+    reality = state(tunnels={"Tunnel0": tunnel()})
+    result = diff(intent, reality)
+    assert len(result) == 1
+    assert result[0]["field"] == "_tunnel"
+    assert result[0]["drift_kind"] == "missing_in_intent"
+    assert result[0]["severity"] == "info"
+
+
+def test_tunnel_only_present_intent_uses_get_default():
+    # Reality omits the key entirely; an intent tunnel still surfaces as missing.
+    intent = state(tunnels={"Tunnel0": tunnel()})
+    reality = state()
+    result = diff(intent, reality)
+    assert len(result) == 1
+    assert result[0]["drift_kind"] == "missing_in_reality"
+
+
+def test_tunnel_type_mismatch_is_warning():
+    intent = state(tunnels={"Tunnel0": tunnel(type="gre")})
+    reality = state(tunnels={"Tunnel0": tunnel(type="vti")})
+    result = diff(intent, reality)
+    assert len(result) == 1
+    assert result[0]["field"] == "type"
+    assert result[0]["severity"] == "warning"
+
+
+def test_tunnel_source_mismatch_is_warning():
+    intent = state(tunnels={"Tunnel0": tunnel(source="192.0.2.1")})
+    reality = state(tunnels={"Tunnel0": tunnel(source="192.0.2.2")})
+    result = diff(intent, reality)
+    assert len(result) == 1
+    assert result[0]["field"] == "source"
+    assert result[0]["severity"] == "warning"
+
+
+def test_tunnel_destination_mismatch_is_warning():
+    intent = state(tunnels={"Tunnel0": tunnel(destination="198.51.100.1")})
+    reality = state(tunnels={"Tunnel0": tunnel(destination="203.0.113.1")})
+    result = diff(intent, reality)
+    assert len(result) == 1
+    assert result[0]["field"] == "destination"
+    assert result[0]["severity"] == "warning"
+
+
+def test_tunnel_enabled_down_when_intent_up_is_critical():
+    intent = state(tunnels={"Tunnel0": tunnel(enabled=True)})
+    reality = state(tunnels={"Tunnel0": tunnel(enabled=False)})
+    result = diff(intent, reality)
+    assert len(result) == 1
+    assert result[0]["field"] == "enabled"
+    assert result[0]["severity"] == "critical"
+
+
+def test_tunnel_enabled_up_when_intent_down_is_warning():
+    intent = state(tunnels={"Tunnel0": tunnel(enabled=False)})
+    reality = state(tunnels={"Tunnel0": tunnel(enabled=True)})
+    result = diff(intent, reality)
+    assert len(result) == 1
+    assert result[0]["field"] == "enabled"
+    assert result[0]["severity"] == "warning"
+
+
+def test_tunnel_state_down_when_intent_up_is_critical():
+    intent = state(tunnels={"Tunnel0": tunnel(tunnel_state="up")})
+    reality = state(tunnels={"Tunnel0": tunnel(tunnel_state="down")})
+    result = diff(intent, reality)
+    assert len(result) == 1
+    assert result[0]["field"] == "tunnel_state"
+    assert result[0]["severity"] == "critical"
+
+
+def test_tunnel_state_up_when_intent_down_is_warning():
+    intent = state(tunnels={"Tunnel0": tunnel(tunnel_state="down")})
+    reality = state(tunnels={"Tunnel0": tunnel(tunnel_state="up")})
+    result = diff(intent, reality)
+    assert len(result) == 1
+    assert result[0]["field"] == "tunnel_state"
+    assert result[0]["severity"] == "warning"
+
+
+def test_tunnel_multiple_field_mismatches_each_emit_a_record():
+    intent = state(tunnels={"Tunnel0": tunnel(
+        type="gre", source="192.0.2.1", destination="198.51.100.1",
+        enabled=True, tunnel_state="up")})
+    reality = state(tunnels={"Tunnel0": tunnel(
+        type="vti", source="192.0.2.9", destination="198.51.100.9",
+        enabled=False, tunnel_state="down")})
+    result = diff(intent, reality)
+    fields = {d["field"] for d in result}
+    assert fields == {"type", "source", "destination", "enabled", "tunnel_state"}
