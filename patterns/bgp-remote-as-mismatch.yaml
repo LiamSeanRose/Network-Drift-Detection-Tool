@@ -1,0 +1,8 @@
+name: "BGP neighbor remote-AS does not match intent"
+object_type: bgp_neighbor
+field: remote_as
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The configured remote-AS for this neighbor differs from intent. Unless the peer was also changed, the session will not establish because the OPEN message carries a mismatched AS."
+fix: "Set the remote-AS to the intended value. Verify it against the peer's actual AS before changing, since correcting the wrong side just relocates the mismatch."

@@ -4,10 +4,10 @@ This is the pure I/O-and-validation layer. It does not touch the database; the
 ``import-patterns`` CLI command (slice 3) consumes ``load_patterns_dir`` and
 upserts the results into ``known_issues``.
 
-``yaml.safe_load`` is mandatory — ``yaml.load`` with the default loader can
-construct arbitrary Python objects from a malicious file, and patterns are
-exactly the kind of artifact a user pastes from the internet. A CI lint rule
-also flags ``yaml.load(`` repo-wide.
+``yaml.safe_load`` is mandatory — the unsafe loader can construct arbitrary
+Python objects from a malicious file, and patterns are exactly the kind of
+artifact a user pastes from the internet. A guard test
+(``test_no_unsafe_yaml_load_in_source``) bans the unsafe loaders repo-wide.
 """
 
 from pathlib import Path
