@@ -33,6 +33,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from netdrift import explain
 from netdrift.appliers.base import RemediationBlockedError, check_blocked
 from netdrift.appliers.registry import get_applier
 from netdrift.diagnose import diagnose
@@ -790,10 +791,18 @@ def remediate_dry_run(issue_id: int, body: RemediateRequest,
     )
     session.commit()
 
+    # AI2: opt-in plain-English summary of what the fix would do. Generated here
+    # because a dry-run is an explicit, infrequent user action (not a read path);
+    # off by default, with a deterministic command-count fallback.
+    summary = explain.summarize_remediation(
+        result.rendered_commands, result.dry_run_diff, drift=drift_record
+    )
+
     return {
         "transport": result.transport,
         "rendered_commands": result.rendered_commands,
         "dry_run_diff": result.dry_run_diff,
+        "summary": summary,
         "would_apply": False,
     }
 

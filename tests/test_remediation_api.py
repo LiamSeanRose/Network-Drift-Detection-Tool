@@ -279,6 +279,9 @@ def test_dry_run_returns_diff(client):
     assert data["transport"] == "cli"
     assert "rendered_commands" in data
     assert "dry_run_diff" in data
+    # AI2: a remediation summary is always present (deterministic by default).
+    assert data["summary"]["source"] == "deterministic"
+    assert data["summary"]["text"]
 
 
 def test_dry_run_records_audit_event(client):
