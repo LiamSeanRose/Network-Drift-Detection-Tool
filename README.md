@@ -6,12 +6,13 @@ surfaces the differences ("drift").
 
 The open-source alternative to NetBox Assurance.
 
-**Status:** v3.0 — multi-vendor drift detection across Arista EOS, Cisco IOS-XE,
+**Status:** v3.5 — multi-vendor drift detection across Arista EOS, Cisco IOS-XE,
 Nokia SR Linux, and Juniper Junos; interface, VLAN, routing (BGP/OSPF), and
 running-config drift; optional auto-remediation that can push fixes back to
 devices (**off by default**, gated, with a hard do-not-apply list); webhook
-notifications; Postgres history; and a FastAPI + React dashboard. Intent can come
-from NetBox or Nautobot. See [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) for the
+notifications; API-key authentication, per-device SLA alerting, and drift
+acknowledgement; Postgres history; and a FastAPI + React dashboard. Intent can
+come from NetBox or Nautobot. See [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) for the
 roadmap and [`SECURITY.md`](SECURITY.md) before exposing the API.
 
 ## Architecture
@@ -81,9 +82,10 @@ per-issue flag, and a per-device pause — with operational-symptom fields and
 management interfaces on a hard do-not-apply list. Every fix can be dry-run
 before it is applied.
 
-The HTTP API that triggers applies ships **without authentication before v3.5**.
-Do not expose it to an untrusted network; run it behind your own auth layer or
-expose only the read-only deployment. See [`SECURITY.md`](SECURITY.md).
+As of v3.5 the HTTP API authenticates mutating requests with an `X-API-Key`
+header (mint keys with `driftcheck create-api-key`); `GET /drifts` and `/health`
+remain public by design. Still review [`SECURITY.md`](SECURITY.md) before exposing
+the API to an untrusted network.
 
 ## Frontend (development)
 
