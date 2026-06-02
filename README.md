@@ -6,13 +6,14 @@ surfaces the differences ("drift").
 
 The open-source alternative to NetBox Assurance.
 
-**Status:** v3.5 — multi-vendor drift detection across Arista EOS, Cisco IOS-XE,
+**Status:** v4.0 — multi-vendor drift detection across Arista EOS, Cisco IOS-XE,
 Nokia SR Linux, and Juniper Junos; interface, VLAN, routing (BGP/OSPF), and
 running-config drift; optional auto-remediation that can push fixes back to
 devices (**off by default**, gated, with a hard do-not-apply list); webhook
 notifications; API-key authentication, per-device SLA alerting, and drift
-acknowledgement; Postgres history; and a FastAPI + React dashboard. Intent can
-come from NetBox or Nautobot. See [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) for the
+acknowledgement; a bundled community pattern library that seeds the knowledge
+base on a fresh install; Postgres history; and a FastAPI + React dashboard.
+Intent can come from NetBox or Nautobot. See [`docs/PROJECT_PLAN.md`](docs/PROJECT_PLAN.md) for the
 roadmap and [`SECURITY.md`](SECURITY.md) before exposing the API.
 
 ## Architecture
