@@ -42,6 +42,7 @@ from netdrift.storage.repository import (
     create_acknowledgement,
     create_alert_rule,
     create_api_key,
+    delete_acknowledgements_for,
     delete_alert_rule,
     delete_api_key,
     get_device_setting,
@@ -430,6 +431,26 @@ def acknowledge_drift(event_id: int, body: AcknowledgeIn,
         event.device, fp, until.isoformat() if until else "permanent",
     )
     return _ack_dict(ack)
+
+
+@app.delete("/drifts/{event_id}/acknowledge")
+def unacknowledge_drift(event_id: int, session: Session = Depends(get_session)):
+    """Un-acknowledge a drift event (toggle off) — remove any acknowledgement
+    for the event's (device, fingerprint) so it alerts again. 404 if the event
+    is unknown."""
+    event = get_drift_event(session, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail=f"Drift event {event_id} not found.")
+    fp = make_fingerprint({
+        "object": event.object_ref, "field": event.field, "drift_kind": event.drift_kind,
+    })
+    deleted = delete_acknowledgements_for(session, event.device, fp)
+    session.commit()
+    logger.info(
+        "drift un-acknowledged: device=%r fingerprint=%r removed=%d (applied_by=api)",
+        event.device, fp, deleted,
+    )
+    return {"deleted": deleted, "device": event.device, "fingerprint": fp}
 
 
 # ---------------------------------------------------------------------------

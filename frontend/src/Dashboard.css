@@ -227,6 +227,39 @@
   color: var(--accent);
 }
 
+/* ---- Acknowledge toggle (v3.5) ----------------------------------- */
+.drift-table tr.acknowledged td {
+  opacity: 0.45;
+}
+
+.ack-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 0.6rem;
+}
+
+.ack-btn {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.ack-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.ack-note {
+  color: var(--fg-muted);
+  font-size: 0.8rem;
+}
+
 /* ---- States: loading / error / empty ----------------------------- */
 
 .dashboard__state {
