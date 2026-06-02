@@ -56,13 +56,14 @@ def test_bundle_loads_and_meets_minimum_counts():
     for _path, pattern in loaded:
         by_type[pattern.object_type] = by_type.get(pattern.object_type, 0) + 1
 
-    assert len(loaded) >= 24
+    assert len(loaded) >= 31
     assert by_type["interface"] >= 8
     assert by_type["vlan"] >= 3
     assert by_type["bgp_neighbor"] >= 6
     assert by_type["ospf_adjacency"] >= 5
     assert by_type["config"] >= 1
     assert by_type["device"] >= 1
+    assert by_type["tunnel"] >= 7
 
 
 def test_bundle_fingerprints_are_unique():
@@ -113,7 +114,7 @@ def _iface(enabled=True, description="", ip_addresses=None, mode="routed",
 
 
 def test_every_drift_the_bundle_covers_matches_differ_output():
-    """Craft an intent/reality pair that triggers all 24 bundled drift kinds and
+    """Craft an intent/reality pair that triggers all 31 bundled drift kinds and
     assert the fingerprints differ produces are exactly the bundle's set."""
     intent = _state(
         interfaces={
@@ -137,6 +138,16 @@ def test_every_drift_the_bundle_covers_matches_differ_output():
             "3.3.3.3": {"area": "0.0.0.0", "interface": "Ethernet2",
                          "adjacency_state": "full"},
         }},
+        tunnels={
+            # Tunnel0 differs on all five comparable fields at once.
+            "Tunnel0": {"type": "gre", "source": "192.0.2.1",
+                         "destination": "198.51.100.1", "enabled": True,
+                         "tunnel_state": "up"},
+            # Tunnel1 is in intent only -> tunnel missing_in_reality.
+            "Tunnel1": {"type": "gre", "source": "192.0.2.5",
+                         "destination": "198.51.100.5", "enabled": True,
+                         "tunnel_state": "up"},
+        },
         running_config="hostname a\ninterface Ethernet1\n",
         software_version="4.30.1F",
     )
@@ -166,6 +177,17 @@ def test_every_drift_the_bundle_covers_matches_differ_output():
             "9.9.9.9": {"area": "0.0.0.0", "interface": "Ethernet3",
                          "adjacency_state": "full"},
         }},
+        tunnels={
+            # Tunnel0 differs on type/source/destination/enabled/tunnel_state.
+            "Tunnel0": {"type": "vti", "source": "192.0.2.9",
+                         "destination": "198.51.100.9", "enabled": False,
+                         "tunnel_state": "down"},
+            # Tunnel1 absent -> tunnel missing_in_reality.
+            # Tunnel2 reality-only -> tunnel missing_in_intent.
+            "Tunnel2": {"type": "gre", "source": "192.0.2.7",
+                         "destination": "198.51.100.7", "enabled": True,
+                         "tunnel_state": "up"},
+        },
         # Differs from intent -> config running_config value_mismatch.
         running_config="hostname b\ninterface Ethernet1\n",
         # Differs from intent -> device software_version value_mismatch.
@@ -190,7 +212,7 @@ def test_real_bundle_imports_and_round_trips():
     with Session() as s:
         summary = import_patterns_dir(s, PATTERNS_DIR)
         s.commit()
-        assert summary["created"] >= 24
+        assert summary["created"] >= 31
         assert summary["updated"] == 0
         assert all(i.auto_apply_enabled is False for i in list_known_issues(s))
 

@@ -1,0 +1,8 @@
+name: "Tunnel is administratively down but intent expects it up"
+object_type: tunnel
+field: enabled
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The tunnel interface is shut on the device while NetBox intends it enabled. Usually a manual shutdown during troubleshooting that was never reverted, or a config push that did not include 'no shutdown'."
+fix: "Re-enable the tunnel interface ('no shutdown') if the overlay should be live, or document the intended-down state in NetBox."

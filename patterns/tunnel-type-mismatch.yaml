@@ -1,0 +1,8 @@
+name: "Tunnel encapsulation type differs from intent"
+object_type: tunnel
+field: type
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The tunnel's encapsulation (GRE vs VTI) on the device does not match what NetBox documents. The two ends of an overlay must agree on encapsulation, so a mismatch usually means the wrong template was applied or intent is stale."
+fix: "Reconfigure the tunnel to the intended encapsulation, or correct the documented type in NetBox if the device is right."

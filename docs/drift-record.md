@@ -26,12 +26,13 @@ freezes the shape so both partners know what they're signing off on before any c
     # Which object drifted. Format: "<type>:<identifier>" or just "<type>" for
     # device-level fields.
     # Examples: "interface:Ethernet1", "vlan:10", "bgp_neighbor:10.0.0.2",
-    #           "ospf_adjacency:2.2.2.2", "config", "device"
+    #           "ospf_adjacency:2.2.2.2", "tunnel:Tunnel0", "config", "device"
     "object": str,
 
     # Which field on that object drifted.
     # Examples: "enabled", "ip_addresses", "description", "_interface",
-    #           "running_config", "software_version", "session_state"
+    #           "running_config", "software_version", "session_state",
+    #           "tunnel_state", "_tunnel"
     "field": str,
 
     # The class of difference.
@@ -68,6 +69,13 @@ freezes the shape so both partners know what they're signing off on before any c
 | `session_state`, `adjacency_state` | any mismatch | `warning` |
 | `running_config` | mismatch | `warning` |
 | `software_version` | mismatch | `warning` |
+| `_tunnel` | missing in reality | `critical` |
+| `_tunnel` | missing in intent | `info` |
+| `enabled` (tunnel) | intent up, reality down | `critical` |
+| `enabled` (tunnel) | intent down, reality up | `warning` |
+| `tunnel_state` | intent up, reality not up | `critical` |
+| `tunnel_state` | intent down, reality up | `warning` |
+| `type`, `source`, `destination` (tunnel) | any mismatch | `warning` |
 
 ## Joint sign-off requirement
 
