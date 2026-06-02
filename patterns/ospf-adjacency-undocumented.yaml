@@ -1,0 +1,8 @@
+name: "Undocumented OSPF adjacency present on the device"
+object_type: ospf_adjacency
+field: _ospf_adjacency
+drift_kinds:
+  - missing_in_intent
+vendors: []
+cause: "The device has an OSPF adjacency NetBox does not model. Often a peering over a link that was added without updating the source of truth."
+fix: "Add the adjacency to NetBox if the link is intended, or investigate why an undocumented neighbor is forming an adjacency. Resolve on the intent side."

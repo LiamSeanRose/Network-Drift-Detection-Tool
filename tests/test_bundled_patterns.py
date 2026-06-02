@@ -13,9 +13,16 @@ the patterns silently never matching.
 
 from pathlib import Path
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+
 from netdrift import differ
 from netdrift.fingerprint import fingerprint as make_fingerprint
+from netdrift.patterns.exporter import export_known_issues
+from netdrift.patterns.importer import import_patterns_dir, import_patterns_text
 from netdrift.patterns.loader import load_patterns_dir, pattern_fingerprints
+from netdrift.storage.models import Base
+from netdrift.storage.repository import list_known_issues
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 PATTERNS_DIR = REPO_ROOT / "patterns"
@@ -49,11 +56,13 @@ def test_bundle_loads_and_meets_minimum_counts():
     for _path, pattern in loaded:
         by_type[pattern.object_type] = by_type.get(pattern.object_type, 0) + 1
 
-    assert len(loaded) >= 20
+    assert len(loaded) >= 24
     assert by_type["interface"] >= 8
     assert by_type["vlan"] >= 3
-    assert by_type["bgp_neighbor"] >= 5
-    assert by_type["ospf_adjacency"] >= 4
+    assert by_type["bgp_neighbor"] >= 6
+    assert by_type["ospf_adjacency"] >= 5
+    assert by_type["config"] >= 1
+    assert by_type["device"] >= 1
 
 
 def test_bundle_fingerprints_are_unique():
@@ -104,7 +113,7 @@ def _iface(enabled=True, description="", ip_addresses=None, mode="routed",
 
 
 def test_every_drift_the_bundle_covers_matches_differ_output():
-    """Craft an intent/reality pair that triggers all 20 bundled drift kinds and
+    """Craft an intent/reality pair that triggers all 24 bundled drift kinds and
     assert the fingerprints differ produces are exactly the bundle's set."""
     intent = _state(
         interfaces={
@@ -128,6 +137,8 @@ def test_every_drift_the_bundle_covers_matches_differ_output():
             "3.3.3.3": {"area": "0.0.0.0", "interface": "Ethernet2",
                          "adjacency_state": "full"},
         }},
+        running_config="hostname a\ninterface Ethernet1\n",
+        software_version="4.30.1F",
     )
     reality = _state(
         interfaces={
@@ -143,12 +154,22 @@ def test_every_drift_the_bundle_covers_matches_differ_output():
             "10.0.0.1": {"remote_as": 65009, "enabled": False,
                           "description": "renamed", "session_state": "active"},
             # 10.0.0.2 absent -> bgp_neighbor missing_in_reality.
+            # 10.0.0.9 reality-only -> bgp_neighbor missing_in_intent.
+            "10.0.0.9": {"remote_as": 65003, "enabled": True,
+                          "description": "peer-c", "session_state": "established"},
         },
         ospf={"adjacencies": {
             "2.2.2.2": {"area": "0.0.0.1", "interface": "Ethernet9",
                          "adjacency_state": "init"},
             # 3.3.3.3 absent -> ospf_adjacency missing_in_reality.
+            # 9.9.9.9 reality-only -> ospf_adjacency missing_in_intent.
+            "9.9.9.9": {"area": "0.0.0.0", "interface": "Ethernet3",
+                         "adjacency_state": "full"},
         }},
+        # Differs from intent -> config running_config value_mismatch.
+        running_config="hostname b\ninterface Ethernet1\n",
+        # Differs from intent -> device software_version value_mismatch.
+        software_version="4.31.2F",
     )
 
     produced = {make_fingerprint(d) for d in differ.diff(intent, reality)}
@@ -157,3 +178,27 @@ def test_every_drift_the_bundle_covers_matches_differ_output():
     # Every drift this pair produces is covered by a bundled pattern, and the
     # bundle has no fingerprint that differ cannot produce.
     assert produced == bundle
+
+
+def test_real_bundle_imports_and_round_trips():
+    """The shipped patterns/ dir imports cleanly and survives an
+    export -> wipe -> import -> export cycle byte-for-byte. Guards the actual
+    bundle (including the config/device patterns) through the full I/O path."""
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    with Session() as s:
+        summary = import_patterns_dir(s, PATTERNS_DIR)
+        s.commit()
+        assert summary["created"] >= 24
+        assert summary["updated"] == 0
+        assert all(i.auto_apply_enabled is False for i in list_known_issues(s))
+
+        export1 = export_known_issues(s)
+        for issue in list_known_issues(s):
+            s.delete(issue)
+        s.commit()
+
+        import_patterns_text(s, export1)
+        s.commit()
+        assert export_known_issues(s) == export1
