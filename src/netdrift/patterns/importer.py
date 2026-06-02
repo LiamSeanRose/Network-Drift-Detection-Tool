@@ -17,7 +17,13 @@ Imports always land with ``auto_apply_enabled=False`` (enforced in
 after the confirm-threshold gate, never the importer.
 """
 
-from netdrift.patterns.loader import load_patterns_dir, pattern_fingerprints
+import yaml
+
+from netdrift.patterns.loader import (
+    PatternError,
+    load_patterns_dir,
+    pattern_fingerprints,
+)
 from netdrift.patterns.schema import PatternSchema
 from netdrift.storage.repository import upsert_known_issue
 
@@ -75,22 +81,29 @@ def pattern_to_known_issues(pattern: PatternSchema) -> list[dict]:
     ]
 
 
-def import_patterns_dir(session, path) -> dict:
-    """Load every pattern under ``path`` and upsert it into ``known_issues``.
-
-    Does NOT commit — the caller owns the transaction boundary. Raises
-    ``PatternError`` (from the loader) if any file is invalid or two patterns
-    collide on a fingerprint, before any row is written.
-
-    Returns a summary: ``{files, created, updated, fingerprints}``.
+def _assert_no_fingerprint_collisions(patterns: list[PatternSchema]) -> None:
+    """Raise PatternError if two patterns map to the same fingerprint — they
+    would fight over one known_issues row and the last write would silently win.
     """
-    loaded = load_patterns_dir(path)
+    owner: dict[str, str] = {}
+    for pattern in patterns:
+        for fp in pattern_fingerprints(pattern):
+            if fp in owner:
+                raise PatternError(
+                    f"fingerprint collision on {fp!r}: "
+                    f"{owner[fp]!r} and {pattern.name!r} map to the same fingerprint"
+                )
+            owner[fp] = pattern.name
 
+
+def _upsert_patterns(session, patterns: list[PatternSchema]) -> dict:
+    """Upsert a list of validated patterns. Does NOT commit. Shared by the
+    directory and text/bundle import paths."""
     created = 0
     updated = 0
     fingerprints: list[str] = []
 
-    for _file, pattern in loaded:
+    for pattern in patterns:
         for record in pattern_to_known_issues(pattern):
             _issue, was_created = upsert_known_issue(
                 session,
@@ -105,9 +118,53 @@ def import_patterns_dir(session, path) -> dict:
             else:
                 updated += 1
 
-    return {
-        "files": len(loaded),
-        "created": created,
-        "updated": updated,
-        "fingerprints": fingerprints,
-    }
+    return {"created": created, "updated": updated, "fingerprints": fingerprints}
+
+
+def import_patterns_dir(session, path) -> dict:
+    """Load every pattern under ``path`` and upsert it into ``known_issues``.
+
+    Does NOT commit — the caller owns the transaction boundary. Raises
+    ``PatternError`` (from the loader) if any file is invalid or two patterns
+    collide on a fingerprint, before any row is written.
+
+    Returns a summary: ``{files, created, updated, fingerprints}``.
+    """
+    loaded = load_patterns_dir(path)
+    patterns = [pattern for _file, pattern in loaded]
+    summary = _upsert_patterns(session, patterns)
+    summary["files"] = len(loaded)
+    return summary
+
+
+def import_patterns_text(session, yaml_text: str) -> dict:
+    """Upsert patterns from a YAML *list* (the shape ``export_known_issues``
+    produces). The inverse of the exporter; used for the round-trip path.
+
+    Does NOT commit. Raises ``PatternError`` on a malformed bundle, an invalid
+    pattern, or a fingerprint collision, before any row is written.
+
+    Returns a summary: ``{files, created, updated, fingerprints}`` where
+    ``files`` is 1 (a bundle is a single document).
+    """
+    try:
+        data = yaml.safe_load(yaml_text)
+    except yaml.YAMLError as exc:
+        raise PatternError(f"invalid YAML bundle: {exc}") from exc
+
+    if data is None:
+        data = []
+    if not isinstance(data, list):
+        raise PatternError(
+            f"export bundle must be a YAML list of patterns, got {type(data).__name__}"
+        )
+
+    try:
+        patterns = [PatternSchema.model_validate(item) for item in data]
+    except Exception as exc:
+        raise PatternError(f"invalid pattern in bundle: {exc}") from exc
+
+    _assert_no_fingerprint_collisions(patterns)
+    summary = _upsert_patterns(session, patterns)
+    summary["files"] = 1
+    return summary
