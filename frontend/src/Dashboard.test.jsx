@@ -12,17 +12,6 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import Dashboard from './Dashboard'
 
-// A small helper: build a fake `fetch` that responds with the given JSON.
-function mockFetchOk(body) {
-  return vi.fn(() =>
-    Promise.resolve({
-      ok: true,
-      status: 200,
-      json: () => Promise.resolve(body),
-    })
-  )
-}
-
 // A fetch stub that routes /drifts and /drifts/history to separate payloads.
 function mockFetchRouted(drifts, history) {
   return vi.fn((url) => {
