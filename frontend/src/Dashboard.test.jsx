@@ -247,6 +247,42 @@ describe('Dashboard', () => {
     expect(screen.getByRole('button', { name: /^resume$/i })).toBeInTheDocument()
   })
 
+  it('shows an Acknowledge button on an unacknowledged drift', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-31T12:00:00+00:00', causes: [], known_fix: null,
+        acknowledged: false,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+
+    fireEvent.click(screen.getByText('core-sw-01'))
+    expect(screen.getByRole('button', { name: /^acknowledge$/i })).toBeInTheDocument()
+  })
+
+  it('shows Unacknowledge on an acknowledged drift', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-31T12:00:00+00:00', causes: [], known_fix: null,
+        acknowledged: true,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+
+    fireEvent.click(screen.getByText('core-sw-01'))
+    expect(screen.getByRole('button', { name: /unacknowledge/i })).toBeInTheDocument()
+  })
+
   it('shows an error message when the fetch fails', async () => {
     // /drifts returns 500; /drifts/history returns empty so only one "500"
     // is in the document (avoiding a `getByText` ambiguity).

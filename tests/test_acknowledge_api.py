@@ -126,3 +126,39 @@ def test_get_drifts_marks_acknowledged_after_ack(ctx):
     rows = client.get("/drifts").json()
     matching = [r for r in rows if r["id"] == event_id]
     assert matching and matching[0]["acknowledged"] is True
+
+
+# ---------------------------------------------------------------------------
+# DELETE /drifts/{id}/acknowledge — un-acknowledge (toggle off)
+# ---------------------------------------------------------------------------
+
+def test_unacknowledge_clears_the_acknowledgement(ctx):
+    client, TestingSession, event_id = ctx
+    client.post(f"/drifts/{event_id}/acknowledge", json={"acknowledged_until": None})
+
+    resp = client.delete(f"/drifts/{event_id}/acknowledge")
+    assert resp.status_code == 200
+    assert resp.json()["deleted"] >= 1
+
+    with TestingSession() as s:
+        assert is_acknowledged(s, "core-sw-01", EXPECTED_FP) is False
+
+
+def test_unacknowledge_reflected_in_get_drifts(ctx):
+    client, _, event_id = ctx
+    client.post(f"/drifts/{event_id}/acknowledge", json={"acknowledged_until": None})
+    client.delete(f"/drifts/{event_id}/acknowledge")
+    rows = client.get("/drifts").json()
+    matching = [r for r in rows if r["id"] == event_id]
+    assert matching and matching[0]["acknowledged"] is False
+
+
+def test_unacknowledge_unknown_drift_returns_404(ctx):
+    client, _, _ = ctx
+    assert client.delete("/drifts/9999/acknowledge").status_code == 404
+
+
+def test_unacknowledge_requires_api_key(ctx):
+    client, _, event_id = ctx
+    resp = client.delete(f"/drifts/{event_id}/acknowledge", headers={"X-API-Key": ""})
+    assert resp.status_code == 401
