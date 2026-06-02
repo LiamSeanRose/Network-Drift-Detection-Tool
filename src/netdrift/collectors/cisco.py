@@ -17,6 +17,7 @@ from datetime import datetime, timezone
 from napalm import get_network_driver
 
 from netdrift.collectors._common import build_ip_list as _build_ip_list
+from netdrift.collectors._common import normalize_area as _normalize_area
 from netdrift.collectors.base import register
 
 
@@ -146,18 +147,6 @@ def _normalize_ospf_state(ios_state):
     if state == "2WAY":
         return "2-way"
     return state.lower()
-
-
-def _normalize_area(area_str):
-    """Convert an IOS OSPF area to dotted-decimal (schema requirement).
-
-    IOS may report area as an integer ("0") or already dotted ("0.0.0.0").
-    """
-    area = area_str.strip()
-    if "." in area:
-        return area
-    n = int(area)
-    return f"{(n >> 24) & 0xff}.{(n >> 16) & 0xff}.{(n >> 8) & 0xff}.{n & 0xff}"
 
 
 def _parse_bgp_summary(napalm_bgp, bgp_summary_text):
