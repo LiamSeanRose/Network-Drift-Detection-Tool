@@ -489,6 +489,50 @@ def test_remediation_events_returned_newest_first(client, db_session):
 # confirmed_count derivation
 # ---------------------------------------------------------------------------
 
+# ---------------------------------------------------------------------------
+# SEC4 — apply/dry-run error responses must not echo raw NAPALM/gNMI text
+# (hostnames, IPs, partial config) to an unauthenticated client.
+# ---------------------------------------------------------------------------
+
+_SENSITIVE = "host=core-sw-01.mgmt 10.0.0.5 secret-community"
+
+
+def test_apply_error_response_is_sanitized(client):
+    def leaky_apply(remediation, drift, device, *, dry_run=False):
+        raise RuntimeError(_SENSITIVE)
+
+    applier_base._reset_registry()
+    applier_registry._reset()
+    applier_base.register("arista_eos")(leaky_apply)
+
+    issue_id = _create_known_issue(client, remediation=_RESTORE_INTENT).json()["id"]
+    drift_id = client.get("/drifts").json()[0]["id"]
+    resp = client.post(
+        f"/known-issues/{issue_id}/remediate/apply",
+        json={"drift_event_id": drift_id},
+    )
+    assert resp.status_code == 502
+    assert _SENSITIVE not in resp.text
+
+
+def test_dry_run_error_response_is_sanitized(client):
+    def leaky_apply(remediation, drift, device, *, dry_run=False):
+        raise RuntimeError(_SENSITIVE)
+
+    applier_base._reset_registry()
+    applier_registry._reset()
+    applier_base.register("arista_eos")(leaky_apply)
+
+    issue_id = _create_known_issue(client, remediation=_RESTORE_INTENT).json()["id"]
+    drift_id = client.get("/drifts").json()[0]["id"]
+    resp = client.post(
+        f"/known-issues/{issue_id}/remediate/dry-run",
+        json={"drift_event_id": drift_id},
+    )
+    assert resp.status_code == 502
+    assert _SENSITIVE not in resp.text
+
+
 def test_confirmed_count_only_counts_successes(db_session):
     with db_session as s:
         issue = save_known_issue(s, "obj_type|field|kind", "cause", "fix")
