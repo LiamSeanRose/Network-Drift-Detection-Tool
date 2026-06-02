@@ -19,7 +19,7 @@ import yaml
 from netdrift import differ
 from netdrift.collectors import registry
 from netdrift.patterns.importer import import_patterns_dir
-from netdrift.patterns.loader import PatternError
+from netdrift.patterns.loader import PatternError, load_patterns_dir
 from netdrift.pipeline import _resolve_intent_fn
 from netdrift.storage.database import get_sessionmaker
 from netdrift.storage.repository import create_api_key as _create_api_key_in_db
@@ -132,6 +132,38 @@ def _cmd_import_patterns(argv, session_factory=None):
     )
 
 
+def _cmd_validate_patterns(argv):
+    """Validate pattern YAML files without touching the database.
+
+    Loads and schema-validates every pattern and checks for fingerprint
+    collisions. Exits non-zero on any problem — this is what the CI
+    `validate-patterns` job runs, so adding a valid pattern needs no Python
+    change and a malformed one fails the build.
+    """
+    parser = argparse.ArgumentParser(
+        prog="driftcheck validate-patterns",
+        description="Validate community pattern YAML files (no database needed).",
+    )
+    parser.add_argument(
+        "path",
+        nargs="?",
+        default=str(PATTERNS_DIR),
+        help="directory of .yaml pattern files (default: ./patterns)",
+    )
+    args = parser.parse_args(argv)
+
+    try:
+        loaded = load_patterns_dir(args.path)
+    except PatternError as e:
+        sys.exit(f"Pattern validation failed: {e}")
+
+    fingerprints = sum(len(p.drift_kinds) for _, p in loaded)
+    print(
+        f"Validated {len(loaded)} pattern file(s) "
+        f"({fingerprints} fingerprint(s)). All valid."
+    )
+
+
 def main(argv=None, collectors=None):
     """Run a one-shot drift check for one device.
 
@@ -148,6 +180,10 @@ def main(argv=None, collectors=None):
 
     if argv and argv[0] == "import-patterns":
         _cmd_import_patterns(argv[1:])
+        return
+
+    if argv and argv[0] == "validate-patterns":
+        _cmd_validate_patterns(argv[1:])
         return
 
     if collectors is None:
