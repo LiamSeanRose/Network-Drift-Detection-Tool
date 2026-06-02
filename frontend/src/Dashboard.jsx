@@ -19,6 +19,9 @@ export default function Dashboard() {
   // `driftcheck create-api-key`. Stored in localStorage by api.setApiKey.
   const [apiKey, setApiKeyState] = useState(getApiKey)
 
+  // v3.5 — SLA alert rules
+  const [alertRules, setAlertRules] = useState(null)
+
   // v2.5 remediation state
   const [dryRunFor, setDryRunFor] = useState(null)       // {drift, issueId}
   const [dryRunResult, setDryRunResult] = useState(null)  // API response
@@ -47,12 +50,39 @@ export default function Dashboard() {
       .catch((err) => setHistoryError(err.message))
   }, [])
 
+  const loadAlertRules = useCallback(() => {
+    return apiFetch('/alert-rules')
+      .then((r) => { if (!r.ok) throw new Error(`API returned ${r.status}`); return r.json() })
+      .then((data) => setAlertRules(data))
+      .catch(() => setAlertRules([]))
+  }, [])
+
   // Initial load on mount. The loaders set a loading flag synchronously, which
   // the fetch-on-mount pattern requires; that is intentional here.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { loadDrifts(); loadHistory() }, [loadDrifts, loadHistory])
+  useEffect(() => { loadDrifts(); loadHistory(); loadAlertRules() },
+    [loadDrifts, loadHistory, loadAlertRules])
 
-  const handleRefresh = useCallback(() => { loadDrifts(); loadHistory() }, [loadDrifts, loadHistory])
+  const handleRefresh = useCallback(() => { loadDrifts(); loadHistory(); loadAlertRules() },
+    [loadDrifts, loadHistory, loadAlertRules])
+
+  const handleAddRule = useCallback((device, severity, windowMinutes) => {
+    return apiFetch('/alert-rules', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        device: device || null, severity, window_minutes: Number(windowMinutes),
+      }),
+    })
+      .then((r) => { if (r.ok) loadAlertRules() })
+      .catch(() => {})
+  }, [loadAlertRules])
+
+  const handleDeleteRule = useCallback((id) => {
+    return apiFetch(`/alert-rules/${id}`, { method: 'DELETE' })
+      .then(() => loadAlertRules())
+      .catch(() => {})
+  }, [loadAlertRules])
 
   const handleSubmitFix = useCallback((drift, cause, fix) => {
     apiFetch('/known-issues', {
@@ -134,6 +164,8 @@ export default function Dashboard() {
           </button>
         </div>
       </header>
+
+      <AlertRulesPanel rules={alertRules} onAdd={handleAddRule} onDelete={handleDeleteRule} />
 
       {history && history.length > 0 && <HistoryPanel history={history} />}
       {historyError && <p className="dashboard__state dashboard__state--error">History unavailable: {historyError}</p>}
@@ -354,6 +386,69 @@ function RemediationAuditLog({ events, loading }) {
         </tbody>
       </table>
     </div>
+  )
+}
+
+// AlertRulesPanel — list SLA alert rules and add/delete them (v3.5).
+function AlertRulesPanel({ rules, onAdd, onDelete }) {
+  const [device, setDevice] = useState('')
+  const [severity, setSeverity] = useState('critical')
+  const [windowMinutes, setWindowMinutes] = useState(10)
+
+  const submit = (e) => {
+    e.preventDefault()
+    if (!windowMinutes || Number(windowMinutes) <= 0) return
+    onAdd(device.trim(), severity, windowMinutes)
+    setDevice('')
+  }
+
+  return (
+    <section className="alert-rules">
+      <h2 className="alert-rules__heading">alert rules</h2>
+
+      {rules && rules.length > 0 && (
+        <ul className="alert-rules__list">
+          {rules.map((r) => (
+            <li key={r.id} className="alert-rules__item">
+              <span className="alert-rules__rule">
+                {r.device || 'all devices'} · {r.severity} · {r.window_minutes} min
+                {r.enabled ? '' : ' · disabled'}
+              </span>
+              <button
+                type="button"
+                className="alert-rules__delete"
+                onClick={() => onDelete(r.id)}
+              >
+                Delete
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <form className="alert-rules__form" onSubmit={submit}>
+        <input
+          className="alert-rules__device"
+          placeholder="device (blank = all)"
+          aria-label="device"
+          value={device}
+          onChange={(e) => setDevice(e.target.value)}
+        />
+        <select aria-label="severity" value={severity} onChange={(e) => setSeverity(e.target.value)}>
+          <option value="critical">critical</option>
+          <option value="warning">warning</option>
+          <option value="info">info</option>
+        </select>
+        <input
+          type="number"
+          min="1"
+          aria-label="window minutes"
+          value={windowMinutes}
+          onChange={(e) => setWindowMinutes(e.target.value)}
+        />
+        <button type="submit" className="alert-rules__add">Add rule</button>
+      </form>
+    </section>
   )
 }
 
