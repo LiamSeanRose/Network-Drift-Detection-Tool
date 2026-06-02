@@ -41,6 +41,7 @@ from netdrift.storage.database import get_sessionmaker
 from netdrift.webhook import WebhookDispatcher
 from netdrift.storage.repository import (
     confirmed_count,
+    confirmed_counts,
     create_acknowledgement,
     create_alert_rule,
     create_api_key,
@@ -393,7 +394,7 @@ def list_drifts(request: Request, response: Response,
     events = get_drifts(session, device=device, limit=limit, offset=offset, since=since_dt)
     all_issues = list_known_issues(session)
     known = {i.fingerprint: i for i in all_issues}
-    counts = {i.id: confirmed_count(session, i.id) for i in all_issues}
+    counts = confirmed_counts(session, [i.id for i in all_issues])
 
     rows = []
     for e in events:
@@ -520,7 +521,8 @@ def create_known_issue(body: KnownIssueIn, session: Session = Depends(get_sessio
 def get_all_known_issues(session: Session = Depends(get_session)):
     """Return all stored known issues, oldest first."""
     issues = list_known_issues(session)
-    return [_issue_dict(i, confirmed_count(session, i.id)) for i in issues]
+    counts = confirmed_counts(session, [i.id for i in issues])
+    return [_issue_dict(i, counts[i.id]) for i in issues]
 
 
 @app.get("/known-issues/export")

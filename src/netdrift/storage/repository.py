@@ -12,6 +12,8 @@ v2.5 additions:
 
 from datetime import datetime, timedelta, timezone
 
+from sqlalchemy import func
+
 from netdrift.auth import KEY_PREFIX, generate_api_key, hash_api_key
 from netdrift.storage.models import (
     Acknowledgement,
@@ -260,6 +262,33 @@ def confirmed_count(session, known_issue_id):
         )
         .count()
     )
+
+
+def confirmed_counts(session, known_issue_ids):
+    """Return ``{known_issue_id: success_count}`` for many issues in one query.
+
+    Bulk form of confirmed_count, so a list endpoint (GET /drifts, GET
+    /known-issues) reads every issue's confirmed count with a single GROUP BY
+    instead of one COUNT(*) per issue (an N+1 over the largest table). Every
+    requested id is present in the result, including those with zero successes.
+    """
+    if not known_issue_ids:
+        return {}
+    counts = {kid: 0 for kid in known_issue_ids}
+    rows = (
+        session.query(
+            RemediationEvent.known_issue_id,
+            func.count(RemediationEvent.id),
+        )
+        .filter(
+            RemediationEvent.known_issue_id.in_(known_issue_ids),
+            RemediationEvent.result == "success",
+        )
+        .group_by(RemediationEvent.known_issue_id)
+        .all()
+    )
+    counts.update({kid: n for kid, n in rows})
+    return counts
 
 
 def save_remediation_event(
