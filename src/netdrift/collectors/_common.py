@@ -19,3 +19,30 @@ def build_ip_list(ip_raw: dict) -> list[str]:
     for address, detail in ip_raw.get("ipv4", {}).items():
         ips.append(f"{address}/{detail['prefix_length']}")
     return sorted(ips)
+
+
+def normalize_area(area) -> str:
+    """Normalize an OSPF area id to dotted-decimal form (schema Rule 10).
+
+    Devices report areas inconsistently: a bare integer (``0`` or ``"0"``), or
+    already-dotted (``"0.0.0.0"``). The schema wants dotted-decimal in every case
+    so intent and reality compare like-for-like. Accepts int or str input.
+
+    - ``""`` / ``None`` -> ``""`` (area not present).
+    - already dotted -> returned unchanged.
+    - bare integer -> converted to dotted (``0`` -> ``"0.0.0.0"``).
+    - anything non-numeric and non-dotted -> returned as-is rather than raising,
+      so one odd value never breaks a whole collection run.
+    """
+    if area == "" or area is None:
+        return ""
+    s = str(area).strip()
+    if not s:
+        return ""
+    if "." in s:
+        return s
+    try:
+        n = int(s)
+    except ValueError:
+        return s
+    return f"{(n >> 24) & 0xFF}.{(n >> 16) & 0xFF}.{(n >> 8) & 0xFF}.{n & 0xFF}"

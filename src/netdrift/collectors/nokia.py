@@ -50,6 +50,7 @@ from datetime import datetime, timezone
 
 from pygnmi.client import gNMIclient, gNMIException
 
+from netdrift.collectors._common import normalize_area as _normalize_area
 from netdrift.collectors.base import register
 
 GNMI_PORT = 57400
@@ -229,25 +230,6 @@ def _build_ospf_adjacencies(gc):
                         ).lower(),
                     }
     return adjacencies
-
-
-def _normalize_area(area_id):
-    """Convert any OSPF area id form to dotted-decimal (schema Rule 10).
-
-    SR Linux may return an area as the int 0, the string "0", or already-dotted
-    "0.0.0.0". Schema wants dotted-decimal in every case so intent and reality
-    compare like-for-like.
-    """
-    if area_id == "" or area_id is None:
-        return ""
-    s = str(area_id)
-    if "." in s:
-        return s
-    try:
-        n = int(s)
-    except ValueError:
-        return s
-    return f"{(n >> 24) & 0xFF}.{(n >> 16) & 0xFF}.{(n >> 8) & 0xFF}.{n & 0xFF}"
 
 
 def _build_tunnels(gc):
