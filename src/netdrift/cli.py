@@ -18,13 +18,19 @@ import yaml
 
 from netdrift import differ
 from netdrift.collectors import registry
+from netdrift.patterns.importer import import_patterns_dir
+from netdrift.patterns.loader import PatternError
 from netdrift.pipeline import _resolve_intent_fn
 from netdrift.storage.database import get_sessionmaker
 from netdrift.storage.repository import create_api_key as _create_api_key_in_db
 
 # devices.yml lives at the repo root, two levels up from this file
 # (src/netdrift/cli.py -> src/netdrift -> src -> repo root).
-DEVICES_FILE = Path(__file__).resolve().parents[2] / "devices.yml"
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DEVICES_FILE = REPO_ROOT / "devices.yml"
+
+# Bundled community patterns live at the repo root, imported by default.
+PATTERNS_DIR = REPO_ROOT / "patterns"
 
 # Single source of truth for vendor dispatch: the collector registry, shared
 # with pipeline.py. Adding a vendor is a new self-registering collector module
@@ -89,6 +95,43 @@ def _cmd_create_api_key(argv, session_factory=None):
     print(raw_key)
 
 
+def _cmd_import_patterns(argv, session_factory=None):
+    """Load community pattern YAML files and upsert them into known_issues."""
+    parser = argparse.ArgumentParser(
+        prog="driftcheck import-patterns",
+        description=(
+            "Load community pattern YAML files and upsert them into the "
+            "known_issues table. Idempotent — safe to re-run."
+        ),
+    )
+    parser.add_argument(
+        "path",
+        nargs="?",
+        default=str(PATTERNS_DIR),
+        help="directory of .yaml pattern files (default: ./patterns)",
+    )
+    args = parser.parse_args(argv)
+
+    if session_factory is None:
+        try:
+            session_factory = get_sessionmaker()
+        except RuntimeError as e:
+            sys.exit(f"Error: {e}")
+
+    try:
+        with session_factory() as session:
+            summary = import_patterns_dir(session, args.path)
+            session.commit()
+    except PatternError as e:
+        sys.exit(f"Error importing patterns: {e}")
+
+    print(
+        f"Imported {summary['files']} pattern file(s): "
+        f"{summary['created']} created, {summary['updated']} updated "
+        f"({len(summary['fingerprints'])} fingerprint(s) total)."
+    )
+
+
 def main(argv=None, collectors=None):
     """Run a one-shot drift check for one device.
 
@@ -101,6 +144,10 @@ def main(argv=None, collectors=None):
 
     if argv and argv[0] == "create-api-key":
         _cmd_create_api_key(argv[1:])
+        return
+
+    if argv and argv[0] == "import-patterns":
+        _cmd_import_patterns(argv[1:])
         return
 
     if collectors is None:
