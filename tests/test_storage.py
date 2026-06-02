@@ -206,3 +206,37 @@ def test_history_filters_by_device(session):
     history = get_drift_history(session, device="core-sw-01")
     assert len(history) == 1
     assert history[0]["device"] == "core-sw-01"
+
+
+# ---------------------------------------------------------------------------
+# PERF4 — confirmed_counts: one GROUP BY for many issues, not N+1 COUNT(*).
+# ---------------------------------------------------------------------------
+
+def test_confirmed_counts_returns_success_count_per_issue(session):
+    from netdrift.storage.repository import (
+        confirmed_counts,
+        save_known_issue,
+        save_remediation_event,
+    )
+
+    a = save_known_issue(session, "obj|fa|value_mismatch", "c", "f")
+    b = save_known_issue(session, "obj|fb|value_mismatch", "c", "f")
+    c = save_known_issue(session, "obj|fc|value_mismatch", "c", "f")
+    session.commit()
+
+    # a: 2 successes + 1 failure (failure must not count); b: none; c: 1 success.
+    save_remediation_event(session, a.id, "p", "", "", "success", "api")
+    save_remediation_event(session, a.id, "p", "", "", "success", "api")
+    save_remediation_event(session, a.id, "p", "", "", "failure", "api")
+    save_remediation_event(session, c.id, "p", "", "", "success", "api")
+    session.commit()
+
+    counts = confirmed_counts(session, [a.id, b.id, c.id])
+
+    # Every requested id is present, including the one with zero successes.
+    assert counts == {a.id: 2, b.id: 0, c.id: 1}
+
+
+def test_confirmed_counts_empty_input_returns_empty(session):
+    from netdrift.storage.repository import confirmed_counts
+    assert confirmed_counts(session, []) == {}
