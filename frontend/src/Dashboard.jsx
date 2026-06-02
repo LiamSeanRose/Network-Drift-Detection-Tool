@@ -1,6 +1,7 @@
 // Dashboard.jsx — drift events page with history panel and v2.5 remediation UI.
 
 import { useState, useEffect, useCallback, Fragment } from 'react'
+import { apiFetch, getApiKey, setApiKey } from './api'
 import './Dashboard.css'
 
 export default function Dashboard() {
@@ -12,6 +13,11 @@ export default function Dashboard() {
   const [historyError, setHistoryError] = useState(null)
   const [expandedId, setExpandedId] = useState(null)
   const [recordingFor, setRecordingFor] = useState(null)
+
+  // v3.5 — API key for mutating requests (record fix, dry-run, apply, …).
+  // Read-only views work without it; writes need a key minted via
+  // `driftcheck create-api-key`. Stored in localStorage by api.setApiKey.
+  const [apiKey, setApiKeyState] = useState(getApiKey)
 
   // v2.5 remediation state
   const [dryRunFor, setDryRunFor] = useState(null)       // {drift, issueId}
@@ -41,12 +47,15 @@ export default function Dashboard() {
       .catch((err) => setHistoryError(err.message))
   }, [])
 
+  // Initial load on mount. The loaders set a loading flag synchronously, which
+  // the fetch-on-mount pattern requires; that is intentional here.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadDrifts(); loadHistory() }, [loadDrifts, loadHistory])
 
   const handleRefresh = useCallback(() => { loadDrifts(); loadHistory() }, [loadDrifts, loadHistory])
 
   const handleSubmitFix = useCallback((drift, cause, fix) => {
-    fetch('/known-issues', {
+    apiFetch('/known-issues', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ object: drift.object, field: drift.field, drift_kind: drift.drift_kind, cause, fix }),
@@ -64,7 +73,7 @@ export default function Dashboard() {
     setDryRunResult(null)
     setDryRunError(null)
     setDryRunLoading(true)
-    fetch(`/known-issues/${issueId}/remediate/dry-run`, {
+    apiFetch(`/known-issues/${issueId}/remediate/dry-run`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ drift_event_id: drift.id }),
@@ -80,7 +89,7 @@ export default function Dashboard() {
     const { drift, issueId } = dryRunFor
     setApplyLoading(true)
     setApplyError(null)
-    fetch(`/known-issues/${issueId}/remediate/apply`, {
+    apiFetch(`/known-issues/${issueId}/remediate/apply`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ drift_event_id: drift.id }),
@@ -111,9 +120,19 @@ export default function Dashboard() {
             {drifts && <> · <span className="dashboard__count">{drifts.length}</span></>}
           </span>
         </div>
-        <button type="button" className="dashboard__refresh" onClick={handleRefresh} disabled={loading}>
-          {loading ? 'Refreshing…' : 'Refresh'}
-        </button>
+        <div className="dashboard__actions">
+          <input
+            type="password"
+            className="dashboard__apikey"
+            placeholder="API key"
+            aria-label="API key"
+            value={apiKey}
+            onChange={(e) => { setApiKeyState(e.target.value); setApiKey(e.target.value) }}
+          />
+          <button type="button" className="dashboard__refresh" onClick={handleRefresh} disabled={loading}>
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </button>
+        </div>
       </header>
 
       {history && history.length > 0 && <HistoryPanel history={history} />}
