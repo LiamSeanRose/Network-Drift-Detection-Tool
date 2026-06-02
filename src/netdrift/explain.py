@@ -100,6 +100,94 @@ def build_prompt(drift, co_occurring=None):
     return "\n".join(lines)
 
 
+def _deterministic_fix_text(drift):
+    """Offline fallback for a suggested fix: a reconcile action keyed on the
+    drift kind. Useful even without a model — it names the two ways to resolve
+    any drift (fix the device, or fix the source of truth)."""
+    obj = drift.get("object", "this object")
+    field = drift.get("field", "the field")
+    kind = drift.get("drift_kind")
+    if kind == "missing_in_reality":
+        return (f"Configure {obj} on the device to match NetBox, or remove it "
+                "from NetBox if it is no longer required.")
+    if kind == "missing_in_intent":
+        return (f"Document {obj} in NetBox if it is intended, or remove it from "
+                "the device if it is not authorized.")
+    return (f"Reconcile {field} on {obj}: update the device to match NetBox, or "
+            "update NetBox if the device value is the correct one.")
+
+
+def build_suggestion_prompt(drift):
+    """Build the grounding prompt for an AI3 known-issue suggestion.
+
+    Asks for a cause and a fix in a strict two-line format so the result parses
+    deterministically; grounded on the diagnose.py hints and the real values.
+    """
+    object_type = drift["object"].split(":")[0]
+    hints = diagnose(drift)
+    grounding = "\n".join(f"- {h}" for h in hints) or "- (no deterministic hint)"
+    return "\n".join([
+        "You are a senior network engineer documenting a drift pattern for a "
+        "knowledge base. Reply in EXACTLY two lines, no markdown:",
+        "CAUSE: <one sentence on the most likely root cause>",
+        "FIX: <one sentence on how to resolve it; never auto-apply>",
+        "",
+        f"Object: {drift['object']} ({object_type})  Field: {drift['field']}",
+        f"Drift kind: {drift['drift_kind']}",
+        f"Intended (NetBox): {drift['intent']!r}",
+        f"Actual (device):   {drift['reality']!r}",
+        "",
+        "Known typical causes:",
+        grounding,
+    ])
+
+
+def _parse_suggestion(text):
+    """Pull (cause, fix) out of the two-line CAUSE:/FIX: format. Returns
+    ("", "") if either line is missing, which triggers the deterministic
+    fallback in the caller."""
+    cause = fix = ""
+    for line in (text or "").splitlines():
+        stripped = line.strip()
+        upper = stripped.upper()
+        if upper.startswith("CAUSE:"):
+            cause = stripped[len("CAUSE:"):].strip()
+        elif upper.startswith("FIX:"):
+            fix = stripped[len("FIX:"):].strip()
+    return cause, fix
+
+
+def suggest_known_issue(drift, *, llm=None):
+    """Suggest a cause and fix for a (typically novel) drift fingerprint (AI3).
+
+    Same opt-in / off-by-default / grounded-with-fallback contract as the other
+    explain functions. Off by default returns the deterministic diagnose-based
+    cause and a reconcile fix; the LLM path is used only when configured and only
+    if it returns both a CAUSE and a FIX (otherwise the deterministic pair is
+    used). Returns ``{"cause", "fix", "source"}``. Read-only — it suggests text
+    for a human to review and edit, never records or applies anything.
+    """
+    fallback_cause = _deterministic_text(drift)
+    fallback_fix = _deterministic_fix_text(drift)
+
+    if llm is None:
+        llm = _resolve_llm(_config())
+    if llm is None:
+        return {"cause": fallback_cause, "fix": fallback_fix,
+                "source": "deterministic"}
+
+    try:
+        text = llm(build_suggestion_prompt(drift))
+    except Exception:
+        text = ""
+    cause, fix = _parse_suggestion(text)
+    if not cause or not fix:
+        return {"cause": fallback_cause, "fix": fallback_fix,
+                "source": "deterministic"}
+
+    return {"cause": cause, "fix": fix, "source": "llm"}
+
+
 def _deterministic_remediation_text(rendered_commands, dry_run_diff):
     """Offline fallback for a remediation summary: a factual command count.
 
