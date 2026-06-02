@@ -1,0 +1,8 @@
+name: "OSPF adjacency area does not match intent"
+object_type: ospf_adjacency
+field: area
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The adjacency is in a different OSPF area than intent. Two ends in different areas on the same link will not form an adjacency at all; if one formed, the intent record is the side that is wrong."
+fix: "Align the interface's OSPF area with intent on the correct end. Verify which area is right before moving the interface."

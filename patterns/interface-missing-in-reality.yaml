@@ -1,0 +1,8 @@
+name: "Interface in NetBox is absent on the device"
+object_type: interface
+field: _interface
+drift_kinds:
+  - missing_in_reality
+vendors: []
+cause: "NetBox defines an interface the device does not report. Likely causes: the NetBox interface name does not match the device's canonical name, a line card or transceiver is absent, or the interface was removed from the device."
+fix: "Confirm the canonical interface name matches NetBox, check that the hardware is present, and create the interface on the device if it should exist. This usually needs physical or naming investigation, so there is no automatic fix."

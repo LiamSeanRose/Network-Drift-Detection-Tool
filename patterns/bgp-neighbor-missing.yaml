@@ -1,0 +1,8 @@
+name: "BGP neighbor in NetBox is absent on the device"
+object_type: bgp_neighbor
+field: _bgp_neighbor
+drift_kinds:
+  - missing_in_reality
+vendors: []
+cause: "NetBox defines a BGP neighbor the device is not configured with. The expected peering does not exist, so its routes are never exchanged."
+fix: "Configure the neighbor on the device (remote-AS, address family, and policy) to match intent."

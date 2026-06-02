@@ -1,0 +1,10 @@
+name: "Interface administratively down when intent says up"
+object_type: interface
+field: enabled
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The interface is shut down on the device while NetBox has it enabled. Common after manual troubleshooting that was never reverted, or an err-disable event such as port-security, BPDU guard, or repeated link-flap."
+fix: "Re-enable the interface with `no shutdown`. If it was err-disabled, clear the triggering condition first or the port will shut again on the next event."
+remediation:
+  kind: restore_intent

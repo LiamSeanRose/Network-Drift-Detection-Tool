@@ -1,0 +1,8 @@
+name: "Undocumented interface present on the device"
+object_type: interface
+field: _interface
+drift_kinds:
+  - missing_in_intent
+vendors: []
+cause: "The device reports an interface NetBox does not model. Often a sub-interface, a breakout port, or an interface configured directly on the device without updating the source of truth."
+fix: "Add the interface to NetBox if it is legitimate, or remove it from the device if it is not. Drift here is resolved on the intent side, not by pushing config."
