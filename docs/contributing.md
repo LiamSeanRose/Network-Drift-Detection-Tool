@@ -34,6 +34,17 @@ The plugin registry (v1.0) makes adding a vendor a self-contained change:
 
 No edits to `pipeline.py`, `cli.py`, or `netbox_client.py` are needed — the registry handles dispatch automatically.
 
+## Submitting a pattern
+
+The community pattern library (`patterns/`) ships cause-and-fix knowledge for recurring drift, so a fresh install is useful on day one. Adding a pattern needs no Python — drop a YAML file and open a PR.
+
+1. Add `patterns/<slug>.yaml`. The format and the available fields are documented in `patterns/README.md`.
+2. Run `pytest tests/test_bundled_patterns.py`. It validates every file against `PatternSchema`, rejects a fingerprint that collides with an existing pattern, and confirms the fingerprint is one the differ actually produces. A pattern that passes is guaranteed to match real drift.
+3. Keep `cause` and `fix` specific and vendor-accurate. The whole value of a pattern is that the next operator does not have to re-derive the diagnosis.
+4. Use `remediation: { kind: restore_intent }` only for a field an applier supports (see `patterns/README.md`); leave operational symptoms and whole-object-missing patterns diagnosis-only.
+
+CI runs the same validation on every PR, so a malformed or colliding pattern fails the build rather than shipping broken.
+
 ## TDD for logic changes
 
 New behaviour in `differ.py`, `pipeline.py`, collectors, and the API should be added test-first:

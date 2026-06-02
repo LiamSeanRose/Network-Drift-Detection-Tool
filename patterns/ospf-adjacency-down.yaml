@@ -1,0 +1,8 @@
+name: "OSPF adjacency not full"
+object_type: ospf_adjacency
+field: adjacency_state
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The OSPF adjacency with this neighbor is not in the full state. An operational symptom: stuck in init, exstart, or 2-way usually points at an MTU mismatch, mismatched hello or dead timers, an area or network-type disagreement, or authentication failure."
+fix: "Diagnose by comparing MTU, timers, area ID, network type, and authentication on both ends. Operational state is not auto-remediated."

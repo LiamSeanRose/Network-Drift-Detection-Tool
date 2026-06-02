@@ -1,0 +1,8 @@
+name: "BGP session not established"
+object_type: bgp_neighbor
+field: session_state
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The BGP session to this neighbor is not established. This is an operational symptom, not a configuration setting. Causes range from the peer being down, an ACL or firewall blocking TCP 179, an AS or address mismatch, to a flapping underlay."
+fix: "Diagnose the session: check reachability to the peer, that TCP 179 is open end to end, the configured remote-AS, and the peer's logs. Operational state is never auto-remediated because there is nothing to push."

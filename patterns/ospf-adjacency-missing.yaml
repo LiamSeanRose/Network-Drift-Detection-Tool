@@ -1,0 +1,8 @@
+name: "OSPF adjacency in NetBox is absent on the device"
+object_type: ospf_adjacency
+field: _ospf_adjacency
+drift_kinds:
+  - missing_in_reality
+vendors: []
+cause: "NetBox expects an OSPF adjacency the device does not have. The neighbor relationship never formed, or OSPF is not enabled on the connecting interface."
+fix: "Confirm OSPF is enabled on the correct interface and in the right area, and that the neighbor is reachable. Then let the adjacency form."
