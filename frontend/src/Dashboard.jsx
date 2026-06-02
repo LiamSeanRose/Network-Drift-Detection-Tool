@@ -25,6 +25,9 @@ export default function Dashboard() {
   // v3.5 — devices + per-device auto-apply pause state
   const [devices, setDevices] = useState(null)
 
+  // maintenance windows — planned change windows that suppress alerting
+  const [maintenanceWindows, setMaintenanceWindows] = useState(null)
+
   // v2.5 remediation state
   const [dryRunFor, setDryRunFor] = useState(null)       // {drift, issueId}
   const [dryRunResult, setDryRunResult] = useState(null)  // API response
@@ -67,15 +70,22 @@ export default function Dashboard() {
       .catch(() => setDevices([]))
   }, [])
 
+  const loadMaintenanceWindows = useCallback(() => {
+    return apiFetch('/maintenance-windows')
+      .then((r) => { if (!r.ok) throw new Error(`API returned ${r.status}`); return r.json() })
+      .then((data) => setMaintenanceWindows(data))
+      .catch(() => setMaintenanceWindows([]))
+  }, [])
+
   // Initial load on mount. The loaders set a loading flag synchronously, which
   // the fetch-on-mount pattern requires; that is intentional here.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices() },
-    [loadDrifts, loadHistory, loadAlertRules, loadDevices])
+  useEffect(() => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices(); loadMaintenanceWindows() },
+    [loadDrifts, loadHistory, loadAlertRules, loadDevices, loadMaintenanceWindows])
 
   const handleRefresh = useCallback(
-    () => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices() },
-    [loadDrifts, loadHistory, loadAlertRules, loadDevices])
+    () => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices(); loadMaintenanceWindows() },
+    [loadDrifts, loadHistory, loadAlertRules, loadDevices, loadMaintenanceWindows])
 
   const handleToggleDevice = useCallback((device) => {
     return apiFetch(`/devices/${device.name}/auto-apply`, {
@@ -104,6 +114,25 @@ export default function Dashboard() {
       .then(() => loadAlertRules())
       .catch(() => {})
   }, [loadAlertRules])
+
+  const handleAddWindow = useCallback((device, startsAt, endsAt, reason) => {
+    return apiFetch('/maintenance-windows', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        device: device || null, starts_at: startsAt, ends_at: endsAt,
+        reason: reason || null,
+      }),
+    })
+      .then((r) => { if (r.ok) loadMaintenanceWindows() })
+      .catch(() => {})
+  }, [loadMaintenanceWindows])
+
+  const handleDeleteWindow = useCallback((id) => {
+    return apiFetch(`/maintenance-windows/${id}`, { method: 'DELETE' })
+      .then(() => loadMaintenanceWindows())
+      .catch(() => {})
+  }, [loadMaintenanceWindows])
 
   const handleSubmitFix = useCallback((drift, cause, fix) => {
     apiFetch('/known-issues', {
@@ -199,6 +228,7 @@ export default function Dashboard() {
       </header>
 
       <AlertRulesPanel rules={alertRules} onAdd={handleAddRule} onDelete={handleDeleteRule} />
+      <MaintenanceWindowsPanel windows={maintenanceWindows} onAdd={handleAddWindow} onDelete={handleDeleteWindow} />
       <DevicesPanel devices={devices} onToggle={handleToggleDevice} />
 
       {history && history.length > 0 && <HistoryPanel history={history} />}
@@ -526,6 +556,83 @@ function AlertRulesPanel({ rules, onAdd, onDelete }) {
           onChange={(e) => setWindowMinutes(e.target.value)}
         />
         <button type="submit" className="alert-rules__add">Add rule</button>
+      </form>
+    </section>
+  )
+}
+
+// MaintenanceWindowsPanel — open/list/cancel planned change windows that suppress
+// SLA alerting and auto-apply while active. Reuses the alert-rules styles.
+function MaintenanceWindowsPanel({ windows, onAdd, onDelete }) {
+  const [device, setDevice] = useState('')
+  const [startsAt, setStartsAt] = useState('')
+  const [endsAt, setEndsAt] = useState('')
+  const [reason, setReason] = useState('')
+
+  const submit = (e) => {
+    e.preventDefault()
+    if (!startsAt || !endsAt) return
+    // datetime-local is in the browser's local time; toISOString converts to UTC.
+    onAdd(device.trim(), new Date(startsAt).toISOString(), new Date(endsAt).toISOString(), reason.trim())
+    setDevice(''); setStartsAt(''); setEndsAt(''); setReason('')
+  }
+
+  const now = Date.now()
+  return (
+    <section className="alert-rules">
+      <h2 className="alert-rules__heading">maintenance windows</h2>
+
+      {windows && windows.length > 0 && (
+        <ul className="alert-rules__list">
+          {windows.map((w) => {
+            const active = new Date(w.starts_at).getTime() <= now && now < new Date(w.ends_at).getTime()
+            return (
+              <li key={w.id} className="alert-rules__item">
+                <span className="alert-rules__rule">
+                  {w.device || 'all devices'} · {new Date(w.starts_at).toLocaleString()} → {new Date(w.ends_at).toLocaleString()}
+                  {active ? ' · active' : ''}{w.reason ? ` · ${w.reason}` : ''}
+                </span>
+                <button
+                  type="button"
+                  className="alert-rules__delete"
+                  onClick={() => onDelete(w.id)}
+                >
+                  Cancel
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+      )}
+
+      <form className="alert-rules__form" onSubmit={submit}>
+        <input
+          className="alert-rules__device"
+          placeholder="device (blank = all)"
+          aria-label="maintenance device"
+          value={device}
+          onChange={(e) => setDevice(e.target.value)}
+        />
+        <input
+          type="datetime-local"
+          aria-label="starts at"
+          value={startsAt}
+          onChange={(e) => setStartsAt(e.target.value)}
+        />
+        <input
+          type="datetime-local"
+          aria-label="ends at"
+          value={endsAt}
+          onChange={(e) => setEndsAt(e.target.value)}
+        />
+        <input
+          className="alert-rules__device"
+          placeholder="reason (optional)"
+          aria-label="maintenance reason"
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+        />
+        <button type="submit" className="alert-rules__add">Open window</button>
       </form>
     </section>
   )
