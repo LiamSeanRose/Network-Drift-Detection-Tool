@@ -44,6 +44,7 @@ from netdrift.storage.repository import (
     create_api_key,
     delete_alert_rule,
     delete_api_key,
+    get_device_setting,
     get_drift_event,
     list_alert_rules,
     list_api_keys,
@@ -545,6 +546,28 @@ def _device_setting_dict(setting) -> dict:
         "paused_at": setting.paused_at.isoformat() if setting.paused_at else None,
         "paused_reason": setting.paused_reason,
     }
+
+
+@app.get("/devices")
+def list_devices(session: Session = Depends(get_session)):
+    """List inventory devices with their auto-apply pause state.
+
+    Each device from devices.yml is returned with its device_settings pause
+    state (absent row → not paused, the safe default). Backs the dashboard's
+    per-device auto-apply toggle. Read-only, so unauthenticated by design.
+    """
+    result = []
+    for name in sorted(_load_devices()):
+        setting = get_device_setting(session, name)
+        result.append({
+            "name": name,
+            "auto_remediation_paused": bool(setting and setting.auto_remediation_paused),
+            "paused_at": (
+                setting.paused_at.isoformat() if setting and setting.paused_at else None
+            ),
+            "paused_reason": setting.paused_reason if setting else None,
+        })
+    return result
 
 
 @app.patch("/devices/{device_name}/auto-apply")

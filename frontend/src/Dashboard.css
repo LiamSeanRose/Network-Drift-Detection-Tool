@@ -180,6 +180,53 @@
   color: var(--accent);
 }
 
+/* ---- Devices panel (v3.5) ---------------------------------------- */
+.devices {
+  margin: 1rem 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--border);
+}
+
+.devices__heading {
+  margin: 0 0 0.6rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+}
+
+.devices__list { list-style: none; margin: 0; padding: 0; }
+
+.devices__item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.25rem 0;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+}
+
+.devices__name { min-width: 10rem; }
+
+.devices__state { color: var(--fg-muted); flex: 1; }
+.devices__state--paused { color: var(--sev-warning, #d8a657); }
+
+.devices__toggle {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  padding: 0.3rem 0.7rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+}
+
+.devices__toggle:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 /* ---- States: loading / error / empty ----------------------------- */
 
 .dashboard__state {
