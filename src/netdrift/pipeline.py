@@ -19,13 +19,23 @@ Public function:
         -> list[drift record]
 """
 
+import logging
 import os
 
-from netdrift import differ, netbox_client
+from netdrift import differ, explain as _explain, netbox_client
 from netdrift.auto_apply import run_auto_apply
 from netdrift.collectors import registry
+from netdrift.fingerprint import fingerprint as _fingerprint
 from netdrift.storage.database import get_sessionmaker
-from netdrift.storage.repository import is_device_paused, record_collection, save_drifts
+from netdrift.storage.repository import (
+    get_explanations,
+    is_device_paused,
+    record_collection,
+    save_drifts,
+    upsert_explanation,
+)
+
+log = logging.getLogger(__name__)
 
 # Single source of truth for vendor dispatch: the collector registry (shared
 # with cli.py). Adding a vendor is a new self-registering collector module
@@ -51,9 +61,56 @@ def _resolve_intent_fn():
     )
 
 
+def generate_explanations(session_factory, drifts, *, llm=None, explain_fn=None):
+    """Opt-in: generate and store an AI explanation per new drift fingerprint.
+
+    Runs on the scheduler cycle after drifts are persisted. Gated on an LLM
+    provider being configured — explain is off by default, so this is a no-op
+    (no network call, no rows written) unless an operator opts in, in which case
+    the API falls back to the deterministic diagnose() causes. One explanation
+    per fingerprint (generate-once): fingerprints that already have a row are
+    skipped, so a recurring drift is explained exactly once. Best-effort: any
+    failure is logged and swallowed so it never breaks a poll.
+
+    `llm` and `explain_fn` are injectable for tests.
+    """
+    if explain_fn is None:
+        explain_fn = _explain.explain
+    if llm is None:
+        llm = _explain._resolve_llm(_explain._config())
+    if llm is None:
+        return  # feature off — nothing to generate
+
+    # One record per fingerprint; the first wins as the representative drift.
+    by_fingerprint = {}
+    for drift in drifts:
+        by_fingerprint.setdefault(_fingerprint(drift), drift)
+    if not by_fingerprint:
+        return
+
+    try:
+        with session_factory() as session:
+            existing = get_explanations(session, by_fingerprint.keys())
+            for fp, drift in by_fingerprint.items():
+                if fp in existing:
+                    continue
+                co_occurring = [
+                    o for o in drifts
+                    if o is not drift and o.get("device") == drift.get("device")
+                ]
+                result = explain_fn(drift, co_occurring=co_occurring, llm=llm)
+                upsert_explanation(
+                    session, fp, result["explanation"], result["source"]
+                )
+            session.commit()
+    except Exception:
+        log.warning("drift explanation generation failed", exc_info=True)
+
+
 def run_drift_check(device, *, get_intent=None,
                     collectors=None, session_factory=None,
-                    auto_apply_fn=None, schedule_repoll_fn=None):
+                    auto_apply_fn=None, schedule_repoll_fn=None,
+                    explain_fn=None, explain_llm=None):
     """Run the full drift pipeline for one device and persist the result.
 
     Args:
@@ -73,6 +130,10 @@ def run_drift_check(device, *, get_intent=None,
             auto-apply loop; called once after any successful apply to trigger
             a one-shot re-poll. The scheduler passes its own helper; left None
             for the CLI/one-shot path.
+        explain_fn / explain_llm: injectable seams for the opt-in AI explanation
+            step (tests pass a fake explain callable and/or a fake llm). In
+            production both default to None, so the step resolves its provider
+            from the environment and is a no-op when the AI feature is off.
 
     Returns the list of drift records produced by differ.diff (also persisted).
 
@@ -133,5 +194,11 @@ def run_drift_check(device, *, get_intent=None,
         is_device_paused_fn=lambda name, sess: is_device_paused(sess, name),
         schedule_repoll_fn=schedule_repoll_fn,
     )
+
+    # AI1: opt-in, best-effort natural-language explanations. No-op (no network,
+    # no writes) unless an LLM provider is configured. Runs last because it may
+    # make a network call and must never delay or break persistence/remediation.
+    generate_explanations(session_factory, drifts,
+                          llm=explain_llm, explain_fn=explain_fn)
 
     return drifts

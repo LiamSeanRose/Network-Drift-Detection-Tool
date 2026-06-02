@@ -289,6 +289,15 @@ export default function Dashboard() {
                           </div>
                         )}
 
+                        {d.explanation && (
+                          <div className="ai-explanation">
+                            <span className="ai-explanation__label">
+                              AI explanation{d.explanation.source === 'deterministic' ? ' (offline)' : ''}
+                            </span>
+                            <p className="ai-explanation__text">{d.explanation.text}</p>
+                          </div>
+                        )}
+
                         {causes.length > 0 && (
                           <ul className="causes-list">
                             {causes.map((c, i) => <li key={i}>{c}</li>)}

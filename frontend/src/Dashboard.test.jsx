@@ -141,6 +141,46 @@ describe('Dashboard', () => {
     expect(screen.getByText(/manually shut/i)).toBeInTheDocument()
   })
 
+  it('shows the AI explanation in the expanded row when present', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-31T12:00:00+00:00',
+        causes: ['Interface was manually shut.'],
+        explanation: { text: 'Ethernet1 went down at 14:32 alongside three other ports — likely a bulk shut.', source: 'llm' },
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+
+    expect(screen.queryByText(/bulk shut/i)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('core-sw-01'))
+    expect(screen.getByText(/bulk shut/i)).toBeInTheDocument()
+    expect(screen.getByText(/AI explanation/i)).toBeInTheDocument()
+  })
+
+  it('shows no AI explanation block when explanation is null', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-31T12:00:00+00:00',
+        causes: ['Interface was manually shut.'],
+        explanation: null,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+
+    fireEvent.click(screen.getByText('core-sw-01'))
+    expect(screen.queryByText(/AI explanation/i)).not.toBeInTheDocument()
+  })
+
   it('shows known fix in expanded row when known_fix is present', async () => {
     const drifts = [
       {
