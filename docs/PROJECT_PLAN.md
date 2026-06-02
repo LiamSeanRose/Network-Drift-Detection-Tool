@@ -620,6 +620,32 @@ v3.75 — Juniper JunOS (parallel Liam track)
 [x] Management interfaces fxp0, em0, fxp0.0, em0.0 raise RemediationBlockedError.
 [x] docs/schema.md Section 4 updated with juniper_junos (joint sign-off).
 
+v4.0 — Community Pattern Library
+[x] patterns/ contains >=20 valid YAML files (interface, VLAN, BGP, OSPF), each with object_type, field, drift_kinds, cause, fix.
+[x] driftcheck import-patterns is idempotent; re-running produces identical DB state.
+[x] Patterns always import with auto_apply_enabled=False regardless of YAML content.
+[x] GET /known-issues/export round-trips (export → wipe → import → export is identical).
+[x] CI validate-patterns passes; adding a valid .yaml needs no Python change.
+[x] Unsafe yaml.load is banned repo-wide (guard test test_no_unsafe_yaml_load_in_source).
+[x] CONTRIBUTING.md pattern-submission section + patterns/README.md field reference merged.
+[x] README, CHANGELOG.md v4.0, and this §15 updated.
+
+v4.0 Ownership
+Per docs/ROADMAP_POST_V2.5.md. The pattern engine (schema, loader, importer,
+exporter) and the bundled patterns were built on the Liam track; the validate
+CLI/CI step and these docs are Matthew's release-shepherd closeout.
+
+| v4.0 work stream | Owner | Notes |
+|---|---|---|
+| `netdrift/patterns/schema.py` `PatternSchema` + loader/importer/exporter | Liam (A) | Pydantic v2; fingerprint via differ |
+| Bundled `patterns/*.yaml` (>=20) + vendor accuracy review | Liam (A) | |
+| `driftcheck import-patterns` CLI | Liam (A) | Idempotent upsert |
+| `GET /known-issues/export` endpoint | Liam (A) | Requires API key |
+| `driftcheck validate-patterns` CLI + CI `validate-patterns` step | Matthew (B) | DB-free; gates malformed patterns in CI |
+| `patterns/README.md` field reference | (shipped) | |
+| `CONTRIBUTING.md` pattern-submission section | Matthew (B) draft + Liam (A) vendor note | |
+| README + CHANGELOG.md v4.0 + this §15 | Matthew (B) (release shepherd) | |
+
 16. Glossary
 Intent / intended state — what the network should be, documented in NetBox.
 Reality / operational state — what a device actually reports right now.
