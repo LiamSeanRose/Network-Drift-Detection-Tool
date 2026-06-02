@@ -64,9 +64,13 @@ def downgrade() -> None:
 
     op.drop_column('known_issues', 'auto_apply_enabled')
     op.drop_column('known_issues', 'remediation')
+    # Restore with a default of 0, not 1: a downgrade must not invent a
+    # "confirmed success" that never happened. A pre-v2.5 auto-apply gate reads
+    # confirmed_count to decide eligibility, so server_default='1' would let
+    # every existing issue past a confirm-once gate after a rollback.
     op.add_column(
         'known_issues',
-        sa.Column('confirmed_count', sa.Integer(), nullable=False, server_default='1'),
+        sa.Column('confirmed_count', sa.Integer(), nullable=False, server_default='0'),
     )
 
     op.drop_column('drift_events', 'platform')

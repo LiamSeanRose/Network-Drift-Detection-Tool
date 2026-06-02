@@ -220,7 +220,9 @@ class RemediationEvent(Base):
     platform: Mapped[str] = mapped_column(String)
     rendered_commands: Mapped[str] = mapped_column(String)
     dry_run_diff: Mapped[str] = mapped_column(String)
-    # "success" | "failure" | "dry_run_only"
+    # "success" | "failure" | "blocked" | "dry_run_only"
+    #   success/failure/blocked — written by the scheduler auto-apply loop
+    #   dry_run_only            — written by the API dry-run endpoint
     result: Mapped[str] = mapped_column(String)
     # "user:<id>" | "scheduler" | "api"
     applied_by: Mapped[str] = mapped_column(String)
