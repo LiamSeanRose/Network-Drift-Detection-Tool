@@ -123,6 +123,41 @@ def test_suggested_fix_404_for_unknown_event(client):
     assert client.get("/drifts/999999/suggested-fix").status_code == 404
 
 
+# --- maintenance windows -----------------------------------------------------
+
+def test_create_and_list_maintenance_window(client):
+    resp = client.post("/maintenance-windows", json={
+        "device": "core-sw-01",
+        "starts_at": "2026-06-02T01:00:00Z",
+        "ends_at": "2026-06-02T03:00:00Z",
+        "reason": "core upgrade",
+    })
+    assert resp.status_code == 200
+    created = resp.json()
+    assert created["device"] == "core-sw-01"
+    assert created["reason"] == "core upgrade"
+
+    listed = client.get("/maintenance-windows").json()
+    assert any(w["id"] == created["id"] for w in listed)
+
+
+def test_create_maintenance_window_rejects_bad_range(client):
+    resp = client.post("/maintenance-windows", json={
+        "starts_at": "2026-06-02T03:00:00Z",
+        "ends_at": "2026-06-02T01:00:00Z",
+    })
+    assert resp.status_code == 422
+
+
+def test_delete_maintenance_window(client):
+    wid = client.post("/maintenance-windows", json={
+        "starts_at": "2026-06-02T01:00:00Z",
+        "ends_at": "2026-06-02T03:00:00Z",
+    }).json()["id"]
+    assert client.delete(f"/maintenance-windows/{wid}").status_code == 200
+    assert client.delete(f"/maintenance-windows/{wid}").status_code == 404
+
+
 def test_drifts_explanation_null_by_default(client):
     # With no explanation generated (the default), every event reports null.
     response = client.get("/drifts")

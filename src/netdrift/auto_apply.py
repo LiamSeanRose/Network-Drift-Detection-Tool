@@ -26,6 +26,7 @@ from netdrift.storage.models import KnownIssue, RemediationEvent
 from netdrift.storage.repository import (
     is_acknowledged,
     is_device_paused,
+    is_in_maintenance_window,
     save_remediation_event,
     set_auto_apply_enabled,
 )
@@ -133,6 +134,15 @@ def run_auto_apply(
 
         if is_device_paused_fn(device_name, session):
             _log.info("Auto-apply paused for device %r; skipping cycle.", device_name)
+            return []
+
+        # Don't push fixes while a planned change window is open — the drift is
+        # expected and an unattended rollback could fight the change in progress.
+        if is_in_maintenance_window(session, device_name):
+            _log.info(
+                "Auto-apply skipped for device %r; in a maintenance window.",
+                device_name,
+            )
             return []
 
         for drift in drifts:

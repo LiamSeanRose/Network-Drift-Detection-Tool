@@ -79,6 +79,38 @@ class KnownIssue(Base):
         return f"<KnownIssue id={self.id} fingerprint={self.fingerprint!r}>"
 
 
+class MaintenanceWindow(Base):
+    """A planned change window during which drift on a device is expected.
+
+    The time-boxed, whole-device sibling of Acknowledgement: while a window is
+    active, drift on the matching device is suppressed from SLA-breach alerting
+    and from auto-apply — the same two suppression points an acknowledgement
+    uses — so a planned change does not page anyone or trigger an unattended
+    rollback. Unlike an ack (one fingerprint, until a date), a window covers
+    *all* drift on a device for a *time range*.
+
+    ``device`` is the device name (as in devices.yml); ``None`` means the window
+    applies to every device (a global change freeze). A window is *active* when
+    ``starts_at <= now < ends_at``.
+    """
+
+    __tablename__ = "maintenance_windows"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    # null = applies to all devices (a global window).
+    device: Mapped[str | None] = mapped_column(String, index=True, nullable=True)
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    def __repr__(self):
+        return (
+            f"<MaintenanceWindow id={self.id} device={self.device!r} "
+            f"{self.starts_at}..{self.ends_at}>"
+        )
+
+
 class DriftExplanation(Base):
     """An opt-in AI-generated natural-language explanation for one drift fingerprint.
 

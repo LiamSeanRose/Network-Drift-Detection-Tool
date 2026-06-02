@@ -167,6 +167,23 @@ def test_per_device_pause_returns_empty(monkeypatch, session_factory):
     assert result == []
 
 
+def test_maintenance_window_suppresses_auto_apply(monkeypatch, session_factory):
+    from datetime import datetime, timedelta, timezone
+
+    from netdrift.storage.repository import create_maintenance_window
+    monkeypatch.setenv("AUTO_REMEDIATION_ENABLED", "true")
+    _make_issue(session_factory)
+    now = datetime.now(tz=timezone.utc)
+    with session_factory() as session:
+        create_maintenance_window(session, "core-sw-01",
+                                  now - timedelta(minutes=5), now + timedelta(minutes=5))
+        session.commit()
+    # An active window suppresses the whole cycle — no fix is pushed.
+    result = run_auto_apply([DRIFT], DEVICE, session_factory,
+                            applier_fn=_success_applier_fn)
+    assert result == []
+
+
 # ---------------------------------------------------------------------------
 # No matching known issue
 # ---------------------------------------------------------------------------
