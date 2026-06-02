@@ -27,7 +27,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 # --- Contract vocabularies (keep in lockstep with schema.md and differ.py) ----
 
-ObjectType = Literal["interface", "vlan", "bgp_neighbor", "ospf_adjacency"]
+ObjectType = Literal[
+    "interface", "vlan", "bgp_neighbor", "ospf_adjacency", "config", "device"
+]
 
 # The three kinds differ.py emits. A pattern naming anything else is rejected —
 # it could never match a real drift fingerprint.

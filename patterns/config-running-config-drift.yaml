@@ -1,0 +1,8 @@
+name: "Running config differs from the rendered intent"
+object_type: config
+field: running_config
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The device's running configuration no longer matches the config rendered from NetBox. Some change was made on the device, or in a template, that the other side does not reflect. This is a coarse, whole-config signal — it does not point at a specific line."
+fix: "Diff the rendered intent against the running config to find the divergent lines, then reconcile the correct side. There is no safe blanket auto-fix for whole-config drift."
