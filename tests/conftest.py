@@ -45,6 +45,20 @@ _CISCO_TUNNEL_PREFIXES = (
     "test_get_reality_builds_tunnels",
 )
 
+# Test-name prefixes in tests/test_nokia.py that depend on the unverified SR Linux
+# `/tunnel-interface` gNMI shape (v4.75 — built ahead of a lab tunnel).
+_NOKIA_TUNNEL_PREFIXES = (
+    "test_build_tunnels",
+    "test_get_reality_builds_tunnels",
+)
+
+# Test-name prefixes in tests/test_junos_collector.py that depend on the
+# unverified JunOS `show interfaces extensive` tunnel shape (v4.75).
+_JUNOS_TUNNEL_PREFIXES = (
+    "test_parse_tunnels_cli",
+    "test_get_reality_builds_tunnels",
+)
+
 
 def pytest_configure(config):
     config.addinivalue_line(
@@ -62,4 +76,8 @@ def pytest_collection_modifyitems(items):
         if "test_arista.py" in item.nodeid and item.name.startswith(_ARISTA_TUNNEL_PREFIXES):
             item.add_marker(pytest.mark.unvalidated_fixture)
         if "test_cisco.py" in item.nodeid and item.name.startswith(_CISCO_TUNNEL_PREFIXES):
+            item.add_marker(pytest.mark.unvalidated_fixture)
+        if "test_nokia.py" in item.nodeid and item.name.startswith(_NOKIA_TUNNEL_PREFIXES):
+            item.add_marker(pytest.mark.unvalidated_fixture)
+        if "test_junos_collector.py" in item.nodeid and item.name.startswith(_JUNOS_TUNNEL_PREFIXES):
             item.add_marker(pytest.mark.unvalidated_fixture)
