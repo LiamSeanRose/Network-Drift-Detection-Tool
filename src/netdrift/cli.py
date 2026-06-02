@@ -6,7 +6,8 @@ Wires the three v0.1 pieces together:
   differ.diff()               -> structured drift records
 
 Usage:
-    driftcheck <device-name>
+    driftcheck <device-name>      one-shot drift check against a live device
+    driftcheck demo               drift on a bundled offline dataset (no setup)
 """
 
 import argparse
@@ -65,6 +66,44 @@ def print_drift(device_name, drift):
         print(f"      reality: {record['reality']}")
         print(f"      kind:    {record['drift_kind']}")
         print()
+
+
+def _cmd_demo(argv):
+    """Run drift detection on a bundled offline dataset — no NetBox, device, or DB.
+
+    This is the zero-setup first-run experience: `driftcheck demo` shows real
+    differ output on a fictional two-device network so a brand-new user sees what
+    drift looks like before wiring up NetBox and the lab.
+    """
+    from netdrift.demo import demo_pairs
+
+    parser = argparse.ArgumentParser(
+        prog="driftcheck demo",
+        description=(
+            "Show drift on a bundled offline dataset. No NetBox, no live "
+            "device, no database required — the perfect first run."
+        ),
+    )
+    parser.parse_args(argv)
+
+    pairs = demo_pairs()
+    print(
+        "netdrift demo — drift on a bundled fictional network "
+        "(no NetBox / device / database).\n"
+        f"{len(pairs)} device(s); this is real differ output.\n"
+    )
+
+    total = 0
+    for device_name, intent, reality in pairs:
+        drift = differ.diff(intent, reality)
+        total += len(drift)
+        print_drift(device_name, drift)
+
+    print(f"Demo complete: {total} drift record(s) across {len(pairs)} device(s).")
+    print(
+        "Next: copy devices.example.yml to devices.yml and run "
+        "'driftcheck <device>' against your own network."
+    )
 
 
 def _cmd_create_api_key(argv, session_factory=None):
@@ -173,6 +212,10 @@ def main(argv=None, collectors=None):
     # Materialize argv so we can inspect it before the drift-check parser runs.
     if argv is None:
         argv = sys.argv[1:]
+
+    if argv and argv[0] == "demo":
+        _cmd_demo(argv[1:])
+        return
 
     if argv and argv[0] == "create-api-key":
         _cmd_create_api_key(argv[1:])
