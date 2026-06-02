@@ -566,6 +566,12 @@
   margin: 0;
 }
 
+.modal__hint {
+  font-size: 0.72rem;
+  color: #a78bfa;
+  margin: 0.1rem 0 0;
+}
+
 .modal__label {
   display: flex;
   flex-direction: column;

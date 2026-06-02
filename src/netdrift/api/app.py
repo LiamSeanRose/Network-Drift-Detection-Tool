@@ -528,6 +528,19 @@ def unacknowledge_drift(event_id: int, session: Session = Depends(get_session)):
     return {"deleted": deleted, "device": event.device, "fingerprint": fp}
 
 
+@app.get("/drifts/{event_id}/suggested-fix")
+def suggested_fix(event_id: int, session: Session = Depends(get_session)):
+    """AI3: suggest a cause and fix for a drift event, to pre-fill the record-fix
+    form. Read-only — it never records or applies anything. Off by default
+    (deterministic suggestion); the LLM path is used only when a provider is
+    configured. 404 if the event does not exist."""
+    event = get_drift_event(session, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail=f"Drift event {event_id} not found.")
+    suggestion = explain.suggest_known_issue(_build_drift_record(event))
+    return suggestion
+
+
 # ---------------------------------------------------------------------------
 # Routes — known issues (CRUD + remediation payload)
 # ---------------------------------------------------------------------------
