@@ -392,6 +392,14 @@ function DryRunModal({ drift, loading, result, error, applyLoading, applyError, 
 
         {result && (
           <>
+            {result.summary && (
+              <div className="ai-explanation">
+                <span className="ai-explanation__label">
+                  AI summary{result.summary.source === 'deterministic' ? ' (offline)' : ''}
+                </span>
+                <p className="ai-explanation__text">{result.summary.text}</p>
+              </div>
+            )}
             <p className="modal__label">Commands that would be sent ({result.transport}):</p>
             <pre className="modal__code">{result.rendered_commands || '(none)'}</pre>
             <p className="modal__label">Candidate diff:</p>
