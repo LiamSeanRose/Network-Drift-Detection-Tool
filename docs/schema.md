@@ -9,8 +9,9 @@
 > approve.** Do not change the schema unilaterally.
 >
 > **Status:** v1.0 / v2.5. Config-level drift (`running_config`) added 2026-05-31;
-> remediation payload (`known_issue.remediation`) added 2026-05-31 (see the change
-> log). Further changes require a merge request both partners approve.
+> remediation payload (`known_issue.remediation`) added 2026-05-31; v4.75 optional
+> `tunnels` block drafted 2026-06-02 — **pending Matthew's `schema-sign-off`** (see
+> the change log). Further changes require a merge request both partners approve.
 
 ---
 ## 1. Why this exists
@@ -95,8 +96,26 @@ This is what `get_intent(device_name)` and `get_reality(device)` both return.
 
     # --- v1.0 addition ---
     "running_config": "",   # str — full device running config as text, "" if unavailable
+
+    # --- v4.75 addition (OPTIONAL — this key may be absent entirely) ---
+    "tunnels": {
+        # key = canonical tunnel interface name (Rule 1: "Tunnel0", never "Tu0")
+        "Tunnel0": {
+            "type": "gre",                  # "gre" | "vti"
+            "source": "192.0.2.1",          # str — local endpoint IP, "" if unset
+            "destination": "198.51.100.1",  # str — remote endpoint IP, "" if unset
+            "enabled": True,                # bool — admin state (no shutdown)
+            "tunnel_state": "up",           # str, lower-cased — operational, see Rule 10
+        },
+    },
 }
 ```
+
+> **`tunnels` is optional.** Unlike `bgp_neighbors` (always `{}`) and `ospf`
+> (always `{"adjacencies": {}}`), the `tunnels` key **may be absent entirely**. A
+> collector with no tunnel support and an intent declaring no tunnels both omit
+> it; the diff engine reads it with `.get("tunnels", {})`, so absent-on-both
+> compares nothing and the ~99% of devices with no overlay produce zero noise.
 
 ### Field reference
 
@@ -125,6 +144,12 @@ This is what `get_intent(device_name)` and `get_reality(device)` both return.
 | `ospf.adjacencies[].interface` | `str` | Canonical full interface name the adjacency is formed on.     |
 | `ospf.adjacencies[].adjacency_state` | `str` | Operational OSPF adjacency state, lower-cased (`full`, `2-way`, `init`, `exstart`, `exchange`, `loading`, `down`). See Rule 10. |
 | `running_config`       | `str`       | The device's full running configuration as plain text. On the **reality** side: output of `show running-config` (or equivalent). On the **intent** side: config rendered from a NetBox Config Template (`GET /api/dcim/devices/{id}/render-config/`). Empty string `""` when unavailable or no template exists — never `None`, per Rule 4. |
+| `tunnels`              | `dict` (optional) | **v4.75.** Overlay tunnels (GRE/VTI) keyed by canonical tunnel interface name. **May be absent entirely** — a collector with no tunnel support and an intent declaring none both omit the key, so absent-on-both produces no drift. Intent comes from the device's NetBox `local_context_data`, like `bgp_neighbors`/`ospf`. |
+| `tunnels[].type`       | `str`       | Encapsulation: `gre` or `vti`. A discriminator that lets the block grow to other tunnel types later. |
+| `tunnels[].source`     | `str`       | Tunnel source (local endpoint) IP. Empty string `""` if unset — never `None`, per Rule 4. |
+| `tunnels[].destination`| `str`       | Tunnel destination (remote endpoint) IP. Empty string `""` if unset — never `None`. |
+| `tunnels[].enabled`    | `bool`      | **Administrative** state: configured `no shutdown` vs shut. Mirrors `interfaces[].enabled`. |
+| `tunnels[].tunnel_state` | `str`     | **Operational** line-protocol state, lower-cased (`up`, `down`). Compared as drift, exactly like `session_state` — see Rule 10. |
 
 ---
 
@@ -243,8 +268,8 @@ device) and returns a `list` of drift records. Each record is one difference.
 | Field         | Type   | Meaning                                                          |
 |---------------|--------|------------------------------------------------------------------|
 | `device`      | `str`  | Device the drift was found on.                                   |
-| `object`      | `str`  | `"<type>:<identifier>"` for all types except config. Types: `interface` (e.g. `interface:Ethernet1`), `vlan` (e.g. `vlan:20`), `bgp_neighbor` (e.g. `bgp_neighbor:10.0.0.2`), `ospf_adjacency` (e.g. `ospf_adjacency:2.2.2.2`), and `config` (no identifier suffix — there is only one running config per device). |
-| `field`       | `str`  | Which field drifted: `description`, `enabled`, `ip_addresses`, `mode`, `untagged_vlan`, `tagged_vlans`, `name`, `remote_as`, `session_state`, `area`, `interface`, `adjacency_state`, `running_config`, or a sentinel (`_interface`, `_vlan`, `_bgp_neighbor`, `_ospf_adjacency`). |
+| `object`      | `str`  | `"<type>:<identifier>"` for all types except config/device. Types: `interface` (e.g. `interface:Ethernet1`), `vlan` (e.g. `vlan:20`), `bgp_neighbor` (e.g. `bgp_neighbor:10.0.0.2`), `ospf_adjacency` (e.g. `ospf_adjacency:2.2.2.2`), `tunnel` (e.g. `tunnel:Tunnel0`), `config` (no identifier suffix — there is only one running config per device), and `device` (device-level fields). |
+| `field`       | `str`  | Which field drifted: `description`, `enabled`, `ip_addresses`, `mode`, `untagged_vlan`, `tagged_vlans`, `name`, `remote_as`, `session_state`, `area`, `interface`, `adjacency_state`, `running_config`, `type`, `source`, `destination`, `tunnel_state`, or a sentinel (`_interface`, `_vlan`, `_bgp_neighbor`, `_ospf_adjacency`, `_tunnel`). |
 | `intent`      | varies | The value NetBox says it should be. Type matches the field.      |
 | `reality`     | varies | The value the device actually reports.                          |
 | `drift_kind`  | `str`  | Category of difference. See Section 6.                           |
@@ -289,6 +314,14 @@ the other is one drift record with `object = "ospf_adjacency:<router-id>"`,
 `object = "ospf_adjacency:<router-id>"`, `field` one of `area` / `interface` /
 `adjacency_state`, `drift_kind = value_mismatch`.
 
+**How this maps to tunnels:** the optional top-level `tunnels` block drifts per
+tunnel, keyed by tunnel interface name. A tunnel present on one side but not the
+other is one drift record with `object = "tunnel:<name>"`, `field` set to the
+sentinel `"_tunnel"`, and the appropriate `missing_in_*` kind. A field difference
+is `object = "tunnel:<name>"`, `field` one of `type` / `source` / `destination` /
+`enabled` / `tunnel_state`, `drift_kind = value_mismatch`. If the key is absent on
+both sides, no record is emitted.
+
 **How this maps to running config:** there is exactly one running config per
 device. If the normalized intent config and the normalized reality config differ,
 the diff engine emits **one** drift record with `object = "config"`,
@@ -328,6 +361,15 @@ refine as you learn:
 | OSPF `area` mismatch                                 | `warning`  |
 | OSPF `adjacency_state` mismatch                      | `warning`  |
 | Config text mismatch (`running_config`)              | `warning`  |
+| Tunnel missing in reality (intent has it)            | `critical` |
+| Tunnel missing in intent (undocumented)              | `info`     |
+| Tunnel `enabled` mismatch (intent up, reality down)  | `critical` |
+| Tunnel `enabled` mismatch (intent down, reality up)  | `warning`  |
+| Tunnel `tunnel_state` mismatch (intent up, reality not up) | `critical` |
+| Tunnel `tunnel_state` mismatch (intent down, reality up)   | `warning`  |
+| Tunnel `type` mismatch (e.g. gre vs vti)             | `warning`  |
+| Tunnel `source` mismatch                             | `warning`  |
+| Tunnel `destination` mismatch                        | `warning`  |
 
 These are defaults. In a later version, severity becomes configurable per site/role.
 
@@ -772,6 +814,7 @@ Keep a running log so both partners can see how the contract evolved.
 | 2026-05-26 | v0.3 routing-state fields added: top-level `bgp_neighbors` and `ospf`. Rule 10 added (operational state in scope, lower-cased values, area normalization). New `bgp_neighbor` / `ospf_adjacency` drift object types and `_bgp_neighbor` / `_ospf_adjacency` sentinels. Section 10 items 15–19. Routing intent stored via NetBox config contexts. | A + B |
 | 2026-05-31 | v1.0 config-level drift: top-level `running_config` field added. `"config"` object type added (Section 6). Config severity row added (Section 7). Section 11 items 20–26. | A + B |
 | 2026-05-31 | v2.5 remediation payload: Section 9 added — `known_issue.remediation` discriminated union (`restore_intent`, `raw_snippet`, `null`), `auto_apply_enabled`, `remediation_events` table, hard do-not-auto-apply list, dry-run API contract. Section 11 items 27–32. Sections renumbered (old 9→10, 10→11, 11→12). | A + B |
+| 2026-06-02 | v4.75 tunnel drift: optional top-level `tunnels` block (GRE/VTI), keyed by tunnel interface name (`type`, `source`, `destination`, `enabled`, `tunnel_state`). New `tunnel` object type and `_tunnel` sentinel (Sections 5–6). Tunnel severity rows (Section 7). Folds in `docs/schema-v4.75-tunnels-proposal.md`. | A (pending B) |
 
 ---
 

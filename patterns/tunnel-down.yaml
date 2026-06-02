@@ -1,0 +1,8 @@
+name: "Tunnel line protocol is down while intent expects it up"
+object_type: tunnel
+field: tunnel_state
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The tunnel is administratively enabled but its line protocol is not up: the overlay is not passing traffic. Common causes are an unreachable destination, a source interface that is down, or a routing/MTU problem on the underlay."
+fix: "Diagnose the underlay path to the tunnel destination (reachability, source interface state, MTU). This is an operational symptom, not a config setting, so resolve the underlying cause rather than editing the tunnel."

@@ -8,7 +8,7 @@ imports wrong is worse than one that fails to import.
 The vocabularies here are the contract with the rest of the tool and must not
 drift from it:
 
-- ``object_type`` — the four object types the differ emits (schema.md §2/§5).
+- ``object_type`` — the object types the differ emits (schema.md §2/§5).
 - ``drift_kinds`` — the three kinds ``differ.py`` actually produces. A pattern
   naming any other kind could never match a real drift.
 - ``vendors`` / ``by_platform`` keys — the canonical platform strings
@@ -28,7 +28,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 # --- Contract vocabularies (keep in lockstep with schema.md and differ.py) ----
 
 ObjectType = Literal[
-    "interface", "vlan", "bgp_neighbor", "ospf_adjacency", "config", "device"
+    "interface", "vlan", "bgp_neighbor", "ospf_adjacency", "config", "device",
+    "tunnel",
 ]
 
 # The three kinds differ.py emits. A pattern naming anything else is rejected —
@@ -40,7 +41,7 @@ Platform = Literal["arista_eos", "cisco_iosxe", "nokia_srlinux", "juniper_junos"
 
 # Operational-symptom fields are never directly configurable, so a pattern for
 # one MUST be diagnosis-only (remediation absent). Mirrors schema.md §9.
-OPERATIONAL_FIELDS = frozenset({"session_state", "adjacency_state"})
+OPERATIONAL_FIELDS = frozenset({"session_state", "adjacency_state", "tunnel_state"})
 
 
 # --- Remediation union (mirrors known_issues.remediation, schema.md §9) --------

@@ -1,0 +1,8 @@
+name: "Tunnel source endpoint differs from intent"
+object_type: tunnel
+field: source
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The tunnel's local source IP on the device does not match intent. A wrong source can break the overlay or send it out the wrong path, often a leftover from a re-IP or a copied template."
+fix: "Set the tunnel source to the intended local endpoint, or update NetBox if the device source is correct."

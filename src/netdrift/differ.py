@@ -317,6 +317,112 @@ def diff(intent, reality):
                 "detected_at": _now(),
             })
 
+    # v4.75 overlay tunnels (GRE + VTI). Optional top-level block: a device with
+    # no tunnels and an intent declaring none both omit the key, so .get(...) on
+    # both sides compares nothing and produces zero noise (proposal Decision 1).
+    # Keyed by canonical tunnel interface name. A tunnel present on one side and
+    # absent on the other is a missing_in_* record with the sentinel field
+    # "_tunnel", mirroring _interface / _bgp_neighbor. tunnel_state and enabled
+    # carry directional severity (intent-up-but-down is an outage = critical),
+    # by analogy to interface enabled and bgp session_state. Severities follow
+    # the v4.75 proposal Section 4.
+    intent_tunnels = intent.get("tunnels", {})
+    reality_tunnels = reality.get("tunnels", {})
+
+    for tunnel_name, intent_tun in intent_tunnels.items():
+        if tunnel_name not in reality_tunnels:
+            drifts.append({
+                "object": "tunnel:" + tunnel_name,
+                "field": "_tunnel",
+                "intent": "present",
+                "reality": "absent",
+                "drift_kind": "missing_in_reality",
+                "severity": "critical",
+                "detected_at": _now(),
+            })
+            continue
+
+        reality_tun = reality_tunnels[tunnel_name]
+
+        if intent_tun["type"] != reality_tun["type"]:
+            drifts.append({
+                "object": "tunnel:" + tunnel_name,
+                "field": "type",
+                "intent": intent_tun["type"],
+                "reality": reality_tun["type"],
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
+        if intent_tun["source"] != reality_tun["source"]:
+            drifts.append({
+                "object": "tunnel:" + tunnel_name,
+                "field": "source",
+                "intent": intent_tun["source"],
+                "reality": reality_tun["source"],
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
+        if intent_tun["destination"] != reality_tun["destination"]:
+            drifts.append({
+                "object": "tunnel:" + tunnel_name,
+                "field": "destination",
+                "intent": intent_tun["destination"],
+                "reality": reality_tun["destination"],
+                "drift_kind": "value_mismatch",
+                "severity": "warning",
+                "detected_at": _now(),
+            })
+
+        if intent_tun["enabled"] != reality_tun["enabled"]:
+            # Should-be-up-but-down is an outage (critical); should-be-down-but-up
+            # is sloppy but live (warning) — same direction logic as interfaces.
+            if intent_tun["enabled"] is True:
+                severity = "critical"
+            else:
+                severity = "warning"
+            drifts.append({
+                "object": "tunnel:" + tunnel_name,
+                "field": "enabled",
+                "intent": intent_tun["enabled"],
+                "reality": reality_tun["enabled"],
+                "drift_kind": "value_mismatch",
+                "severity": severity,
+                "detected_at": _now(),
+            })
+
+        if intent_tun["tunnel_state"] != reality_tun["tunnel_state"]:
+            # Intent up but reality not up = the overlay is down (critical);
+            # intent down but reality up = unexpected-but-live (warning).
+            if intent_tun["tunnel_state"] == "up":
+                severity = "critical"
+            else:
+                severity = "warning"
+            drifts.append({
+                "object": "tunnel:" + tunnel_name,
+                "field": "tunnel_state",
+                "intent": intent_tun["tunnel_state"],
+                "reality": reality_tun["tunnel_state"],
+                "drift_kind": "value_mismatch",
+                "severity": severity,
+                "detected_at": _now(),
+            })
+
+    for tunnel_name in reality_tunnels:
+        if tunnel_name not in intent_tunnels:
+            drifts.append({
+                "object": "tunnel:" + tunnel_name,
+                "field": "_tunnel",
+                "intent": "absent",
+                "reality": "present",
+                "drift_kind": "missing_in_intent",
+                "severity": "info",
+                "detected_at": _now(),
+            })
+
     # v1.0 running config. Skip if either side is "" — no template means nothing
     # to compare; empty reality means the collector could not retrieve the config.
     # Neither is drift (schema.md Section 10, Decisions 3–4).
