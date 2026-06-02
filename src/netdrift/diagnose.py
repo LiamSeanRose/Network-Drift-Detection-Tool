@@ -167,6 +167,55 @@ _RULES: dict[tuple[str, str, str], list[str]] = {
         "Normalisation differences (whitespace, ordering) that the normaliser did "
         "not fully collapse — review the diff before treating as actionable.",
     ],
+
+    # ── Software version ──────────────────────────────────────────────────────
+    ("device", "software_version", "value_mismatch"): [
+        "Device is running a different OS version than NetBox documents — an "
+        "upgrade or downgrade happened without updating the source of truth.",
+        "NetBox version was pinned after a planned upgrade that has not been "
+        "carried out on the device yet.",
+        "Device was replaced (RMA or swap) with a unit on a different firmware "
+        "than the documented standard.",
+    ],
+
+    # ── Tunnels (v4.75) ───────────────────────────────────────────────────────
+    ("tunnel", "_tunnel", "missing_in_reality"): [
+        "Tunnel is documented in NetBox but is not configured on the device — it "
+        "may have been removed, never provisioned, or failed to come up at all.",
+        "Tunnel interface was deleted during cleanup without updating NetBox.",
+    ],
+    ("tunnel", "_tunnel", "missing_in_intent"): [
+        "Tunnel exists on the device but is not documented in NetBox — either a "
+        "legitimate overlay missing from the source of truth, or one configured "
+        "directly on the device and never recorded.",
+        "Tunnel was provisioned on the device without a corresponding NetBox update.",
+    ],
+    ("tunnel", "type", "value_mismatch"): [
+        "Tunnel encapsulation (GRE vs VTI) was changed on the device without "
+        "updating NetBox — the two ends of an overlay must agree on encapsulation.",
+        "The wrong tunnel template was applied during provisioning.",
+    ],
+    ("tunnel", "source", "value_mismatch"): [
+        "Tunnel source was re-pointed on the device after a re-IP without updating "
+        "NetBox — a wrong source can break or misroute the overlay.",
+        "A copied template left the previous device's source address in place.",
+    ],
+    ("tunnel", "destination", "value_mismatch"): [
+        "Tunnel destination differs from intent — silently misroutes the overlay "
+        "to the wrong peer; verify the far end before changing a live tunnel.",
+        "Remote endpoint was re-addressed without updating this end or NetBox.",
+    ],
+    ("tunnel", "enabled", "value_mismatch"): [
+        "Tunnel interface was manually shut or no-shut on the device without "
+        "updating NetBox — often a troubleshooting shutdown that was never reverted.",
+        "A config push left out 'no shutdown' on the tunnel interface.",
+    ],
+    ("tunnel", "tunnel_state", "value_mismatch"): [
+        "Tunnel is administratively up but its line protocol is down — the overlay "
+        "is not passing traffic. Check destination reachability, the source "
+        "interface state, and underlay MTU.",
+        "A routing or MTU problem on the underlay path is keeping the tunnel down.",
+    ],
 }
 
 
