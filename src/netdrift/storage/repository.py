@@ -21,6 +21,7 @@ from netdrift.storage.models import (
     ApiKey,
     DeviceSetting,
     DriftEvent,
+    DriftExplanation,
     KnownIssue,
     RemediationEvent,
 )
@@ -215,6 +216,46 @@ def get_known_issue_by_id(session, issue_id):
 def list_known_issues(session):
     """Return all KnownIssue rows, oldest first."""
     return session.query(KnownIssue).order_by(KnownIssue.created_at).all()
+
+
+# --- Drift explanations (AI1) ------------------------------------------------
+
+def upsert_explanation(session, fingerprint, explanation, source):
+    """Insert or update the AI explanation for a drift fingerprint.
+
+    One row per fingerprint (generate-once semantics live in the caller). Does
+    NOT commit. Returns the row.
+    """
+    row = session.get(DriftExplanation, fingerprint)
+    if row is None:
+        row = DriftExplanation(
+            fingerprint=fingerprint,
+            explanation=explanation,
+            source=source,
+            generated_at=datetime.now(tz=timezone.utc),
+        )
+        session.add(row)
+    else:
+        row.explanation = explanation
+        row.source = source
+        row.generated_at = datetime.now(tz=timezone.utc)
+    session.flush()
+    return row
+
+
+def get_explanations(session, fingerprints=None):
+    """Return ``{fingerprint: DriftExplanation}``.
+
+    With ``fingerprints`` given, fetch only those in one query (the /drifts read
+    path); ``None`` returns all. An empty iterable returns ``{}`` without a query.
+    """
+    query = session.query(DriftExplanation)
+    if fingerprints is not None:
+        fps = list(fingerprints)
+        if not fps:
+            return {}
+        query = query.filter(DriftExplanation.fingerprint.in_(fps))
+    return {r.fingerprint: r for r in query.all()}
 
 
 def update_known_issue_remediation(session, issue_id, remediation):
