@@ -1,0 +1,8 @@
+name: "BGP neighbor description does not match intent"
+object_type: bgp_neighbor
+field: description
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The neighbor's description differs from NetBox. Cosmetic, but neighbor descriptions are how operators identify a peer mid-incident, so a wrong one costs time when it matters most."
+fix: "Set the neighbor description to the intended value, or update NetBox if the live one is correct."

@@ -1,0 +1,8 @@
+name: "Interface IP addresses do not match intent"
+object_type: interface
+field: ip_addresses
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The IP addresses configured on the interface differ from those assigned in NetBox. A wrong address here can black-hole traffic or create a duplicate-IP conflict on the segment."
+fix: "Reconcile the interface addressing with NetBox. Verify which side is correct before changing anything, since an address change on a live routed interface drops sessions."
