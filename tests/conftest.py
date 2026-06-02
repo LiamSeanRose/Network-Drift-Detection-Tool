@@ -31,16 +31,26 @@ _NOKIA_ROUTING_PREFIXES = (
     "test_get_reality_builds_ospf",
 )
 
+# Test-name prefixes in tests/test_arista.py that depend on the unverified EOS
+# `show interfaces tunnel` eAPI shape (v4.75 — built ahead of a lab tunnel).
+_ARISTA_TUNNEL_PREFIXES = (
+    "test_build_tunnels",
+    "test_get_reality_builds_tunnels",
+)
+
 
 def pytest_configure(config):
     config.addinivalue_line(
         "markers",
         "unvalidated_fixture: relies on a fixture shape not yet verified against "
-        "a live device (Nokia SR Linux BGP/OSPF gNMI — see CLAUDE.md).",
+        "a live device (Nokia SR Linux BGP/OSPF gNMI; Arista EOS tunnels — see "
+        "CLAUDE.md).",
     )
 
 
 def pytest_collection_modifyitems(items):
     for item in items:
         if "test_nokia.py" in item.nodeid and item.name.startswith(_NOKIA_ROUTING_PREFIXES):
+            item.add_marker(pytest.mark.unvalidated_fixture)
+        if "test_arista.py" in item.nodeid and item.name.startswith(_ARISTA_TUNNEL_PREFIXES):
             item.add_marker(pytest.mark.unvalidated_fixture)
