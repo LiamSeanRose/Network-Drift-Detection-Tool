@@ -493,22 +493,19 @@ to `docs/schema.md`. This is deferred to a post-v4.0 schema call with joint sign
 
 #### v4.0 Ownership Table
 
-| Work stream | Owner | Notes |
+Work is divided by **feature**, not layer. One person owns a feature end-to-end
+(collector → differ → API → frontend → tests); the other reviews. See `docs/drift-record.md`
+and `CLAUDE.md § Work division model` for the full rules. `patterns/` YAML schema design
+requires joint sign-off before any feature branch opens.
+
+| Feature | Owner | Scope |
 |---|---|---|
-| `patterns/` YAML schema design | Joint sign-off | Must agree before implementation |
-| `netdrift/patterns/schema.py` — `PatternSchema` Pydantic model | Matthew | |
-| `driftcheck import-patterns` CLI command | Matthew | `cli.py` extension |
-| `GET /known-issues/export` endpoint | Matthew | Requires API key |
-| CI lint rule: flag `yaml.load(` without safe Loader | Matthew | |
-| CI job: `validate-patterns` (separate from pytest) | Matthew | `driftcheck import-patterns --dry-run patterns/` |
-| Initial patterns — interfaces and VLANs | Matthew | |
-| Initial patterns — BGP and OSPF | Matthew | |
-| Vendor accuracy review of all patterns | Liam | Sign-off on all vendor-specific fields before merge |
-| Arista-specific patterns (MLAG, EOS defaults, etc.) | Liam | |
-| `patterns/README.md` — YAML field reference | Matthew | Required before `CONTRIBUTING.md` links to it |
-| `CONTRIBUTING.md` — pattern submission section | Matthew (draft) + Liam (vendor section) | Must merge before release tag |
-| Device status card grid in dashboard | Matthew | Cards per known device: drift count by severity, last-checked, "in NetBox?" indicator, click → slide-out detail panel. Uses existing `/drifts?device=`, zero schema change. (Design council 2026-06-01) |
-| README + CHANGELOG.md v4.0 + `docs/PROJECT_PLAN.md §15` | Matthew (release shepherd) | |
+| **Patterns infrastructure** — `PatternSchema`, import CLI, export endpoint, CI lint + validate job | Matthew | Plumbing layer; Liam reviews the schema design before branch opens (`schema-sign-off`) |
+| **Interface + VLAN patterns** — all YAML files, vendor accuracy, `patterns/README.md` | Liam | Writes all content; Matthew reviews differ/import seam (`needs-logic-review`) |
+| **BGP + OSPF patterns** — all YAML files, Arista-specific (MLAG, EOS defaults) | Liam | Same as above; Liam owns vendor edge-case accuracy |
+| **Device status card grid** — React cards per device: drift count by severity, "in NetBox?" indicator, slide-out detail panel | Matthew | Uses existing `/drifts?device=`, zero schema change (`needs-collector-review` if netbox_client touched) |
+| **`CONTRIBUTING.md`** — full pattern submission guide | Liam (vendor + submission sections) + Matthew (infra + CI section) | Liam drafts; Matthew reviews |
+| **README + CHANGELOG.md v4.0 + `docs/PROJECT_PLAN.md §15`** | Matthew (release shepherd) | |
 
 #### Paired Seams
 
