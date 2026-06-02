@@ -22,6 +22,9 @@ export default function Dashboard() {
   // v3.5 — SLA alert rules
   const [alertRules, setAlertRules] = useState(null)
 
+  // v3.5 — devices + per-device auto-apply pause state
+  const [devices, setDevices] = useState(null)
+
   // v2.5 remediation state
   const [dryRunFor, setDryRunFor] = useState(null)       // {drift, issueId}
   const [dryRunResult, setDryRunResult] = useState(null)  // API response
@@ -57,14 +60,32 @@ export default function Dashboard() {
       .catch(() => setAlertRules([]))
   }, [])
 
+  const loadDevices = useCallback(() => {
+    return apiFetch('/devices')
+      .then((r) => { if (!r.ok) throw new Error(`API returned ${r.status}`); return r.json() })
+      .then((data) => setDevices(data))
+      .catch(() => setDevices([]))
+  }, [])
+
   // Initial load on mount. The loaders set a loading flag synchronously, which
   // the fetch-on-mount pattern requires; that is intentional here.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { loadDrifts(); loadHistory(); loadAlertRules() },
-    [loadDrifts, loadHistory, loadAlertRules])
+  useEffect(() => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices() },
+    [loadDrifts, loadHistory, loadAlertRules, loadDevices])
 
-  const handleRefresh = useCallback(() => { loadDrifts(); loadHistory(); loadAlertRules() },
-    [loadDrifts, loadHistory, loadAlertRules])
+  const handleRefresh = useCallback(
+    () => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices() },
+    [loadDrifts, loadHistory, loadAlertRules, loadDevices])
+
+  const handleToggleDevice = useCallback((device) => {
+    return apiFetch(`/devices/${device.name}/auto-apply`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ paused: !device.auto_remediation_paused }),
+    })
+      .then((r) => { if (r.ok) loadDevices() })
+      .catch(() => {})
+  }, [loadDevices])
 
   const handleAddRule = useCallback((device, severity, windowMinutes) => {
     return apiFetch('/alert-rules', {
@@ -166,6 +187,7 @@ export default function Dashboard() {
       </header>
 
       <AlertRulesPanel rules={alertRules} onAdd={handleAddRule} onDelete={handleDeleteRule} />
+      <DevicesPanel devices={devices} onToggle={handleToggleDevice} />
 
       {history && history.length > 0 && <HistoryPanel history={history} />}
       {historyError && <p className="dashboard__state dashboard__state--error">History unavailable: {historyError}</p>}
@@ -448,6 +470,33 @@ function AlertRulesPanel({ rules, onAdd, onDelete }) {
         />
         <button type="submit" className="alert-rules__add">Add rule</button>
       </form>
+    </section>
+  )
+}
+
+// DevicesPanel — list inventory devices with a per-device auto-apply toggle (v3.5).
+function DevicesPanel({ devices, onToggle }) {
+  if (!devices || devices.length === 0) return null
+  return (
+    <section className="devices">
+      <h2 className="devices__heading">devices</h2>
+      <ul className="devices__list">
+        {devices.map((d) => (
+          <li key={d.name} className="devices__item">
+            <span className="devices__name">{d.name}</span>
+            <span className={`devices__state${d.auto_remediation_paused ? ' devices__state--paused' : ''}`}>
+              {d.auto_remediation_paused ? 'auto-apply paused' : 'auto-apply active'}
+            </span>
+            <button
+              type="button"
+              className="devices__toggle"
+              onClick={() => onToggle(d)}
+            >
+              {d.auto_remediation_paused ? 'Resume' : 'Pause'}
+            </button>
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }
