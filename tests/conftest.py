@@ -38,6 +38,13 @@ _ARISTA_TUNNEL_PREFIXES = (
     "test_get_reality_builds_tunnels",
 )
 
+# Test-name prefixes in tests/test_cisco.py that depend on the unverified IOS-XE
+# `show interfaces tunnel` CLI shape (v4.75 — built ahead of a lab tunnel).
+_CISCO_TUNNEL_PREFIXES = (
+    "test_parse_tunnels_cli",
+    "test_get_reality_builds_tunnels",
+)
+
 
 def pytest_configure(config):
     config.addinivalue_line(
@@ -53,4 +60,6 @@ def pytest_collection_modifyitems(items):
         if "test_nokia.py" in item.nodeid and item.name.startswith(_NOKIA_ROUTING_PREFIXES):
             item.add_marker(pytest.mark.unvalidated_fixture)
         if "test_arista.py" in item.nodeid and item.name.startswith(_ARISTA_TUNNEL_PREFIXES):
+            item.add_marker(pytest.mark.unvalidated_fixture)
+        if "test_cisco.py" in item.nodeid and item.name.startswith(_CISCO_TUNNEL_PREFIXES):
             item.add_marker(pytest.mark.unvalidated_fixture)

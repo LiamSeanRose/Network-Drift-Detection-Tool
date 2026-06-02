@@ -22,6 +22,7 @@ from netdrift.collectors.cisco import (
     _parse_ospf_neighbors,
     _parse_switchport_cli,
     _parse_trunk_vlans,
+    _parse_tunnels_cli,
     get_reality,
 )
 
@@ -42,13 +43,17 @@ class FakeNapalmConn:
     """Answers all get_reality() calls from canned data. No socket opened."""
 
     def __init__(self, interfaces, interfaces_ip, bgp_neighbors, vlans, cli_results,
-                 os_version="17.06.01a"):
+                 os_version="17.06.01a", tunnel_cli=None):
         self._interfaces = interfaces
         self._interfaces_ip = interfaces_ip
         self._bgp_neighbors = bgp_neighbors
         self._vlans = vlans
         self._cli_results = cli_results
         self._os_version = os_version
+        # v4.75: the tunnel block is fetched in a separate defensive cli() call.
+        self._tunnel_cli = tunnel_cli if tunnel_cli is not None else {
+            "show interfaces tunnel": ""
+        }
 
     def open(self): pass
     def close(self): pass
@@ -60,7 +65,10 @@ class FakeNapalmConn:
     def get_interfaces_ip(self): return self._interfaces_ip
     def get_bgp_neighbors(self): return self._bgp_neighbors
     def get_vlans(self): return self._vlans
-    def cli(self, commands): return self._cli_results
+    def cli(self, commands):
+        if commands == ["show interfaces tunnel"]:
+            return self._tunnel_cli
+        return self._cli_results
     def get_config(self, retrieve="running"):
         return {"running": RUNNING_CONFIG, "startup": "", "candidate": ""}
 
@@ -160,10 +168,11 @@ DEVICE = {
 }
 
 
-def _run_get_reality():
+def _run_get_reality(tunnel_cli=None):
     """Run get_reality() with the NAPALM IOS driver patched for the fake."""
     fake_conn = FakeNapalmConn(
         INTERFACES, INTERFACES_IP, BGP_NEIGHBORS, VLANS, CLI_RESULTS,
+        tunnel_cli=tunnel_cli,
     )
     with patch(
         "netdrift.collectors.cisco.get_network_driver",
@@ -500,8 +509,13 @@ def test_get_reality_top_level_shape():
     assert result["platform"] == "cisco_iosxe"
     assert set(result.keys()) == {
         "device", "platform", "collected_at", "interfaces", "vlans",
-        "bgp_neighbors", "ospf", "running_config", "software_version",
+        "bgp_neighbors", "ospf", "tunnels", "running_config", "software_version",
     }
+
+
+def test_get_reality_no_tunnels_is_empty_block():
+    # Default fake returns empty tunnel text -> empty tunnels block, no diff noise.
+    assert _run_get_reality()["tunnels"] == {}
 
 
 def test_get_reality_includes_running_config():
@@ -568,3 +582,97 @@ def test_get_reality_builds_ospf_block():
             },
         },
     }
+
+
+# ---------------------------------------------------------------------------
+# _parse_tunnels_cli (v4.75)
+# UNVALIDATED `show interfaces tunnel` text — modelled, not lab-captured.
+# Marked unvalidated_fixture via conftest.
+# ---------------------------------------------------------------------------
+
+GRE_TUNNEL_TEXT = (
+    "Tunnel0 is up, line protocol is up\n"
+    "  Hardware is Tunnel\n"
+    "  Tunnel source 192.0.2.1, destination 198.51.100.1\n"
+    "  Tunnel protocol/transport GRE/IP\n"
+)
+
+
+def test_parse_tunnels_cli_gre_up():
+    assert _parse_tunnels_cli(GRE_TUNNEL_TEXT) == {"Tunnel0": {
+        "type": "gre",
+        "source": "192.0.2.1",
+        "destination": "198.51.100.1",
+        "enabled": True,
+        "tunnel_state": "up",
+    }}
+
+
+def test_parse_tunnels_cli_ipsec_maps_to_vti():
+    text = (
+        "Tunnel1 is up, line protocol is up\n"
+        "  Tunnel source 10.0.0.1, destination 10.0.0.2\n"
+        "  Tunnel protocol/transport IPSEC/IP\n"
+    )
+    assert _parse_tunnels_cli(text)["Tunnel1"]["type"] == "vti"
+
+
+def test_parse_tunnels_cli_admin_down():
+    text = (
+        "Tunnel0 is administratively down, line protocol is down\n"
+        "  Tunnel source 192.0.2.1, destination 198.51.100.1\n"
+        "  Tunnel protocol/transport GRE/IP\n"
+    )
+    result = _parse_tunnels_cli(text)["Tunnel0"]
+    assert result["enabled"] is False
+    assert result["tunnel_state"] == "down"
+
+
+def test_parse_tunnels_cli_oper_down_admin_up():
+    text = (
+        "Tunnel0 is up, line protocol is down\n"
+        "  Tunnel source 192.0.2.1, destination 198.51.100.1\n"
+        "  Tunnel protocol/transport GRE/IP\n"
+    )
+    result = _parse_tunnels_cli(text)["Tunnel0"]
+    assert result["enabled"] is True
+    assert result["tunnel_state"] == "down"
+
+
+def test_parse_tunnels_cli_skips_out_of_scope_transport():
+    # A transport that is neither GRE nor IPSEC is skipped, not mistyped.
+    text = (
+        "Tunnel0 is up, line protocol is up\n"
+        "  Tunnel source 192.0.2.1, destination 198.51.100.1\n"
+        "  Tunnel protocol/transport GRE/IP\n"
+        "Tunnel5 is up, line protocol is up\n"
+        "  Tunnel source 203.0.113.1, destination 203.0.113.2\n"
+        "  Tunnel protocol/transport IPv6/IP\n"
+    )
+    assert set(_parse_tunnels_cli(text)) == {"Tunnel0"}
+
+
+def test_parse_tunnels_cli_two_tunnels():
+    text = GRE_TUNNEL_TEXT + (
+        "Tunnel1 is up, line protocol is up\n"
+        "  Tunnel source 10.0.0.1, destination 10.0.0.2\n"
+        "  Tunnel protocol/transport GRE/IP\n"
+    )
+    assert set(_parse_tunnels_cli(text)) == {"Tunnel0", "Tunnel1"}
+
+
+def test_parse_tunnels_cli_empty_is_empty():
+    assert _parse_tunnels_cli("") == {}
+
+
+def test_get_reality_builds_tunnels_block():
+    result = _run_get_reality(
+        tunnel_cli={"show interfaces tunnel": GRE_TUNNEL_TEXT}
+    )
+    assert result["tunnels"] == {"Tunnel0": {
+        "type": "gre",
+        "source": "192.0.2.1",
+        "destination": "198.51.100.1",
+        "enabled": True,
+        "tunnel_state": "up",
+    }}
