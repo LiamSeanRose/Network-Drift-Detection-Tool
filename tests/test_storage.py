@@ -277,3 +277,60 @@ def test_get_explanations_filters_to_requested(session):
     session.commit()
     got = get_explanations(session, ["a|b|value_mismatch"])
     assert set(got) == {"a|b|value_mismatch"}
+
+
+# --- maintenance windows -----------------------------------------------------
+
+def _mw_repo():
+    from netdrift.storage import repository
+    return repository
+
+
+def test_create_and_list_maintenance_window(session):
+    r = _mw_repo()
+    now = datetime.now(tz=timezone.utc)
+    r.create_maintenance_window(session, "core-sw-01", now, now + timedelta(hours=1), "upgrade")
+    session.commit()
+    rows = r.list_maintenance_windows(session)
+    assert len(rows) == 1
+    assert rows[0].device == "core-sw-01"
+    assert rows[0].reason == "upgrade"
+
+
+def test_is_in_maintenance_window_active(session):
+    r = _mw_repo()
+    now = datetime.now(tz=timezone.utc)
+    r.create_maintenance_window(session, "core-sw-01", now - timedelta(minutes=10),
+                                now + timedelta(minutes=10))
+    session.commit()
+    assert r.is_in_maintenance_window(session, "core-sw-01", now=now) is True
+    assert r.is_in_maintenance_window(session, "core-sw-02", now=now) is False
+
+
+def test_is_in_maintenance_window_respects_time_bounds(session):
+    r = _mw_repo()
+    now = datetime.now(tz=timezone.utc)
+    # A window that has not started yet.
+    r.create_maintenance_window(session, "core-sw-01", now + timedelta(hours=1),
+                                now + timedelta(hours=2))
+    session.commit()
+    assert r.is_in_maintenance_window(session, "core-sw-01", now=now) is False
+
+
+def test_global_window_matches_every_device(session):
+    r = _mw_repo()
+    now = datetime.now(tz=timezone.utc)
+    r.create_maintenance_window(session, None, now - timedelta(minutes=5),
+                                now + timedelta(minutes=5), "global freeze")
+    session.commit()
+    assert r.is_in_maintenance_window(session, "any-device", now=now) is True
+
+
+def test_delete_maintenance_window(session):
+    r = _mw_repo()
+    now = datetime.now(tz=timezone.utc)
+    w = r.create_maintenance_window(session, "core-sw-01", now, now + timedelta(hours=1))
+    session.commit()
+    assert r.delete_maintenance_window(session, w.id) == 1
+    session.commit()
+    assert r.list_maintenance_windows(session) == []
