@@ -487,6 +487,30 @@
   font-weight: 500;
 }
 
+.ai-explanation {
+  margin-bottom: 0.6rem;
+  padding: 0.5rem 0.75rem;
+  border-left: 2px solid #7c5cff;
+  background: #12101f;
+}
+
+.ai-explanation__label {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #a78bfa;
+  margin-bottom: 0.35rem;
+}
+
+.ai-explanation__text {
+  font-family: var(--sans);
+  font-size: 0.82rem;
+  color: var(--fg);
+  margin: 0.2rem 0 0;
+}
+
 /* Record fix button inside expanded row */
 .record-fix-btn {
   margin-top: 0.5rem;

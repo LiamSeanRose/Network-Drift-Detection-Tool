@@ -108,6 +108,55 @@ def test_drifts_includes_causes(client):
         assert isinstance(event["causes"], list)
 
 
+def test_drifts_explanation_null_by_default(client):
+    # With no explanation generated (the default), every event reports null.
+    response = client.get("/drifts")
+    for event in response.json():
+        assert "explanation" in event
+        assert event["explanation"] is None
+
+
+def test_drifts_includes_explanation_when_present():
+    # Build a dedicated client whose DB has an explanation for the untagged_vlan
+    # drift's fingerprint, and assert it surfaces on that event only.
+    from netdrift.storage.repository import upsert_explanation
+
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    Base.metadata.create_all(engine)
+    TestingSession = sessionmaker(bind=engine)
+
+    with TestingSession() as s:
+        save_drifts(s, [
+            {"device": "core-sw-01", "object": "interface:Ethernet2",
+             "field": "untagged_vlan", "intent": 10, "reality": 99,
+             "drift_kind": "value_mismatch", "severity": "warning",
+             "detected_at": "2026-05-26T14:32:00Z"},
+        ])
+        upsert_explanation(
+            s, "interface|untagged_vlan|value_mismatch",
+            "The access VLAN was changed on the device after a move.", "llm",
+        )
+        s.commit()
+
+    def override_get_session():
+        with TestingSession() as s:
+            yield s
+
+    app.dependency_overrides[get_session] = override_get_session
+    try:
+        client = TestClient(app)
+        event = client.get("/drifts").json()[0]
+        assert event["explanation"]["source"] == "llm"
+        assert "access VLAN" in event["explanation"]["text"]
+        assert "generated_at" in event["explanation"]
+    finally:
+        app.dependency_overrides.clear()
+
+
 # ---------------------------------------------------------------------------
 # GET /drifts/history tests
 # ---------------------------------------------------------------------------

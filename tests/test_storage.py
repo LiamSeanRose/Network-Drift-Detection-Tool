@@ -240,3 +240,40 @@ def test_confirmed_counts_returns_success_count_per_issue(session):
 def test_confirmed_counts_empty_input_returns_empty(session):
     from netdrift.storage.repository import confirmed_counts
     assert confirmed_counts(session, []) == {}
+
+
+# --- drift explanations (AI1) ------------------------------------------------
+
+def test_upsert_explanation_inserts(session):
+    from netdrift.storage.repository import get_explanations, upsert_explanation
+    upsert_explanation(session, "interface|enabled|value_mismatch", "Likely a shut.", "llm")
+    session.commit()
+    got = get_explanations(session, ["interface|enabled|value_mismatch"])
+    assert got["interface|enabled|value_mismatch"].explanation == "Likely a shut."
+    assert got["interface|enabled|value_mismatch"].source == "llm"
+
+
+def test_upsert_explanation_updates_in_place(session):
+    from netdrift.storage.repository import get_explanations, upsert_explanation
+    fp = "tunnel|tunnel_state|value_mismatch"
+    upsert_explanation(session, fp, "first", "deterministic")
+    upsert_explanation(session, fp, "second", "llm")
+    session.commit()
+    got = get_explanations(session, [fp])
+    assert len(got) == 1  # one row per fingerprint, updated not duplicated
+    assert got[fp].explanation == "second"
+    assert got[fp].source == "llm"
+
+
+def test_get_explanations_empty_iterable_returns_empty_without_query(session):
+    from netdrift.storage.repository import get_explanations
+    assert get_explanations(session, []) == {}
+
+
+def test_get_explanations_filters_to_requested(session):
+    from netdrift.storage.repository import get_explanations, upsert_explanation
+    upsert_explanation(session, "a|b|value_mismatch", "x", "llm")
+    upsert_explanation(session, "c|d|value_mismatch", "y", "llm")
+    session.commit()
+    got = get_explanations(session, ["a|b|value_mismatch"])
+    assert set(got) == {"a|b|value_mismatch"}
