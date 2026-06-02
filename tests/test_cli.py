@@ -5,6 +5,8 @@ table and the new `collectors=` injection seam. load_devices and the intent
 function are patched, so no devices.yml, NetBox, or device is touched.
 """
 
+import textwrap
+
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -13,7 +15,7 @@ from sqlalchemy.pool import StaticPool
 from netdrift import cli
 from netdrift.auth import KEY_PREFIX
 from netdrift.storage.models import Base
-from netdrift.storage.repository import verify_api_key
+from netdrift.storage.repository import list_known_issues, verify_api_key
 
 
 def _state(platform):
@@ -118,4 +120,52 @@ def test_main_routes_create_api_key(db_session_factory, monkeypatch, capsys):
     monkeypatch.setattr(cli, "_cmd_create_api_key",
                         lambda argv, **_: print("routed"))
     cli.main(argv=["create-api-key", "--name", "admin"])
+    assert "routed" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# import-patterns subcommand
+# ---------------------------------------------------------------------------
+
+
+def _write_pattern(path, name, body):
+    f = path / name
+    f.write_text(textwrap.dedent(body))
+    return f
+
+
+def test_import_patterns_imports_and_reports(db_session_factory, tmp_path, capsys):
+    _write_pattern(
+        tmp_path,
+        "iface.yaml",
+        """
+        name: Interface admin-down
+        object_type: interface
+        field: enabled
+        drift_kinds: [value_mismatch]
+        cause: shut
+        fix: no shut
+        """,
+    )
+    cli._cmd_import_patterns([str(tmp_path)], session_factory=db_session_factory)
+    out = capsys.readouterr().out
+    assert "1 created" in out
+    with db_session_factory() as session:
+        assert len(list_known_issues(session)) == 1
+
+
+def test_import_patterns_invalid_file_exits(db_session_factory, tmp_path):
+    _write_pattern(
+        tmp_path,
+        "bad.yaml",
+        "name: x\nobject_type: interface\nfield: enabled\ndrift_kinds: [nope]\ncause: c\nfix: f\n",
+    )
+    with pytest.raises(SystemExit):
+        cli._cmd_import_patterns([str(tmp_path)], session_factory=db_session_factory)
+
+
+def test_main_routes_import_patterns(monkeypatch, capsys):
+    monkeypatch.setattr(cli, "_cmd_import_patterns",
+                        lambda argv, **_: print("routed"))
+    cli.main(argv=["import-patterns", "patterns/"])
     assert "routed" in capsys.readouterr().out
