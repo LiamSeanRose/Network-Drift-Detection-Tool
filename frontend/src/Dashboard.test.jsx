@@ -14,11 +14,12 @@ import Dashboard from './Dashboard'
 
 // A fetch stub that routes /drifts, /drifts/history, and /alert-rules to
 // separate payloads. /alert-rules defaults to empty so the panel renders quietly.
-function mockFetchRouted(drifts, history, alertRules = [], devices = []) {
+function mockFetchRouted(drifts, history, alertRules = [], devices = [], maintenanceWindows = []) {
   return vi.fn((url) => {
     let body = drifts
     if (url === '/drifts/history') body = history
     else if (url.startsWith('/alert-rules')) body = alertRules
+    else if (url.startsWith('/maintenance-windows')) body = maintenanceWindows
     else if (url.startsWith('/devices')) body = devices
     else if (url.includes('/suggested-fix')) body = { cause: 'Suggested cause', fix: 'Suggested fix', source: 'deterministic' }
     return Promise.resolve({
@@ -288,6 +289,20 @@ describe('Dashboard', () => {
     await screen.findByRole('heading', { name: /alert rules/i })
     expect(screen.getByRole('button', { name: /add rule/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/window/i)).toBeInTheDocument()
+  })
+
+  it('lists maintenance windows from the API', async () => {
+    const windows = [
+      { id: 1, device: 'core-sw-01', starts_at: '2026-06-02T01:00:00+00:00',
+        ends_at: '2026-06-02T03:00:00+00:00', reason: 'core upgrade' },
+    ]
+    globalThis.fetch = mockFetchRouted([], [], [], [], windows)
+
+    render(<Dashboard />)
+
+    expect(await screen.findByRole('heading', { name: /maintenance windows/i })).toBeInTheDocument()
+    expect(screen.getByText(/core upgrade/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /open window/i })).toBeInTheDocument()
   })
 
   it('lists devices with an auto-apply toggle', async () => {
