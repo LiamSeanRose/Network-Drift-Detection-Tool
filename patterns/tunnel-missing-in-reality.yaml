@@ -1,0 +1,8 @@
+name: "Configured tunnel is absent from the device"
+object_type: tunnel
+field: _tunnel
+drift_kinds:
+  - missing_in_reality
+vendors: []
+cause: "NetBox documents an overlay tunnel that the device is not running. Either the tunnel was never configured, was removed, or the interface failed to come up at all."
+fix: "Configure the tunnel on the device to match intent, or remove it from NetBox if the overlay is no longer required."

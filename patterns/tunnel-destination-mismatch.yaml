@@ -1,0 +1,8 @@
+name: "Tunnel destination endpoint differs from intent"
+object_type: tunnel
+field: destination
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The tunnel's remote destination IP on the device does not match intent. A wrong destination silently misroutes the overlay to the wrong peer, one of the highest-impact tunnel misconfigurations."
+fix: "Set the tunnel destination to the intended remote endpoint, or update NetBox if the device value is correct. Verify the far end before changing a live tunnel."

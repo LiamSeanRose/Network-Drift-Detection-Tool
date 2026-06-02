@@ -13,7 +13,7 @@ ever matches drift the differ actually produces.
 
 ```yaml
 name: "Interface administratively down when intent says up"
-object_type: interface          # interface | vlan | bgp_neighbor | ospf_adjacency | config | device
+object_type: interface          # interface | vlan | bgp_neighbor | ospf_adjacency | tunnel | config | device
 field: enabled                   # a schema field, or a sentinel (see below)
 drift_kinds:                     # value_mismatch | missing_in_intent | missing_in_reality
   - value_mismatch
@@ -27,9 +27,10 @@ remediation:                     # optional; omit for diagnosis-only patterns
 - **`field`** is a normalized schema field (`enabled`, `description`,
   `ip_addresses`, `mode`, `untagged_vlan`, `tagged_vlans`, `name`, `remote_as`,
   `session_state`, `area`, `interface`, `adjacency_state`, plus `running_config`
-  on the `config` object and `software_version` on the `device` object), or a
+  on the `config` object, `software_version` on the `device` object, and
+  `type`/`source`/`destination`/`tunnel_state` on the `tunnel` object), or a
   **sentinel** for a whole object present on only one side: `_interface`,
-  `_vlan`, `_bgp_neighbor`, `_ospf_adjacency`.
+  `_vlan`, `_bgp_neighbor`, `_ospf_adjacency`, `_tunnel`.
 - **`drift_kinds`** lists one or more kinds. A pattern with N kinds imports as N
   `known_issues` rows, one per fingerprint.
 - **`vendors`** is advisory metadata. The fingerprint is vendor-agnostic, so a
