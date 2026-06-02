@@ -13,6 +13,8 @@ session, an OSPF area mismatch, a whole interface missing, and tunnel drift
 including the v4.75 `tunnels` feature.
 """
 
+from netdrift import differ
+
 
 def _iface(description="", enabled=True, ip_addresses=None, mode="routed",
            untagged_vlan=None, tagged_vlans=None):
@@ -162,3 +164,20 @@ DEMO_DEVICES = [
 def demo_pairs():
     """Return the bundled demo dataset as a list of (name, intent, reality)."""
     return DEMO_DEVICES
+
+
+def demo_drift_records():
+    """Return every demo drift record, stamped with `device` and `platform`.
+
+    Runs each pair through the real `differ.diff()`, then stamps the two fields
+    the pipeline normally adds (device from the pair name, platform from the
+    intent), so the result is ready to hand straight to `save_drifts()`.
+    """
+    records = []
+    for name, intent, reality in DEMO_DEVICES:
+        drifts = differ.diff(intent, reality)
+        for record in drifts:
+            record["device"] = name
+            record["platform"] = intent["platform"]
+        records.extend(drifts)
+    return records
