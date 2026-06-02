@@ -162,6 +162,40 @@ def save_known_issue(session, fingerprint, cause, fix, remediation=None):
     return issue
 
 
+def upsert_known_issue(session, fingerprint, cause, fix, remediation=None):
+    """Insert a KnownIssue, or update the existing row with this fingerprint.
+
+    Idempotent by fingerprint — the key the pattern importer upserts on. On
+    insert, ``auto_apply_enabled`` is False (patterns are never auto-apply on
+    arrival; schema.md §9 requires manual enablement after the confirm gate).
+    On update, cause/fix/remediation are refreshed but ``auto_apply_enabled`` is
+    preserved — re-importing a pattern must never silently disable an auto-apply
+    an operator turned on.
+
+    Does NOT commit. Returns ``(issue, created)`` where ``created`` is True on
+    insert, False on update.
+    """
+    issue = get_known_issue(session, fingerprint)
+    if issue is None:
+        issue = KnownIssue(
+            fingerprint=fingerprint,
+            cause=cause,
+            fix=fix,
+            created_at=datetime.now(tz=timezone.utc),
+            remediation=remediation,
+            auto_apply_enabled=False,
+        )
+        session.add(issue)
+        session.flush()
+        return issue, True
+
+    issue.cause = cause
+    issue.fix = fix
+    issue.remediation = remediation
+    session.flush()
+    return issue, False
+
+
 def get_known_issue(session, fingerprint):
     """Return the KnownIssue for this fingerprint, or None."""
     return (
