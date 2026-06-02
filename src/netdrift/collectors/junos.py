@@ -16,6 +16,7 @@ VLAN data comes from NAPALM get_vlans(). On non-ELS platforms the getter may
 return an empty dict — that is handled gracefully (no drift on vlans block).
 """
 
+import re
 from datetime import datetime, timezone
 
 from napalm import get_network_driver
@@ -152,6 +153,76 @@ def _parse_ospf_neighbors(text: str) -> dict:
     return adjacencies
 
 
+_JUNOS_TUNNEL_HEADER = re.compile(
+    r"^Physical interface:\s+(gr-\S+?|st0\S*),\s+(Enabled|Disabled),"
+    r"\s+Physical link is (Up|Down)"
+)
+
+
+def _junos_tunnel_type(name: str) -> str | None:
+    """Map a JunOS tunnel interface name to the schema type. gr- = GRE,
+    st0 = secure tunnel (IPsec VTI). Anything else is out of v4.75 scope."""
+    if name.startswith("gr-"):
+        return "gre"
+    if name.startswith("st0"):
+        return "vti"
+    return None
+
+
+def _parse_tunnels_cli(text: str) -> dict:
+    """Parse `show interfaces extensive` text into the schema's `tunnels` block.
+
+    UNVALIDATED FIXTURE SHAPE (v4.75): modelled from JunOS output, not captured
+    from a live device. Re-verify the `Physical interface:` and tunnel
+    source/destination lines against hardware.
+
+    GRE (`gr-*`) and VTI (`st0*`) only (tunnels schema proposal, Decision 2).
+    """
+    tunnels = {}
+    cur_name = None
+    cur = {}
+
+    def _commit():
+        if cur_name and _junos_tunnel_type(cur_name):
+            tunnels[cur_name] = {
+                "type": _junos_tunnel_type(cur_name),
+                "source": cur.get("source", ""),
+                "destination": cur.get("destination", ""),
+                "enabled": cur.get("enabled", True),
+                "tunnel_state": cur.get("tunnel_state", ""),
+            }
+
+    for line in text.splitlines():
+        m = _JUNOS_TUNNEL_HEADER.match(line.strip())
+        if m:
+            _commit()
+            cur_name = m.group(1)
+            cur = {"enabled": m.group(2) == "Enabled", "tunnel_state": m.group(3).lower()}
+            continue
+        if cur_name is None:
+            continue
+        m = re.search(r"Source[:\s]+(\S+?),?\s+Destination[:\s]+(\S+)", line)
+        if m:
+            cur["source"] = m.group(1).rstrip(",")
+            cur["destination"] = m.group(2)
+
+    _commit()
+    return tunnels
+
+
+def _collect_tunnels(conn) -> dict:
+    """Run the tunnel show command defensively and shape the result.
+
+    `tunnels` is optional: most devices have none. A failure degrades to "no
+    tunnels" rather than breaking the rest of collection.
+    """
+    try:
+        result = conn.cli(["show interfaces extensive"])
+        return _parse_tunnels_cli(result.get("show interfaces extensive", ""))
+    except Exception:
+        return {}
+
+
 @register("juniper_junos", netbox_slugs=("juniper-junos", "junos", "juniper"))
 def get_reality(device: dict) -> dict:
     """Collect reality for a Juniper JunOS device via NAPALM."""
@@ -171,6 +242,9 @@ def get_reality(device: dict) -> dict:
         raw_vlans = conn.get_vlans()
         cli_output = conn.cli(["show bgp summary", "show ospf neighbor"])
         running_config = conn.get_config(retrieve="running")["running"]
+        # v4.75: optional tunnel block, defensive so a device without tunnels
+        # never breaks the rest of collection.
+        tunnels = _collect_tunnels(conn)
     finally:
         conn.close()
 
@@ -206,6 +280,7 @@ def get_reality(device: dict) -> dict:
         "vlans": _build_vlans(raw_vlans),
         "bgp_neighbors": _build_bgp_neighbors(raw_bgp, bgp_summary_text),
         "ospf": {"adjacencies": _parse_ospf_neighbors(ospf_text)},
+        "tunnels": tunnels,
         "running_config": running_config,
         "software_version": facts.get("os_version", ""),
     }

@@ -250,6 +250,49 @@ def _normalize_area(area_id):
     return f"{(n >> 24) & 0xFF}.{(n >> 16) & 0xFF}.{(n >> 8) & 0xFF}.{n & 0xFF}"
 
 
+def _build_tunnels(gc):
+    """Read GRE tunnels from SR Linux, return the schema's `tunnels` block.
+
+    Path: /tunnel-interface  (UNVALIDATED — the SR Linux gNMI tunnel paths are
+    modelled from the YANG spec, not captured from a live node, same caveat as
+    BGP/OSPF). `_safe_gnmi_get` returns None on an invalid path, so a wrong model
+    degrades to "no tunnels" rather than breaking collection — matching the
+    optional-block design (tunnels schema proposal, Decision 1).
+
+    Only GRE is in scope for SR Linux: VXLAN is out of v4.75 scope, and VTI is
+    not an SR Linux concept. The tunnel-interface name (e.g. "gre1") is the key.
+    """
+    tunnels = {}
+    val = _safe_gnmi_get(gc, "/tunnel-interface")
+    if not val:
+        return tunnels
+
+    raw = (
+        val.get("srl_nokia-tunnel-interfaces:tunnel-interface", val)
+        if isinstance(val, dict) else val
+    )
+    if not isinstance(raw, list):
+        return tunnels
+
+    for ti in raw:
+        name = ti.get("name")
+        if not name:
+            continue
+        for subif in ti.get("subinterface", []):
+            if "gre" not in str(subif.get("type", "")).lower():
+                continue
+            gre = subif.get("gre", {})
+            tunnels[name] = {
+                "type": "gre",
+                "source": gre.get("source", "") or "",
+                "destination": gre.get("destination", "") or "",
+                "enabled": subif.get("admin-state", "") == "enable",
+                "tunnel_state": str(subif.get("oper-state", "")).lower(),
+            }
+            break
+    return tunnels
+
+
 @register("nokia_srlinux", netbox_slugs=("nokia-srlinux", "srlinux"))
 def get_reality(device):
     """Return the real state of an SR Linux device in the normalized schema."""
@@ -266,6 +309,7 @@ def get_reality(device):
         subif_to_macvrf = _build_macvrf_map(gc)
         bgp_neighbors = _build_bgp_neighbors(gc)
         ospf_adjacencies = _build_ospf_adjacencies(gc)
+        tunnels = _build_tunnels(gc)
         # SR Linux software version via the platform control card path.
         # _safe_gnmi_get returns None if the path is absent on this chassis.
         # NOTE: fixture unvalidated against a live device (same caveat as BGP/OSPF).
@@ -297,6 +341,7 @@ def get_reality(device):
         "vlans": vlans,
         "bgp_neighbors": bgp_neighbors,
         "ospf": {"adjacencies": ospf_adjacencies},
+        "tunnels": tunnels,
         "software_version": software_version,
         # v1.0 config-level drift (schema `running_config`): SR Linux is
         # gNMI/structured and exposes no Cisco-style text running-config that

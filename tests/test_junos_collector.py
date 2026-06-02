@@ -20,6 +20,7 @@ from netdrift.collectors.junos import (
     _looks_like_ip,
     _parse_bgp_summary,
     _parse_ospf_neighbors,
+    _parse_tunnels_cli,
     get_reality,
 )
 
@@ -450,3 +451,73 @@ def test_get_reality_software_version():
                return_value=_fake_conn_factory(fake)):
         result = get_reality(DEVICE)
     assert result["software_version"] == "22.4R1.10"
+
+
+# --- _parse_tunnels_cli (v4.75) ----------------------------------------------
+# UNVALIDATED `show interfaces extensive` shape — modelled, not lab-captured.
+# Marked unvalidated_fixture via conftest.
+
+GRE_TUNNEL_TEXT = (
+    "Physical interface: gr-0/0/0, Enabled, Physical link is Up\n"
+    "  Logical interface gr-0/0/0.0\n"
+    "    Tunnel data: Source 192.0.2.1, Destination 198.51.100.1\n"
+)
+
+VTI_TUNNEL_TEXT = (
+    "Physical interface: st0.0, Enabled, Physical link is Up\n"
+    "    Tunnel data: Source 10.0.0.1, Destination 10.0.0.2\n"
+)
+
+
+def test_parse_tunnels_cli_gre():
+    assert _parse_tunnels_cli(GRE_TUNNEL_TEXT) == {"gr-0/0/0": {
+        "type": "gre",
+        "source": "192.0.2.1",
+        "destination": "198.51.100.1",
+        "enabled": True,
+        "tunnel_state": "up",
+    }}
+
+
+def test_parse_tunnels_cli_st0_is_vti():
+    assert _parse_tunnels_cli(VTI_TUNNEL_TEXT)["st0.0"]["type"] == "vti"
+
+
+def test_parse_tunnels_cli_admin_down():
+    text = (
+        "Physical interface: gr-0/0/0, Disabled, Physical link is Down\n"
+        "    Tunnel data: Source 192.0.2.1, Destination 198.51.100.1\n"
+    )
+    result = _parse_tunnels_cli(text)["gr-0/0/0"]
+    assert result["enabled"] is False
+    assert result["tunnel_state"] == "down"
+
+
+def test_parse_tunnels_cli_skips_non_tunnel_interfaces():
+    text = (
+        "Physical interface: ge-0/0/0, Enabled, Physical link is Up\n"
+        "    Description: a normal port\n"
+        + GRE_TUNNEL_TEXT
+    )
+    assert set(_parse_tunnels_cli(text)) == {"gr-0/0/0"}
+
+
+def test_parse_tunnels_cli_empty_is_empty():
+    assert _parse_tunnels_cli("") == {}
+
+
+def test_get_reality_builds_tunnels_block():
+    fake = FakeNapalmJunosConn()
+    fake._cli_outputs["show interfaces extensive"] = GRE_TUNNEL_TEXT
+    with patch(
+        "netdrift.collectors.junos.get_network_driver",
+        return_value=_fake_conn_factory(fake),
+    ):
+        result = get_reality(DEVICE)
+    assert result["tunnels"] == {"gr-0/0/0": {
+        "type": "gre",
+        "source": "192.0.2.1",
+        "destination": "198.51.100.1",
+        "enabled": True,
+        "tunnel_state": "up",
+    }}

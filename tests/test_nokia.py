@@ -28,6 +28,7 @@ from netdrift.collectors.nokia import (
     _build_ip_list,
     _build_macvrf_map,
     _build_ospf_adjacencies,
+    _build_tunnels,
     _gnmi_first_val,
     _is_bridged,
     _normalize_area,
@@ -418,12 +419,13 @@ class FakeGNMIClient:
     """
 
     def __init__(self, interface=None, network_instance=None, bgp=None, ospf=None,
-                 software_version="v22.11.2-32-g5c4e0cfa69"):
+                 software_version="v22.11.2-32-g5c4e0cfa69", tunnel=None):
         self._interface = interface
         self._network_instance = network_instance
         self._bgp = bgp
         self._ospf = ospf
         self._software_version = software_version
+        self._tunnel = tunnel
 
     def __enter__(self):
         return self
@@ -443,6 +445,8 @@ class FakeGNMIClient:
             return gnmi_response(self._ospf)
         if "software-version" in key and self._software_version is not None:
             return gnmi_response(self._software_version)
+        if key == "/tunnel-interface" and self._tunnel is not None:
+            return gnmi_response(self._tunnel)
         return {"notification": []}
 
 
@@ -512,13 +516,14 @@ DEVICE = {
 }
 
 
-def _run_get_reality():
+def _run_get_reality(tunnel=None):
     """Run get_reality() with the gNMI client patched out for the fake."""
     fake = FakeGNMIClient(
         interface=INTERFACE_PAYLOAD,
         network_instance=NETWORK_INSTANCE_PAYLOAD,
         bgp=BGP_PAYLOAD,
         ospf=OSPF_PAYLOAD,
+        tunnel=tunnel,
     )
     # nokia.py does `with gNMIclient(...) as gc:` — patch the name it imported
     # so constructing it returns our fake instead of opening a connection.
@@ -532,8 +537,68 @@ def test_get_reality_top_level_shape():
     assert result["platform"] == "nokia_srlinux"
     assert set(result.keys()) == {
         "device", "platform", "collected_at", "interfaces", "vlans",
-        "bgp_neighbors", "ospf", "running_config", "software_version",
+        "bgp_neighbors", "ospf", "tunnels", "running_config", "software_version",
     }
+
+
+def test_get_reality_no_tunnels_is_empty_block():
+    # No tunnel payload -> /tunnel-interface returns empty -> empty tunnels block.
+    assert _run_get_reality()["tunnels"] == {}
+
+
+# --- _build_tunnels (v4.75) --------------------------------------------------
+# UNVALIDATED SR Linux /tunnel-interface gNMI shape — modelled, not lab-captured.
+# Marked unvalidated_fixture via conftest.
+
+def _gre_tunnel_payload():
+    return {"srl_nokia-tunnel-interfaces:tunnel-interface": [{
+        "name": "gre1",
+        "subinterface": [{
+            "type": "gre",
+            "admin-state": "enable",
+            "oper-state": "up",
+            "gre": {"source": "192.0.2.1", "destination": "198.51.100.1"},
+        }],
+    }]}
+
+
+def test_build_tunnels_gre():
+    class _GC:
+        def get(self, path=None, datatype=None):
+            return gnmi_response(_gre_tunnel_payload())
+    assert _build_tunnels(_GC()) == {"gre1": {
+        "type": "gre",
+        "source": "192.0.2.1",
+        "destination": "198.51.100.1",
+        "enabled": True,
+        "tunnel_state": "up",
+    }}
+
+
+def test_build_tunnels_admin_down():
+    payload = _gre_tunnel_payload()
+    payload["srl_nokia-tunnel-interfaces:tunnel-interface"][0]["subinterface"][0]["admin-state"] = "disable"
+    payload["srl_nokia-tunnel-interfaces:tunnel-interface"][0]["subinterface"][0]["oper-state"] = "down"
+
+    class _GC:
+        def get(self, path=None, datatype=None):
+            return gnmi_response(payload)
+    result = _build_tunnels(_GC())["gre1"]
+    assert result["enabled"] is False
+    assert result["tunnel_state"] == "down"
+
+
+def test_build_tunnels_no_data_is_empty():
+    class _GC:
+        def get(self, path=None, datatype=None):
+            return {"notification": []}
+    assert _build_tunnels(_GC()) == {}
+
+
+def test_get_reality_builds_tunnels_block():
+    result = _run_get_reality(tunnel=_gre_tunnel_payload())
+    assert result["tunnels"]["gre1"]["type"] == "gre"
+    assert result["tunnels"]["gre1"]["destination"] == "198.51.100.1"
 
 
 def test_get_reality_software_version():
