@@ -12,10 +12,13 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import Dashboard from './Dashboard'
 
-// A fetch stub that routes /drifts and /drifts/history to separate payloads.
-function mockFetchRouted(drifts, history) {
+// A fetch stub that routes /drifts, /drifts/history, and /alert-rules to
+// separate payloads. /alert-rules defaults to empty so the panel renders quietly.
+function mockFetchRouted(drifts, history, alertRules = []) {
   return vi.fn((url) => {
-    const body = url === '/drifts/history' ? history : drifts
+    let body = drifts
+    if (url === '/drifts/history') body = history
+    else if (url.startsWith('/alert-rules')) body = alertRules
     return Promise.resolve({
       ok: true,
       status: 200,
@@ -197,6 +200,29 @@ describe('Dashboard', () => {
     expect(screen.getByRole('heading', { name: /record fix/i })).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/what caused this drift/i)).toBeInTheDocument()
     expect(screen.getByPlaceholderText(/how was it resolved/i)).toBeInTheDocument()
+  })
+
+  it('lists alert rules from the API', async () => {
+    const rules = [
+      { id: 1, device: 'core-sw-01', severity: 'critical', window_minutes: 10, enabled: true },
+    ]
+    globalThis.fetch = mockFetchRouted([], [], rules)
+
+    render(<Dashboard />)
+
+    expect(await screen.findByRole('heading', { name: /alert rules/i })).toBeInTheDocument()
+    expect(screen.getByText(/core-sw-01/)).toBeInTheDocument()
+    expect(screen.getByText(/10 min/i)).toBeInTheDocument()
+  })
+
+  it('shows the add-rule form controls', async () => {
+    globalThis.fetch = mockFetchRouted([], [], [])
+
+    render(<Dashboard />)
+
+    await screen.findByRole('heading', { name: /alert rules/i })
+    expect(screen.getByRole('button', { name: /add rule/i })).toBeInTheDocument()
+    expect(screen.getByLabelText(/window/i)).toBeInTheDocument()
   })
 
   it('shows an error message when the fetch fails', async () => {
