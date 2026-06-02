@@ -199,13 +199,30 @@ class WebhookDispatcher:
 
     def _dispatch(self, body: dict):
         """POST one event. A failure is logged, never raised — the worker must
-        survive a dead endpoint and keep draining."""
+        survive a dead endpoint and keep draining.
+
+        Two failure modes are surfaced at WARNING: a transport error (no
+        response at all) and an HTTP error status (4xx/5xx). The latter matters
+        because a 401/429/503 from the receiver means the notification did NOT
+        land — recording it as a successful delivery would hide the failure.
+        Only a non-error status is logged at INFO as delivered.
+        """
         try:
             resp = self._post(self._url, json=body, timeout=self._timeout)
-            logger.info(
-                "Webhook %s -> %s (%s)",
-                body.get("event_type"), self._redacted,
-                getattr(resp, "status_code", "?"),
-            )
         except Exception as e:  # noqa: BLE001 — a webhook failure must not kill the daemon
             logger.warning("Webhook POST to %s failed: %s", self._redacted, e)
+            return
+
+        status = getattr(resp, "status_code", None)
+        if status is not None and status >= 400:
+            logger.warning(
+                "Webhook %s -> %s failed with status %s",
+                body.get("event_type"), self._redacted, status,
+            )
+            return
+
+        logger.info(
+            "Webhook %s -> %s (%s)",
+            body.get("event_type"), self._redacted,
+            status if status is not None else "?",
+        )

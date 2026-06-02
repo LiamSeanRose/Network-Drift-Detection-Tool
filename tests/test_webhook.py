@@ -148,3 +148,43 @@ def test_rate_limit_param_is_accepted(httpserver):
     # v3.5). Pin the API surface so v3.5 can tighten it without a signature break.
     d = _dispatcher(httpserver, rate_limit_per_minute=120)
     assert d.enabled
+
+
+# ---------------------------------------------------------------------------
+# COR1 — an HTTP error status (4xx/5xx) must be surfaced as a delivery failure,
+# not logged as a successful delivery. A 401/429/503 from Slack/PagerDuty was
+# previously recorded at INFO as if it had gone through.
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("status", [401, 429, 503])
+def test_dispatch_error_status_is_logged_as_failure(httpserver, caplog, status):
+    httpserver.expect_request("/hook", method="POST").respond_with_data(
+        "error", status=status
+    )
+    d = _dispatcher(httpserver)
+    t = d.start()
+    with caplog.at_level("INFO", logger="netdrift.webhook"):
+        d.fire("critical_drift", {"device": "core-sw-01", "timestamp": "t", "detail": "x"})
+        d.stop()
+
+    assert not t.is_alive()  # the worker must still drain and exit cleanly
+    ours = [r for r in caplog.records if r.name == "netdrift.webhook"]
+    # The failing status is surfaced as a WARNING naming the status code...
+    assert any(r.levelname == "WARNING" and str(status) in r.getMessage() for r in ours)
+    # ...and the failed POST is NOT recorded as a successful delivery at INFO.
+    assert not any(r.levelname == "INFO" for r in ours)
+
+
+def test_dispatch_success_status_still_logs_info(httpserver, caplog):
+    # The 2xx path must remain an INFO success — the fix must not over-warn.
+    httpserver.expect_request("/hook", method="POST").respond_with_json({"ok": True})
+    d = _dispatcher(httpserver)
+    t = d.start()
+    with caplog.at_level("INFO", logger="netdrift.webhook"):
+        d.fire("critical_drift", {"device": "core-sw-01", "timestamp": "t", "detail": "x"})
+        d.stop()
+
+    assert not t.is_alive()
+    ours = [r for r in caplog.records if r.name == "netdrift.webhook"]
+    assert any(r.levelname == "INFO" for r in ours)
+    assert not any(r.levelname == "WARNING" for r in ours)
