@@ -169,3 +169,67 @@ def test_main_routes_import_patterns(monkeypatch, capsys):
                         lambda argv, **_: print("routed"))
     cli.main(argv=["import-patterns", "patterns/"])
     assert "routed" in capsys.readouterr().out
+
+
+# ---------------------------------------------------------------------------
+# validate-patterns subcommand (no database — for CI)
+# ---------------------------------------------------------------------------
+
+
+def test_validate_patterns_reports_valid(tmp_path, capsys):
+    _write_pattern(
+        tmp_path,
+        "iface.yaml",
+        """
+        name: Interface admin-down
+        object_type: interface
+        field: enabled
+        drift_kinds: [value_mismatch]
+        cause: shut
+        fix: no shut
+        """,
+    )
+    cli._cmd_validate_patterns([str(tmp_path)])
+    out = capsys.readouterr().out
+    assert "1 pattern" in out
+
+
+def test_validate_patterns_invalid_file_exits(tmp_path):
+    _write_pattern(
+        tmp_path,
+        "bad.yaml",
+        "name: x\nobject_type: interface\nfield: enabled\ndrift_kinds: [nope]\ncause: c\nfix: f\n",
+    )
+    with pytest.raises(SystemExit):
+        cli._cmd_validate_patterns([str(tmp_path)])
+
+
+def test_validate_patterns_needs_no_database(tmp_path, capsys, monkeypatch):
+    # Validation must not touch the DB — break get_sessionmaker to prove it.
+    monkeypatch.setattr(cli, "get_sessionmaker",
+                        lambda: (_ for _ in ()).throw(AssertionError("DB used")))
+    _write_pattern(
+        tmp_path, "iface.yaml",
+        """
+        name: Interface admin-down
+        object_type: interface
+        field: enabled
+        drift_kinds: [value_mismatch]
+        cause: shut
+        fix: no shut
+        """,
+    )
+    cli._cmd_validate_patterns([str(tmp_path)])
+    assert "1 pattern" in capsys.readouterr().out
+
+
+def test_bundled_patterns_validate():
+    # The repo's own patterns/ must always validate (this is what CI runs).
+    cli._cmd_validate_patterns([str(cli.PATTERNS_DIR)])
+
+
+def test_main_routes_validate_patterns(monkeypatch, capsys):
+    monkeypatch.setattr(cli, "_cmd_validate_patterns",
+                        lambda argv, **_: print("routed"))
+    cli.main(argv=["validate-patterns", "patterns/"])
+    assert "routed" in capsys.readouterr().out

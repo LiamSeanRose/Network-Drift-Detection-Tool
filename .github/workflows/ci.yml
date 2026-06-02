@@ -25,5 +25,8 @@ jobs:
       - name: Lint with ruff
         run: ruff check .
 
+      - name: Validate bundled patterns
+        run: driftcheck validate-patterns patterns/
+
       - name: Run tests with pytest
         run: pytest
