@@ -21,6 +21,7 @@ from netdrift.collectors.arista import (
     _build_ip_list,
     _build_ospf_adjacencies,
     _build_switchport_map,
+    _build_tunnels,
     _build_vlans,
     _expand_interface_name,
     _parse_vlan_range,
@@ -161,12 +162,21 @@ RUNNING_CONFIG = (
 
 class FakeNapalmDevice:
     """Stands in for conn.device — the pyeapi connection NAPALM's EOS driver
-    holds. arista.py calls .device.run_commands([...], encoding="json")."""
+    holds. arista.py calls .device.run_commands([...], encoding="json").
 
-    def __init__(self, run_commands_result):
+    The tunnel block (v4.75) is fetched in a separate, defensive run_commands
+    call, so this fake dispatches `["show interfaces tunnel"]` to its own canned
+    result and everything else to the main batch result."""
+
+    def __init__(self, run_commands_result, tunnel_result=None):
         self._result = run_commands_result
+        self._tunnel_result = (
+            tunnel_result if tunnel_result is not None else [{"interfaces": {}}]
+        )
 
     def run_commands(self, commands, encoding=None):
+        if commands == ["show interfaces tunnel"]:
+            return self._tunnel_result
         return self._result
 
 
@@ -179,12 +189,12 @@ class FakeNapalmConn:
     """
 
     def __init__(self, interfaces, interfaces_ip, bgp_neighbors, run_commands_result,
-                 os_version="4.28.0F"):
+                 os_version="4.28.0F", tunnel_result=None):
         self._interfaces = interfaces
         self._interfaces_ip = interfaces_ip
         self._bgp_neighbors = bgp_neighbors
         self._os_version = os_version
-        self.device = FakeNapalmDevice(run_commands_result)
+        self.device = FakeNapalmDevice(run_commands_result, tunnel_result)
 
     def open(self):
         pass
@@ -295,10 +305,11 @@ DEVICE = {
 }
 
 
-def _run_get_reality():
+def _run_get_reality(tunnel_result=None):
     """Run get_reality() with the NAPALM driver patched out for the fake."""
     fake_conn = FakeNapalmConn(
         INTERFACES, INTERFACES_IP, BGP_NEIGHBORS, RUN_COMMANDS_RESULT,
+        tunnel_result=tunnel_result,
     )
     # arista.py does `driver = get_network_driver("eos")` then `driver(...)`.
     # Patch get_network_driver so it returns a factory that yields our fake
@@ -316,8 +327,14 @@ def test_get_reality_top_level_shape():
     assert result["platform"] == "arista_eos"
     assert set(result.keys()) == {
         "device", "platform", "collected_at", "interfaces", "vlans",
-        "bgp_neighbors", "ospf", "running_config", "software_version",
+        "bgp_neighbors", "ospf", "tunnels", "running_config", "software_version",
     }
+
+
+def test_get_reality_no_tunnels_is_empty_block():
+    # With no tunnel result injected, the fake returns {"interfaces": {}} and the
+    # collector emits an empty tunnels block (present key, no diff noise).
+    assert _run_get_reality()["tunnels"] == {}
 
 
 def test_get_reality_includes_running_config():
@@ -506,3 +523,103 @@ def test_get_reality_builds_ospf_block():
             },
         },
     }
+
+
+# --- _build_tunnels (v4.75) --------------------------------------------------
+# UNVALIDATED eAPI `show interfaces tunnel` shape — keys modelled, not yet
+# captured from a live cEOS tunnel. Marked unvalidated_fixture via conftest.
+#   {"interfaces": {"Tunnel0": {"tunnelMode": "gre", "sourceAddress": ...,
+#    "destinationAddress": ..., "interfaceStatus": ..., "lineProtocolStatus": ...}}}
+
+def test_build_tunnels_gre_up():
+    show = {"interfaces": {"Tunnel0": {
+        "tunnelMode": "gre",
+        "sourceAddress": "192.0.2.1",
+        "destinationAddress": "198.51.100.1",
+        "interfaceStatus": "connected",
+        "lineProtocolStatus": "up",
+    }}}
+    assert _build_tunnels(show) == {"Tunnel0": {
+        "type": "gre",
+        "source": "192.0.2.1",
+        "destination": "198.51.100.1",
+        "enabled": True,
+        "tunnel_state": "up",
+    }}
+
+
+def test_build_tunnels_vti_type_preserved():
+    show = {"interfaces": {"Tunnel1": {
+        "tunnelMode": "vti", "sourceAddress": "10.0.0.1",
+        "destinationAddress": "10.0.0.2", "interfaceStatus": "connected",
+        "lineProtocolStatus": "up",
+    }}}
+    assert _build_tunnels(show)["Tunnel1"]["type"] == "vti"
+
+
+def test_build_tunnels_admin_down_is_disabled():
+    # EOS reports an admin-shut interface as interfaceStatus "disabled".
+    show = {"interfaces": {"Tunnel0": {
+        "tunnelMode": "gre", "sourceAddress": "192.0.2.1",
+        "destinationAddress": "198.51.100.1", "interfaceStatus": "disabled",
+        "lineProtocolStatus": "down",
+    }}}
+    result = _build_tunnels(show)["Tunnel0"]
+    assert result["enabled"] is False
+    assert result["tunnel_state"] == "down"
+
+
+def test_build_tunnels_oper_down_but_admin_up():
+    show = {"interfaces": {"Tunnel0": {
+        "tunnelMode": "gre", "sourceAddress": "192.0.2.1",
+        "destinationAddress": "198.51.100.1", "interfaceStatus": "notconnect",
+        "lineProtocolStatus": "down",
+    }}}
+    result = _build_tunnels(show)["Tunnel0"]
+    assert result["enabled"] is True
+    assert result["tunnel_state"] == "down"
+
+
+def test_build_tunnels_skips_out_of_scope_mode():
+    # v4.75 is GRE + VTI only; an ipsec/mpls tunnel is skipped, not mistyped.
+    show = {"interfaces": {
+        "Tunnel0": {"tunnelMode": "gre", "sourceAddress": "1.1.1.1",
+                    "destinationAddress": "2.2.2.2", "interfaceStatus": "connected",
+                    "lineProtocolStatus": "up"},
+        "Tunnel9": {"tunnelMode": "ipsec", "interfaceStatus": "connected",
+                    "lineProtocolStatus": "up"},
+    }}
+    result = _build_tunnels(show)
+    assert set(result) == {"Tunnel0"}
+
+
+def test_build_tunnels_missing_endpoints_are_empty_strings():
+    # schema Rule 4: absent string fields are "", never None.
+    show = {"interfaces": {"Tunnel0": {
+        "tunnelMode": "gre", "interfaceStatus": "connected",
+        "lineProtocolStatus": "up",
+    }}}
+    result = _build_tunnels(show)["Tunnel0"]
+    assert result["source"] == ""
+    assert result["destination"] == ""
+
+
+def test_build_tunnels_no_tunnels_is_empty():
+    assert _build_tunnels({"interfaces": {}}) == {}
+    assert _build_tunnels({}) == {}
+
+
+def test_get_reality_builds_tunnels_block():
+    tunnel_result = [{"interfaces": {"Tunnel0": {
+        "tunnelMode": "gre", "sourceAddress": "192.0.2.1",
+        "destinationAddress": "198.51.100.1", "interfaceStatus": "connected",
+        "lineProtocolStatus": "up",
+    }}}]
+    result = _run_get_reality(tunnel_result=tunnel_result)
+    assert result["tunnels"] == {"Tunnel0": {
+        "type": "gre",
+        "source": "192.0.2.1",
+        "destination": "198.51.100.1",
+        "enabled": True,
+        "tunnel_state": "up",
+    }}
