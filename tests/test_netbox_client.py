@@ -90,3 +90,32 @@ def test_get_intent_raises_for_unknown_device(monkeypatch):
 
     with pytest.raises(ValueError, match="not found"):
         netbox_client.get_intent("nope")
+
+
+# --- _build_tunnels_from_context (v4.75) -------------------------------------
+
+def test_build_tunnels_from_context_reads_tunnels():
+    device = _Rec(local_context_data={"tunnels": {
+        "Tunnel0": {"type": "gre", "source": "192.0.2.1",
+                    "destination": "198.51.100.1", "enabled": True,
+                    "tunnel_state": "up"},
+    }})
+    result = netbox_client._build_tunnels_from_context(device)
+    assert result == {"Tunnel0": {
+        "type": "gre", "source": "192.0.2.1", "destination": "198.51.100.1",
+        "enabled": True, "tunnel_state": "up",
+    }}
+
+
+def test_build_tunnels_from_context_absent_key_is_empty():
+    device = _Rec(local_context_data={"bgp_neighbors": {}})
+    assert netbox_client._build_tunnels_from_context(device) == {}
+
+
+def test_build_tunnels_from_context_no_context_is_empty():
+    assert netbox_client._build_tunnels_from_context(_Rec(local_context_data=None)) == {}
+
+
+def test_build_tunnels_from_context_null_tunnels_is_empty():
+    device = _Rec(local_context_data={"tunnels": None})
+    assert netbox_client._build_tunnels_from_context(device) == {}
