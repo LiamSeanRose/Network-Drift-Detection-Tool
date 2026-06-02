@@ -147,6 +147,61 @@ def test_ollama_call_posts_to_generate_endpoint(monkeypatch):
     assert captured["json"]["stream"] is False
 
 
+# --- AI3 known-issue suggestions ---------------------------------------------
+
+def test_suggest_off_by_default_returns_deterministic(monkeypatch):
+    for var in ("NETDRIFT_EXPLAIN_PROVIDER", "NETDRIFT_EXPLAIN_MODEL",
+                "NETDRIFT_EXPLAIN_URL", "NETDRIFT_EXPLAIN_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+
+    def explode(*a, **k):
+        raise AssertionError("must not call the network when off")
+
+    monkeypatch.setattr(explain.httpx, "post", explode)
+    result = explain.suggest_known_issue(_drift())
+    assert result["source"] == "deterministic"
+    assert result["cause"]
+    assert result["fix"]
+
+
+def test_suggest_deterministic_fix_keys_on_drift_kind():
+    missing_reality = _drift(object_ref="interface:Ethernet9", field="_interface",
+                             drift_kind="missing_in_reality")
+    assert "device to match NetBox" in explain._deterministic_fix_text(missing_reality)
+    undoc = _drift(object_ref="vlan:99", field="_vlan", drift_kind="missing_in_intent")
+    assert "Document" in explain._deterministic_fix_text(undoc)
+
+
+def test_suggest_uses_llm_when_it_returns_both_lines():
+    def fake_llm(prompt):
+        return "CAUSE: A maintenance window left it shut.\nFIX: Re-enable the interface."
+
+    result = explain.suggest_known_issue(_drift(), llm=fake_llm)
+    assert result["source"] == "llm"
+    assert result["cause"] == "A maintenance window left it shut."
+    assert result["fix"] == "Re-enable the interface."
+
+
+def test_suggest_falls_back_when_llm_output_unparseable():
+    # Missing the FIX line -> deterministic pair, not a half-filled suggestion.
+    result = explain.suggest_known_issue(_drift(), llm=lambda p: "CAUSE: only a cause")
+    assert result["source"] == "deterministic"
+    assert result["fix"]
+
+
+def test_suggest_falls_back_when_llm_raises():
+    def boom(p):
+        raise RuntimeError("down")
+
+    assert explain.suggest_known_issue(_drift(), llm=boom)["source"] == "deterministic"
+
+
+def test_parse_suggestion_is_case_insensitive():
+    cause, fix = explain._parse_suggestion("cause: lower\nFix: mixed")
+    assert cause == "lower"
+    assert fix == "mixed"
+
+
 # --- AI2 remediation summaries ----------------------------------------------
 
 _COMMANDS = "interface Ethernet1\n  no shutdown\n"

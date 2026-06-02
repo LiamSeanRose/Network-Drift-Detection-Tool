@@ -108,6 +108,21 @@ def test_drifts_includes_causes(client):
         assert isinstance(event["causes"], list)
 
 
+def test_suggested_fix_returns_cause_and_fix(client):
+    # AI3: the endpoint suggests a cause + fix (deterministic by default).
+    event_id = client.get("/drifts").json()[0]["id"]
+    resp = client.get(f"/drifts/{event_id}/suggested-fix")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["cause"]
+    assert body["fix"]
+    assert body["source"] == "deterministic"
+
+
+def test_suggested_fix_404_for_unknown_event(client):
+    assert client.get("/drifts/999999/suggested-fix").status_code == 404
+
+
 def test_drifts_explanation_null_by_default(client):
     # With no explanation generated (the default), every event reports null.
     response = client.get("/drifts")
