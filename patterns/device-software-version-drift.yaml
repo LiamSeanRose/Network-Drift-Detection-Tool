@@ -1,0 +1,8 @@
+name: "Software version does not match the pinned intent"
+object_type: device
+field: software_version
+drift_kinds:
+  - value_mismatch
+vendors: []
+cause: "The OS version running on the device differs from the version pinned in NetBox. Indicates an unplanned upgrade or downgrade, or a device that missed a fleet-wide upgrade."
+fix: "Confirm which version is correct. If the device drifted, schedule it back onto the intended image; if the intent is stale, update the pinned version in NetBox."

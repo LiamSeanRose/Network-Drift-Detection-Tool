@@ -1,0 +1,8 @@
+name: "Undocumented BGP neighbor present on the device"
+object_type: bgp_neighbor
+field: _bgp_neighbor
+drift_kinds:
+  - missing_in_intent
+vendors: []
+cause: "The device has a BGP neighbor NetBox does not model. Either a legitimate peering missing from the source of truth, or a session configured directly on the device and never documented."
+fix: "Add the neighbor to NetBox if it belongs, or remove it from the device if it is not authorized. Resolve on the intent side."
