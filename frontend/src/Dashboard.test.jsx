@@ -14,11 +14,12 @@ import Dashboard from './Dashboard'
 
 // A fetch stub that routes /drifts, /drifts/history, and /alert-rules to
 // separate payloads. /alert-rules defaults to empty so the panel renders quietly.
-function mockFetchRouted(drifts, history, alertRules = []) {
+function mockFetchRouted(drifts, history, alertRules = [], devices = []) {
   return vi.fn((url) => {
     let body = drifts
     if (url === '/drifts/history') body = history
     else if (url.startsWith('/alert-rules')) body = alertRules
+    else if (url.startsWith('/devices')) body = devices
     return Promise.resolve({
       ok: true,
       status: 200,
@@ -223,6 +224,27 @@ describe('Dashboard', () => {
     await screen.findByRole('heading', { name: /alert rules/i })
     expect(screen.getByRole('button', { name: /add rule/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/window/i)).toBeInTheDocument()
+  })
+
+  it('lists devices with an auto-apply toggle', async () => {
+    const devices = [{ name: 'core-sw-01', auto_remediation_paused: false }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+
+    expect(await screen.findByRole('heading', { name: /^devices$/i })).toBeInTheDocument()
+    expect(screen.getByText('core-sw-01')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^pause$/i })).toBeInTheDocument()
+  })
+
+  it('shows resume for a paused device', async () => {
+    const devices = [{ name: 'core-sw-01', auto_remediation_paused: true }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.getByRole('button', { name: /^resume$/i })).toBeInTheDocument()
   })
 
   it('shows an error message when the fetch fails', async () => {

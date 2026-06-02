@@ -83,3 +83,30 @@ def test_pause_state_persists_across_requests(client):
     # A second toggle reads the existing row (upsert), proving persistence.
     r = client.patch("/devices/core-sw-01/auto-apply", json={"paused": True, "reason": "still"})
     assert r.json()["paused_reason"] == "still"
+
+
+# ---------------------------------------------------------------------------
+# GET /devices — list devices + their pause state (v3.5, backs the UI toggle)
+# ---------------------------------------------------------------------------
+
+def test_list_devices_returns_inventory_with_pause_state(client):
+    r = client.get("/devices")
+    assert r.status_code == 200
+    devices = r.json()
+    names = {d["name"] for d in devices}
+    assert "core-sw-01" in names
+    core = next(d for d in devices if d["name"] == "core-sw-01")
+    assert core["auto_remediation_paused"] is False  # no row yet → safe default
+
+
+def test_list_devices_reflects_pause(client):
+    client.patch("/devices/core-sw-01/auto-apply", json={"paused": True, "reason": "loop"})
+    core = next(d for d in client.get("/devices").json() if d["name"] == "core-sw-01")
+    assert core["auto_remediation_paused"] is True
+    assert core["paused_reason"] == "loop"
+
+
+def test_list_devices_is_public_no_api_key(client):
+    # GET is exempt from auth by design; sending no key still works.
+    r = client.get("/devices", headers={"X-API-Key": ""})
+    assert r.status_code == 200
