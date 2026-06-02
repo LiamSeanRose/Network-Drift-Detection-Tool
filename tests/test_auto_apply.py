@@ -19,6 +19,7 @@ from netdrift.storage.models import KnownIssue
 from netdrift.storage.repository import (
     create_acknowledgement,
     save_known_issue,
+    save_remediation_event,
     set_auto_apply_enabled,
     set_device_paused,
 )
@@ -534,3 +535,121 @@ def test_expired_acknowledgement_does_not_block_apply(monkeypatch, session_facto
     # Expired ack — apply should proceed normally.
     assert len(result) == 1
     assert calls == ["description"]
+
+
+# ---------------------------------------------------------------------------
+# TEST1 — partial failure across multiple matched issues in one call.
+# The most dangerous path: a single auto-apply cycle pushes config for two
+# different known issues, one succeeds and one fails. We pin (a) that a failure
+# mid-loop does not abort the remaining work, and (b) that the consecutive-
+# failure disable is accounted per-KnownIssue — a co-processed success must not
+# be contaminated by another issue's failure, nor vice versa.
+# ---------------------------------------------------------------------------
+
+_ENABLED_FINGERPRINT = "interface|enabled|value_mismatch"
+
+_ENABLED_REMEDIATION = {
+    "kind": "restore_intent",
+    "schema_version": 1,
+    "object_type": "interface",
+    "field": "enabled",
+    "drift_kinds": ["value_mismatch"],
+}
+
+# A second drift that matches a *different* known issue than DRIFT.
+DRIFT_ENABLED = {
+    **DRIFT,
+    "object": "interface:Ethernet2",
+    "field": "enabled",
+}
+
+
+def _make_enabled_issue(session_factory, *, auto_apply_enabled=True):
+    """Seed a second KnownIssue matching DRIFT_ENABLED's fingerprint."""
+    with session_factory() as session:
+        issue = save_known_issue(
+            session,
+            fingerprint=_ENABLED_FINGERPRINT,
+            cause="Interface was shut",
+            fix="Re-enable interface",
+            remediation=_ENABLED_REMEDIATION,
+        )
+        if auto_apply_enabled:
+            set_auto_apply_enabled(session, issue.id, True)
+        session.commit()
+        return issue.id
+
+
+def _selective_applier_fn(platform):
+    """Succeed for the description drift, fail for the enabled drift."""
+    def apply(remediation, drift, device, *, dry_run=False):
+        if drift["field"] == "enabled":
+            raise RuntimeError("SSH connection refused")
+        return ApplyResult(
+            transport="cli",
+            rendered_commands="interface Ethernet1\n   description Uplink to core",
+            dry_run_diff="diff",
+            applied=True,
+        )
+    return apply
+
+
+def test_partial_failure_processes_all_and_isolates_outcomes(monkeypatch, session_factory):
+    monkeypatch.setenv("AUTO_REMEDIATION_ENABLED", "true")
+    issue_ok = _make_issue(session_factory)            # interface|description → succeeds
+    issue_bad = _make_enabled_issue(session_factory)   # interface|enabled → fails
+
+    repolled = []
+    result = run_auto_apply(
+        [DRIFT, DRIFT_ENABLED], DEVICE, session_factory,
+        applier_fn=_selective_applier_fn,
+        schedule_repoll_fn=lambda d: repolled.append(d["name"]),
+    )
+
+    # The mid-loop failure did not abort the cycle — both issues were processed.
+    assert {o.known_issue_id: o.result for o in result} == {
+        issue_ok: "success",
+        issue_bad: "failure",
+    }
+
+    # One RemediationEvent per matched issue, regardless of outcome.
+    from netdrift.storage.models import RemediationEvent
+    with session_factory() as session:
+        rows = session.query(RemediationEvent).all()
+        assert sorted(r.result for r in rows) == ["failure", "success"]
+
+    # Exactly one success → exactly one repoll.
+    assert repolled == ["core-sw-01"]
+
+    # Neither issue is disabled: the success stays on, the single failure is
+    # below the threshold.
+    with session_factory() as session:
+        assert session.query(KnownIssue).filter_by(id=issue_ok).one().auto_apply_enabled is True
+        assert session.query(KnownIssue).filter_by(id=issue_bad).one().auto_apply_enabled is True
+
+
+def test_partial_failure_disable_threshold_is_per_issue(monkeypatch, session_factory):
+    monkeypatch.setenv("AUTO_REMEDIATION_ENABLED", "true")
+    issue_ok = _make_issue(session_factory)            # succeeds this cycle
+    issue_bad = _make_enabled_issue(session_factory)   # fails this cycle (its 3rd)
+
+    # Pre-seed the failing issue with FAILURE_THRESHOLD-1 prior scheduler failures
+    # so this cycle's failure is the one that trips the threshold.
+    with session_factory() as session:
+        for _ in range(FAILURE_THRESHOLD - 1):
+            save_remediation_event(
+                session, issue_bad, "arista_eos", "", "", "failure", "scheduler",
+            )
+        session.commit()
+
+    run_auto_apply(
+        [DRIFT, DRIFT_ENABLED], DEVICE, session_factory,
+        applier_fn=_selective_applier_fn,
+    )
+
+    with session_factory() as session:
+        # The failing issue tripped its own threshold and is disabled...
+        assert session.query(KnownIssue).filter_by(id=issue_bad).one().auto_apply_enabled is False
+        # ...but the issue that succeeded in the same call is untouched: the
+        # failure counter is not shared across known issues.
+        assert session.query(KnownIssue).filter_by(id=issue_ok).one().auto_apply_enabled is True
