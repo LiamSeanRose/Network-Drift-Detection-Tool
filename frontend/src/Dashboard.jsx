@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react'
 import { apiFetch, getApiKey, setApiKey } from './api'
 import { GLOSSARY, SEVERITY_LEGEND } from './help'
+import { LanguageToggle, useI18n } from './i18n'
 import './Dashboard.css'
 
 const HELP_BANNER_KEY = 'netdrift_help_banner_dismissed'
 
 export default function Dashboard({ initialFilter = null }) {
+  const { t } = useI18n()
   const [drifts, setDrifts] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -271,12 +273,13 @@ export default function Dashboard({ initialFilter = null }) {
           </span>
           <h1 className="dashboard__title">netdrift</h1>
           <span className="dashboard__subtitle">
-            drift console
+            {t('app.driftConsole')}
             {visibleDrifts && <> · <span className="dashboard__count">{visibleDrifts.length}</span> events</>}
           </span>
         </div>
         <div className="dashboard__actions">
           <a href="#" className="dashboard__overview-link">← Overview</a>
+          <LanguageToggle />
           <input
             type="password"
             className="dashboard__apikey"
@@ -286,10 +289,10 @@ export default function Dashboard({ initialFilter = null }) {
             onChange={(e) => { setApiKeyState(e.target.value); setApiKey(e.target.value) }}
           />
           <button type="button" className="dashboard__refresh" onClick={handleRefresh} disabled={loading}>
-            {loading ? 'Refreshing…' : 'Refresh'}
+            {loading ? t('app.refreshing') : t('app.refresh')}
           </button>
           <button type="button" className="dashboard__help-btn" onClick={() => setHelpOpen(true)}>
-            Help
+            {t('app.help')}
           </button>
         </div>
       </header>
@@ -347,7 +350,7 @@ export default function Dashboard({ initialFilter = null }) {
         </p>
       )}
 
-      <h2 className="section-title">configuration</h2>
+      <h2 className="section-title">{t('section.configuration')}</h2>
       <div className="panel-grid">
         <AlertRulesPanel rules={alertRules} onAdd={handleAddRule} onDelete={handleDeleteRule} />
         <MaintenanceWindowsPanel windows={maintenanceWindows} onAdd={handleAddWindow} onDelete={handleDeleteWindow} />
@@ -356,13 +359,13 @@ export default function Dashboard({ initialFilter = null }) {
 
       {history && history.length > 0 && <HistoryPanel history={history} />}
       {historyError && <p className="dashboard__state dashboard__state--error">History unavailable: {historyError}</p>}
-      {loading && !drifts && <p className="dashboard__state">Loading…</p>}
+      {loading && !drifts && <p className="dashboard__state">{t('state.loading')}</p>}
       {error && <p className="dashboard__state dashboard__state--error">Failed to load drifts: {error}</p>}
-      {!loading && !error && visibleDrifts && visibleDrifts.length === 0 && <p className="dashboard__state">No drift events yet.</p>}
+      {!loading && !error && visibleDrifts && visibleDrifts.length === 0 && <p className="dashboard__state">{t('state.noDrift')}</p>}
 
       {visibleDrifts && visibleDrifts.length > 0 && (
         <>
-        <h2 className="section-title">drift events</h2>
+        <h2 className="section-title">{t('section.driftEvents')}</h2>
         <div className="table-card">
         <table className="drift-table">
           <thead>
@@ -1123,6 +1126,7 @@ function formatTimestamp(iso) {
 // nothing until a well-formed /inventory-accuracy payload arrives, so an empty
 // inventory or a failed fetch simply shows no banner rather than a broken card.
 function AccuracyBanner({ accuracy }) {
+  const { t } = useI18n()
   if (!accuracy || typeof accuracy.accuracy_pct !== 'number') return null
   const pct = accuracy.accuracy_pct
   const tone = pct >= 95 ? 'good' : pct >= 80 ? 'warn' : 'bad'
@@ -1132,7 +1136,7 @@ function AccuracyBanner({ accuracy }) {
       <div className={`accuracy__score accuracy__score--${tone}`}>
         <span className="accuracy__pct">{pct}%</span>
         <span className="accuracy__caption">
-          inventory verified accurate
+          {t('accuracy.caption')}
           {window ? <span className="accuracy__window"> · last {window} min</span> : null}
         </span>
       </div>

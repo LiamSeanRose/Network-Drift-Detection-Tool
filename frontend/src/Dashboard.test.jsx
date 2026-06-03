@@ -11,6 +11,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import Dashboard from './Dashboard'
+import { I18nProvider } from './i18n'
 
 // A fetch stub that routes /drifts, /drifts/history, and /alert-rules to
 // separate payloads. /alert-rules defaults to empty so the panel renders quietly.
@@ -398,6 +399,18 @@ describe('Dashboard', () => {
     expect(await screen.findByRole('heading', { name: /^devices$/i })).toBeInTheDocument()
     expect(screen.getByText('core-sw-01')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^pause$/i })).toBeInTheDocument()
+  })
+
+  it('translates the dashboard to French when FR is selected', async () => {
+    localStorage.clear()
+    globalThis.fetch = mockFetchRouted([], [])
+    render(<I18nProvider><Dashboard /></I18nProvider>)
+    await screen.findByText(/no drift events yet/i)
+
+    fireEvent.click(screen.getByRole('button', { name: 'FR' }))
+    expect(screen.getByText(/aucun événement de dérive/i)).toBeInTheDocument()
+    expect(screen.queryByText(/no drift events yet/i)).not.toBeInTheDocument()
+    localStorage.clear()
   })
 
   it('shows a reachable device status', async () => {

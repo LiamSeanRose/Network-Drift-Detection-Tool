@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react'
 import { buildFleetSummary } from './fleet'
+import { LanguageToggle, useI18n } from './i18n'
 import './FleetHome.css'
 
 // Render the newest-drift timestamp in the viewer's locale, falling back to the
@@ -19,6 +20,7 @@ function formatActivity(iso) {
 }
 
 export default function FleetHome() {
+  const { t } = useI18n()
   const [data, setData] = useState(null)   // { drifts, devices, alertRules }
   const [error, setError] = useState(null)
 
@@ -37,10 +39,10 @@ export default function FleetHome() {
   }, [])
 
   if (error) {
-    return <p className="fleet-error" role="alert">Failed to load fleet health: {error}</p>
+    return <p className="fleet-error" role="alert">{t('fleet.error')} {error}</p>
   }
   if (!data) {
-    return <p className="fleet-loading">Loading fleet health…</p>
+    return <p className="fleet-loading">{t('fleet.loading')}</p>
   }
 
   const { cards, lastActivity } = buildFleetSummary(data)
@@ -48,11 +50,12 @@ export default function FleetHome() {
   return (
     <main id="main-content" className="fleet-home" aria-label="Fleet health summary">
       <header className="fleet-home__header">
-        <h1>Fleet health</h1>
+        <h1>{t('fleet.title')}</h1>
+        <LanguageToggle />
         <p className="fleet-activity">
           {lastActivity
-            ? <>Last activity: <time dateTime={lastActivity}>{formatActivity(lastActivity)}</time></>
-            : 'No drift detected yet.'}
+            ? <>{t('fleet.lastActivity')} <time dateTime={lastActivity}>{formatActivity(lastActivity)}</time></>
+            : t('fleet.noDrift')}
         </p>
       </header>
 
