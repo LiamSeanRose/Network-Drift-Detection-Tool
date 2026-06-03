@@ -252,6 +252,25 @@ def get_session():
 # ---------------------------------------------------------------------------
 
 _MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+_TRUTHY = {"1", "true", "yes", "on"}
+
+
+def _api_auth_disabled() -> bool:
+    """True when API-key auth is turned off for a trusted/local deployment.
+
+    Opt-in via ``NETDRIFT_DISABLE_API_AUTH``; the default (unset) keeps auth on.
+    Intended for a local dashboard on a trusted network where pasting a key for
+    every browser is needless friction — NEVER for a public instance, where the
+    mutating routes push config to live devices (see SECURITY.md and the audit's
+    B1). Read per-request so it can be toggled without restarting in tests."""
+    return os.environ.get("NETDRIFT_DISABLE_API_AUTH", "").strip().lower() in _TRUTHY
+
+
+if _api_auth_disabled():
+    logger.warning(
+        "API-key authentication is DISABLED (NETDRIFT_DISABLE_API_AUTH set) — "
+        "mutating endpoints are open. Use only on a trusted/local network."
+    )
 
 
 @app.middleware("http")
@@ -264,9 +283,12 @@ async def require_api_key(request: Request, call_next):
     Only mutating methods (POST/PUT/PATCH/DELETE) require a key, so every
     current and future write endpoint is protected without per-route wiring.
 
+    ``NETDRIFT_DISABLE_API_AUTH`` turns the check off entirely for a trusted
+    local deployment (off by default; do not use on a public box).
+
     The X-API-Key header value is never logged.
     """
-    if request.method.upper() in _MUTATING_METHODS:
+    if request.method.upper() in _MUTATING_METHODS and not _api_auth_disabled():
         presented = request.headers.get("X-API-Key")
         if not presented:
             return JSONResponse(
