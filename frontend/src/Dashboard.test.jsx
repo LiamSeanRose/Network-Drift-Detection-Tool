@@ -458,6 +458,31 @@ describe('Dashboard', () => {
     expect(screen.getByText(/stable low-severity drift/i)).toBeInTheDocument()
   })
 
+  it('opens the help glossary from the Help button', async () => {
+    localStorage.clear()
+    globalThis.fetch = mockFetchRouted([], [])
+    render(<Dashboard />)
+    await screen.findByText(/no drift events/i)
+
+    fireEvent.click(screen.getByRole('button', { name: /^help$/i }))
+    const dialog = screen.getByRole('dialog', { name: /help/i })
+    expect(dialog).toBeInTheDocument()
+    // A glossary definition unique to the panel (not the banner).
+    expect(screen.getByText(/a difference between intent and reality/i)).toBeInTheDocument()
+  })
+
+  it('shows the intent-vs-reality banner and dismisses it', async () => {
+    localStorage.clear()
+    globalThis.fetch = mockFetchRouted([], [])
+    render(<Dashboard />)
+    await screen.findByText(/no drift events/i)
+
+    expect(screen.getByText(/what am i looking at/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /dismiss help banner/i }))
+    expect(screen.queryByText(/what am i looking at/i)).not.toBeInTheDocument()
+    expect(localStorage.getItem('netdrift_help_banner_dismissed')).toBe('1')
+  })
+
   it('shows an Acknowledge button on an unacknowledged drift', async () => {
     const drifts = [
       {

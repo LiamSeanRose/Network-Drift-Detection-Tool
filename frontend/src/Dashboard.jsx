@@ -2,7 +2,10 @@
 
 import { useState, useEffect, useCallback, Fragment } from 'react'
 import { apiFetch, getApiKey, setApiKey } from './api'
+import { GLOSSARY, SEVERITY_LEGEND } from './help'
 import './Dashboard.css'
+
+const HELP_BANNER_KEY = 'netdrift_help_banner_dismissed'
 
 export default function Dashboard() {
   const [drifts, setDrifts] = useState(null)
@@ -31,6 +34,16 @@ export default function Dashboard() {
   // Surfaced when a write fails. Mutating requests need an API key; without one
   // they 401, and the handlers used to swallow that — every button looked dead.
   const [actionError, setActionError] = useState(null)
+
+  // In-app help: the glossary modal and the dismissible intent-vs-reality banner.
+  const [helpOpen, setHelpOpen] = useState(false)
+  const [bannerDismissed, setBannerDismissed] = useState(
+    () => localStorage.getItem(HELP_BANNER_KEY) === '1')
+
+  const dismissBanner = useCallback(() => {
+    setBannerDismissed(true)
+    localStorage.setItem(HELP_BANNER_KEY, '1')
+  }, [])
 
   // v2.5 remediation state
   const [dryRunFor, setDryRunFor] = useState(null)       // {drift, issueId}
@@ -244,8 +257,36 @@ export default function Dashboard() {
           <button type="button" className="dashboard__refresh" onClick={handleRefresh} disabled={loading}>
             {loading ? 'Refreshing…' : 'Refresh'}
           </button>
+          <button type="button" className="dashboard__help-btn" onClick={() => setHelpOpen(true)}>
+            Help
+          </button>
         </div>
       </header>
+
+      {!bannerDismissed && (
+        <div className="intent-banner">
+          <p className="intent-banner__text">
+            <strong>What am I looking at?</strong> netdrift compares your{' '}
+            <em>intent</em> (what NetBox says the network should be) against{' '}
+            <em>reality</em> (what each device reports live). Every row below is a{' '}
+            <em>drift</em> — a difference between the two.{' '}
+            <button type="button" className="intent-banner__link" onClick={() => setHelpOpen(true)}>
+              Open the glossary
+            </button>{' '}
+            for any term.
+          </p>
+          <button
+            type="button"
+            className="intent-banner__dismiss"
+            aria-label="dismiss help banner"
+            onClick={dismissBanner}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
+      {helpOpen && <HelpPanel onClose={() => setHelpOpen(false)} />}
 
       {actionError && (
         <div className="dashboard__action-error" role="alert">
@@ -442,6 +483,42 @@ export default function Dashboard() {
 // body so it is an intentional, isolated impurity rather than inline noise.
 function nowMs() {
   return Date.now()
+}
+
+// HelpPanel — the in-app glossary + severity legend. A finite reference so an
+// operator does not have to leave the app to look up a term.
+function HelpPanel({ onClose }) {
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal modal--wide help-panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Help and glossary">
+        <h2 className="modal__title">Help &amp; glossary</h2>
+
+        <h3 className="help-panel__subhead">Severity</h3>
+        <ul className="help-panel__legend">
+          {SEVERITY_LEGEND.map((s) => (
+            <li key={s.level} className="help-panel__legend-item">
+              <span className={`sev-pill sev-pill--${s.level}`}>{s.level}</span>
+              <span className="help-panel__legend-text">{s.meaning}</span>
+            </li>
+          ))}
+        </ul>
+
+        <h3 className="help-panel__subhead">Glossary</h3>
+        <dl className="help-panel__glossary">
+          {GLOSSARY.map((g) => (
+            <Fragment key={g.term}>
+              <dt className="help-panel__term">{g.term}</dt>
+              <dd className="help-panel__def">{g.definition}</dd>
+            </Fragment>
+          ))}
+        </dl>
+
+        <div className="modal__actions">
+          <button type="button" className="modal__cancel" onClick={onClose}>Close</button>
+        </div>
+      </div>
+    </div>
+  )
 }
 
 // MatchConfidenceBadge — how a known fix was matched to this drift (v5.0).
