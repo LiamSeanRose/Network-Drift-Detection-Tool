@@ -721,6 +721,24 @@ def record_reachability(session, device_name, reachable, when=None):
     return setting
 
 
+def record_lifecycle(session, device_name, warranty_expiry, end_of_life):
+    """Store a device's lifecycle dates (upsert). Does NOT commit.
+
+    Creates the device_settings row if absent, preserving any other state.
+    ``warranty_expiry`` and ``end_of_life`` are ``datetime.date`` (or None to
+    clear) — the caller (lifecycle sync) parses NetBox's strings to dates before
+    calling. Synced periodically from NetBox custom fields.
+    """
+    setting = get_device_setting(session, device_name)
+    if setting is None:
+        setting = DeviceSetting(device_name=device_name)
+        session.add(setting)
+    setting.warranty_expiry = warranty_expiry
+    setting.end_of_life = end_of_life
+    session.flush()
+    return setting
+
+
 # ---------------------------------------------------------------------------
 # v3.5 — api_keys (REST API authentication)
 # ---------------------------------------------------------------------------

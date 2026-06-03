@@ -543,3 +543,37 @@ def test_inventory_accuracy_window_excludes_old_drift(session):
     result = inventory_accuracy(session, ["core-sw-01"], window_minutes=60, now=now)
     assert result["devices"][0]["status"] == "accurate"
     assert result["accuracy_pct"] == 100.0
+
+
+def test_record_lifecycle_upserts_dates(session):
+    from datetime import date
+
+    from netdrift.storage.repository import get_device_setting, record_lifecycle
+    record_lifecycle(session, "core-sw-01", date(2026, 12, 31), date(2028, 1, 1))
+    session.commit()
+    setting = get_device_setting(session, "core-sw-01")
+    assert setting.warranty_expiry == date(2026, 12, 31)
+    assert setting.end_of_life == date(2028, 1, 1)
+
+    # Re-sync with new dates overwrites; None clears.
+    record_lifecycle(session, "core-sw-01", date(2027, 6, 30), None)
+    session.commit()
+    setting = get_device_setting(session, "core-sw-01")
+    assert setting.warranty_expiry == date(2027, 6, 30)
+    assert setting.end_of_life is None
+
+
+def test_record_lifecycle_preserves_other_state(session):
+    from datetime import date
+
+    from netdrift.storage.repository import (
+        get_device_setting,
+        record_lifecycle,
+        set_device_paused,
+    )
+    set_device_paused(session, "core-sw-01", True, reason="freeze")
+    record_lifecycle(session, "core-sw-01", date(2026, 12, 31), None)
+    session.commit()
+    setting = get_device_setting(session, "core-sw-01")
+    assert setting.auto_remediation_paused is True
+    assert setting.warranty_expiry == date(2026, 12, 31)

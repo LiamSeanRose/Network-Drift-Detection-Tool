@@ -37,6 +37,7 @@ from netdrift import explain
 from netdrift.appliers.base import RemediationBlockedError, check_blocked
 from netdrift.appliers.registry import get_applier
 from netdrift.diagnose import diagnose
+from netdrift.lifecycle import lifecycle_summary
 from netdrift.fingerprint import fingerprint as make_fingerprint
 from netdrift.fingerprint import (
     fuzzy_fingerprint,
@@ -811,6 +812,12 @@ def list_devices(session: Session = Depends(get_session)):
     result = []
     for name in sorted(_load_devices()):
         setting = get_device_setting(session, name)
+        # Lifecycle status (warranty / EoL) computed from the stored dates — no
+        # NetBox call; the scheduler's lifecycle sync keeps the dates current.
+        lifecycle_view = lifecycle_summary(
+            setting.warranty_expiry if setting else None,
+            setting.end_of_life if setting else None,
+        )
         result.append({
             "name": name,
             "auto_remediation_paused": bool(setting and setting.auto_remediation_paused),
@@ -828,6 +835,8 @@ def list_devices(session: Session = Depends(get_session)):
                 setting.last_reachable_at.isoformat()
                 if setting and setting.last_reachable_at else None
             ),
+            # Lifecycle: warranty_expiry/end_of_life + status + days_left.
+            **lifecycle_view,
         })
     return result
 

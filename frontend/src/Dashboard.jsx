@@ -994,8 +994,31 @@ function ReachabilityBadge({ device }) {
   )
 }
 
-// DevicesPanel — list inventory devices with reachability + a per-device
-// auto-apply toggle (v3.5).
+// Warranty / end-of-life badge. Only renders when something needs attention
+// (expiring or expired); a device with plenty of runway or no dates stays quiet
+// so the panel isn't cluttered. Text + dot, never colour alone.
+function LifecycleBadge({ device }) {
+  const items = [
+    { label: 'warranty', status: device.warranty_status, days: device.warranty_days_left },
+    { label: 'EoL', status: device.eol_status, days: device.eol_days_left },
+  ].filter((i) => i.status === 'expiring' || i.status === 'expired')
+  if (items.length === 0) return null
+  return (
+    <>
+      {items.map((i) => (
+        <span key={i.label} className={`devices__lifecycle devices__lifecycle--${i.status}`}>
+          <span className="devices__lifecycle-dot" aria-hidden="true" />
+          {i.status === 'expired'
+            ? `${i.label} expired`
+            : `${i.label} expires in ${i.days}d`}
+        </span>
+      ))}
+    </>
+  )
+}
+
+// DevicesPanel — list inventory devices with reachability, lifecycle, and a
+// per-device auto-apply toggle (v3.5).
 function DevicesPanel({ devices, onToggle }) {
   if (!devices || devices.length === 0) return null
   return (
@@ -1009,6 +1032,7 @@ function DevicesPanel({ devices, onToggle }) {
           <li key={d.name} className="devices__item">
             <span className="devices__name">{d.name}</span>
             <ReachabilityBadge device={d} />
+            <LifecycleBadge device={d} />
             <span className={`devices__state${d.auto_remediation_paused ? ' devices__state--paused' : ''}`}>
               {d.auto_remediation_paused ? 'auto-apply paused' : 'auto-apply active'}
             </span>

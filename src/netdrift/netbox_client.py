@@ -246,6 +246,39 @@ def list_devices(*, nb=None, status="active", site=None, role=None):
     return result
 
 
+def list_lifecycle(*, nb=None, warranty_field=None, eol_field=None,
+                   status="active", site=None, role=None):
+    """List devices with their lifecycle dates from NetBox custom fields.
+
+    Returns ``[{"name", "warranty_expiry", "end_of_life"}]`` where the two dates
+    are whatever the device's custom fields hold (ISO date strings, or None when
+    unset). NetBox has no native warranty/EoL model, so these live in custom
+    fields; the field names default to ``warranty_expiry`` / ``end_of_life`` and
+    are overridable via NETDRIFT_WARRANTY_FIELD / NETDRIFT_EOL_FIELD (or the
+    keyword args) for a deployment that names them differently.
+
+    ``nb`` is injectable for tests. Filters mirror list_devices.
+    """
+    nb = nb or _connect()
+    warranty_field = warranty_field or os.environ.get(
+        "NETDRIFT_WARRANTY_FIELD", "warranty_expiry")
+    eol_field = eol_field or os.environ.get("NETDRIFT_EOL_FIELD", "end_of_life")
+
+    filters = {k: v for k, v in (("status", status), ("site", site), ("role", role))
+               if v is not None}
+    devices = nb.dcim.devices.filter(**filters) if filters else nb.dcim.devices.all()
+
+    result = []
+    for device in devices:
+        custom = getattr(device, "custom_fields", None) or {}
+        result.append({
+            "name": device.name,
+            "warranty_expiry": custom.get(warranty_field),
+            "end_of_life": custom.get(eol_field),
+        })
+    return result
+
+
 def get_intent(device_name):
     """
     Return the intended state of `device_name` from NetBox, in the normalized

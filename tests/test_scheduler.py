@@ -298,3 +298,51 @@ def test_probe_one_swallows_errors(caplog):
             {"name": "core-sw-01"}, session_factory=lambda: None, check_fn=boom
         )
     assert any("probe boom" in r.message for r in caplog.records)
+
+
+def test_schedule_lifecycle_sync_registers_single_job():
+    from netdrift.scheduler import schedule_lifecycle_sync
+    sched = _fresh_scheduler()
+    job_id = schedule_lifecycle_sync(sched, lambda: None)
+    assert job_id == "lifecycle-sync"
+    assert sched.get_job("lifecycle-sync") is not None
+
+
+def test_run_lifecycle_sync_persists_with_injected_lister():
+    from datetime import date
+
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+
+    from netdrift.scheduler import _run_lifecycle_sync
+    from netdrift.storage.models import Base
+    from netdrift.storage.repository import get_device_setting
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine)
+
+    def fake_lister():
+        return [{"name": "core-sw-01", "warranty_expiry": "2026-12-31",
+                 "end_of_life": "2028-01-01"}]
+
+    _run_lifecycle_sync(session_factory, lister=fake_lister)
+
+    with session_factory() as s:
+        setting = get_device_setting(s, "core-sw-01")
+        assert setting.warranty_expiry == date(2026, 12, 31)
+        assert setting.end_of_life == date(2028, 1, 1)
+
+
+def test_run_lifecycle_sync_swallows_errors(caplog):
+    from netdrift.scheduler import _run_lifecycle_sync
+
+    def boom():
+        raise RuntimeError("lifecycle boom")
+
+    with caplog.at_level("ERROR"):
+        _run_lifecycle_sync(lambda: None, lister=boom)
+    assert any("lifecycle boom" in r.message for r in caplog.records)

@@ -100,6 +100,11 @@ def test_devices_endpoint_includes_reachability(client, monkeypatch):
     assert device["reachable"] is None  # never probed yet
     assert "reachability_checked_at" in device
     assert "last_reachable_at" in device
+    # Lifecycle fields present; null/None until the lifecycle sync runs.
+    assert device["warranty_expiry"] is None
+    assert device["warranty_status"] is None
+    assert "end_of_life" in device
+    assert "eol_status" in device
 
 
 def test_drifts_returns_all_events(client):
