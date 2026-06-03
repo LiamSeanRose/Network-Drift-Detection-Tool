@@ -301,7 +301,7 @@ export default function Dashboard() {
                     onClick={() => setExpandedId(isExpanded ? null : d.id)}
                   >
                     <td>{d.device}</td>
-                    <td>{d.object}</td>
+                    <td className="col-object" title={d.object}>{d.object}</td>
                     <td>{d.field}</td>
                     <td className="col-intent">{formatValue(d.intent)}</td>
                     <td className="col-reality">{formatValue(d.reality)}</td>
