@@ -248,3 +248,93 @@ def test_unreachable_fires_once_per_device(session):
     evaluate_sla(session, fake, now=NOW, unreachable_after_minutes=10)
 
     assert [e for e, _ in fake.fired] == ["device_unreachable"]
+
+
+# ---------------------------------------------------------------------------
+# v4.5 — edge-triggered alerting: fire once per breach window, resolve on clear
+# ---------------------------------------------------------------------------
+
+def _clear_drift(session):
+    """Delete every drift event — simulates the next poll finding no drift."""
+    from netdrift.storage.models import DriftEvent
+    session.query(DriftEvent).delete()
+    session.commit()
+
+
+def test_persisting_breach_fires_only_on_first_cycle(session):
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20)
+    session.commit()
+
+    fake = FakeDispatcher()
+    evaluate_sla(session, fake, now=NOW)
+    session.commit()
+    # Second cycle: same drift still present and breaching.
+    evaluate_sla(session, fake, now=NOW + timedelta(minutes=5))
+    session.commit()
+
+    # One breach alert total — not one per cycle.
+    assert [e for e, _ in fake.fired] == ["sla_breached"]
+
+
+def test_cleared_breach_fires_sla_resolved_once(session):
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20)
+    session.commit()
+
+    fake = FakeDispatcher()
+    evaluate_sla(session, fake, now=NOW)
+    session.commit()
+    _clear_drift(session)
+    evaluate_sla(session, fake, now=NOW + timedelta(minutes=5))
+    session.commit()
+    # A third cycle with the drift still gone must stay silent.
+    evaluate_sla(session, fake, now=NOW + timedelta(minutes=10))
+    session.commit()
+
+    assert [e for e, _ in fake.fired] == ["sla_breached", "sla_resolved"]
+
+
+def test_breach_recurring_after_resolution_fires_again(session):
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20)
+    session.commit()
+
+    fake = FakeDispatcher()
+    evaluate_sla(session, fake, now=NOW)
+    session.commit()
+    _clear_drift(session)
+    evaluate_sla(session, fake, now=NOW + timedelta(minutes=5))
+    session.commit()
+    # Drift returns and ages past the window again.
+    _seed_drift(session, minutes_ago=-20)  # detected 20m after NOW; >10m before T+35
+    session.commit()
+    evaluate_sla(session, fake, now=NOW + timedelta(minutes=35))
+    session.commit()
+
+    assert [e for e, _ in fake.fired] == ["sla_breached", "sla_resolved", "sla_breached"]
+
+
+def test_maintenance_mutes_without_firing_resolved(session):
+    from netdrift.storage.repository import (
+        active_sla_breaches,
+        create_maintenance_window,
+    )
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20)
+    session.commit()
+
+    fake = FakeDispatcher()
+    evaluate_sla(session, fake, now=NOW)  # breach fires, now tracked
+    session.commit()
+
+    # A window opens over the still-present breach. The mute must not look like a
+    # resolution, and the tracked state must survive so it is not re-alerted later.
+    create_maintenance_window(session, "core-sw-01",
+                              NOW, NOW + timedelta(hours=1))
+    session.commit()
+    evaluate_sla(session, fake, now=NOW + timedelta(minutes=5))
+    session.commit()
+
+    assert [e for e, _ in fake.fired] == ["sla_breached"]
+    assert ("core-sw-01", FP) in active_sla_breaches(session)
