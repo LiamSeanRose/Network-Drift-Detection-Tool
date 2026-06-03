@@ -522,11 +522,21 @@
   padding-bottom: 0.2rem;
 }
 
-.device-history__bars { display: flex; align-items: flex-end; gap: 2px; height: 42px; }
+.device-history__bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 42px;
+  /* min-width:0 lets the 1fr grid track actually constrain this flex row, and
+     overflow:hidden is the safety net so a 24h span of 5-min buckets (288 bars)
+     can never push the page into a horizontal scroll. */
+  min-width: 0;
+  overflow: hidden;
+}
 
 .history-bar {
-  flex: 1;
-  min-width: 3px;
+  flex: 1 1 0;
+  min-width: 0;
   border-radius: 2px 2px 0 0;
   transition: opacity 100ms var(--ease), transform 100ms var(--ease);
   transform-origin: bottom;
@@ -606,6 +616,14 @@
   word-break: break-word;
   max-width: 22ch;
   color: var(--fg-muted);
+}
+
+/* Long identifiers (e.g. interface:TenGigabitEthernet1/1/4) truncate with an
+   ellipsis rather than widening the whole table; the full value is in title=. */
+.drift-table td.col-object {
+  max-width: 26ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* severity pill */
