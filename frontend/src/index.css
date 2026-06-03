@@ -2,7 +2,7 @@
  *
  * Most styling lives in component CSS files (e.g. Dashboard.css). This file
  * only handles the things that need to apply globally: resetting browser
- * defaults and making sure the dark background covers the whole viewport.
+ * defaults and painting the dark base background across the whole viewport.
  */
 
 *,
@@ -13,12 +13,26 @@
 
 html, body, #root {
   margin: 0;
-  min-height: 100vh;
-  background: #0e1014;
+  min-height: 100dvh;
+  background-color: #0a0d13;
 }
 
 body {
-  font-family: "IBM Plex Sans", "Helvetica Neue", system-ui, sans-serif;
+  /* A faint cool glow at the top so the dark canvas has depth instead of
+     reading as a flat black slab. */
+  background-image:
+    radial-gradient(1200px 600px at 78% -10%, rgba(108, 124, 255, 0.10), transparent 60%),
+    radial-gradient(1000px 500px at 0% 0%, rgba(45, 212, 167, 0.05), transparent 55%);
+  background-attachment: fixed;
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  color: #e8ecf4;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }
