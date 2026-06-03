@@ -216,10 +216,19 @@ export default function Dashboard() {
     <div className="dashboard">
       <header className="dashboard__header">
         <div className="dashboard__title-group">
+          <span className="brand__glyph" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#0b0f17" strokeWidth="2.4"
+              strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="5" cy="6" r="2" />
+              <circle cx="19" cy="6" r="2" />
+              <circle cx="12" cy="18" r="2" />
+              <path d="M7 6h10M6 8l5 8M18 8l-5 8" />
+            </svg>
+          </span>
           <h1 className="dashboard__title">netdrift</h1>
           <span className="dashboard__subtitle">
-            drift events
-            {drifts && <> · <span className="dashboard__count">{drifts.length}</span></>}
+            drift console
+            {drifts && <> · <span className="dashboard__count">{drifts.length}</span> events</>}
           </span>
         </div>
         <div className="dashboard__actions">
@@ -251,9 +260,16 @@ export default function Dashboard() {
         </div>
       )}
 
-      <AlertRulesPanel rules={alertRules} onAdd={handleAddRule} onDelete={handleDeleteRule} />
-      <MaintenanceWindowsPanel windows={maintenanceWindows} onAdd={handleAddWindow} onDelete={handleDeleteWindow} />
-      <DevicesPanel devices={devices} onToggle={handleToggleDevice} />
+      {drifts && drifts.length > 0 && (
+        <StatsBar drifts={drifts} devices={devices} windows={maintenanceWindows} />
+      )}
+
+      <div className="section-title">configuration</div>
+      <div className="panel-grid">
+        <AlertRulesPanel rules={alertRules} onAdd={handleAddRule} onDelete={handleDeleteRule} />
+        <MaintenanceWindowsPanel windows={maintenanceWindows} onAdd={handleAddWindow} onDelete={handleDeleteWindow} />
+        <DevicesPanel devices={devices} onToggle={handleToggleDevice} />
+      </div>
 
       {history && history.length > 0 && <HistoryPanel history={history} />}
       {historyError && <p className="dashboard__state dashboard__state--error">History unavailable: {historyError}</p>}
@@ -262,6 +278,9 @@ export default function Dashboard() {
       {!loading && !error && drifts && drifts.length === 0 && <p className="dashboard__state">No drift events yet.</p>}
 
       {drifts && drifts.length > 0 && (
+        <>
+        <div className="section-title">drift events</div>
+        <div className="table-card">
         <table className="drift-table">
           <thead>
             <tr>
@@ -278,7 +297,7 @@ export default function Dashboard() {
               return (
                 <Fragment key={d.id}>
                   <tr
-                    className={`sev-${d.severity} expandable${d.acknowledged ? ' acknowledged' : ''}`}
+                    className={`sev-${d.severity} expandable${isExpanded ? ' is-open' : ''}${d.acknowledged ? ' acknowledged' : ''}`}
                     onClick={() => setExpandedId(isExpanded ? null : d.id)}
                   >
                     <td>{d.device}</td>
@@ -287,9 +306,11 @@ export default function Dashboard() {
                     <td className="col-intent">{formatValue(d.intent)}</td>
                     <td className="col-reality">{formatValue(d.reality)}</td>
                     <td>{d.drift_kind}</td>
-                    <td className="col-severity">{d.severity}</td>
-                    <td className="col-detected">{d.detected_at}</td>
-                    <td className="col-expand">{isExpanded ? '▾' : '▸'}</td>
+                    <td className="col-severity">
+                      <span className={`sev-pill sev-pill--${d.severity}`}>{d.severity}</span>
+                    </td>
+                    <td className="col-detected">{formatTimestamp(d.detected_at)}</td>
+                    <td className="col-expand"><span className="chevron" aria-hidden="true">▸</span></td>
                   </tr>
 
                   {isExpanded && (
@@ -375,6 +396,8 @@ export default function Dashboard() {
             })}
           </tbody>
         </table>
+        </div>
+        </>
       )}
 
       {recordingFor && (
@@ -400,6 +423,13 @@ export default function Dashboard() {
       )}
     </div>
   )
+}
+
+// Current wall-clock in ms. Wrapped so call sites read the time at render to
+// decide which maintenance windows are active *now*; kept out of the component
+// body so it is an intentional, isolated impurity rather than inline noise.
+function nowMs() {
+  return Date.now()
 }
 
 // RecordFixModal — overlay form for recording a cause and fix for a drift pattern.
@@ -537,7 +567,10 @@ function AlertRulesPanel({ rules, onAdd, onDelete }) {
 
   return (
     <section className="alert-rules">
-      <h2 className="alert-rules__heading">alert rules</h2>
+      <h2 className="alert-rules__heading">
+        alert rules
+        {rules && rules.length > 0 && <span className="count-badge" aria-hidden="true">{rules.length}</span>}
+      </h2>
 
       {rules && rules.length > 0 && (
         <ul className="alert-rules__list">
@@ -601,10 +634,13 @@ function MaintenanceWindowsPanel({ windows, onAdd, onDelete }) {
     setDevice(''); setStartsAt(''); setEndsAt(''); setReason('')
   }
 
-  const now = Date.now()
+  const now = nowMs()
   return (
     <section className="alert-rules">
-      <h2 className="alert-rules__heading">maintenance windows</h2>
+      <h2 className="alert-rules__heading">
+        maintenance windows
+        {windows && windows.length > 0 && <span className="count-badge" aria-hidden="true">{windows.length}</span>}
+      </h2>
 
       {windows && windows.length > 0 && (
         <ul className="alert-rules__list">
@@ -667,7 +703,10 @@ function DevicesPanel({ devices, onToggle }) {
   if (!devices || devices.length === 0) return null
   return (
     <section className="devices">
-      <h2 className="devices__heading">devices</h2>
+      <h2 className="devices__heading">
+        devices
+        <span className="count-badge" aria-hidden="true">{devices.length}</span>
+      </h2>
       <ul className="devices__list">
         {devices.map((d) => (
           <li key={d.name} className="devices__item">
@@ -742,4 +781,57 @@ function formatValue(v) {
   if (Array.isArray(v)) return v.join(', ')
   if (typeof v === 'boolean') return v ? 'true' : 'false'
   return String(v)
+}
+
+// Render an ISO timestamp as a compact, readable local time. Falls back to the
+// raw string if it does not parse, so unexpected formats never blank the cell.
+function formatTimestamp(iso) {
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return iso
+  return d.toLocaleString(undefined, {
+    month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit',
+  })
+}
+
+// StatsBar — at-a-glance summary cards across the top of the console. Derived
+// entirely from data already loaded, so it adds no requests.
+function StatsBar({ drifts, devices, windows }) {
+  const counts = { critical: 0, warning: 0, info: 0 }
+  for (const d of drifts) {
+    if (counts[d.severity] !== undefined) counts[d.severity] += 1
+  }
+  const now = nowMs()
+  const activeWindows = (windows || []).filter(
+    (w) => new Date(w.starts_at).getTime() <= now && now < new Date(w.ends_at).getTime()
+  ).length
+  const pausedDevices = (devices || []).filter((d) => d.auto_remediation_paused).length
+
+  const cards = [
+    { key: 'total', label: 'Total drift', value: drifts.length, mod: '' },
+    { key: 'critical', label: 'Critical', value: counts.critical, mod: 'stat--critical' },
+    { key: 'warning', label: 'Warning', value: counts.warning, mod: 'stat--warning' },
+    { key: 'info', label: 'Info', value: counts.info, mod: 'stat--info' },
+    {
+      key: 'devices', label: 'Devices', value: (devices || []).length,
+      mod: pausedDevices ? 'stat--warning' : 'stat--healthy',
+      sub: pausedDevices ? `${pausedDevices} paused` : 'all active',
+    },
+    {
+      key: 'windows', label: 'Maint. windows', value: activeWindows,
+      mod: activeWindows ? 'stat--info' : '',
+      sub: activeWindows ? 'active now' : 'none active',
+    },
+  ]
+
+  return (
+    <div className="statbar">
+      {cards.map((c) => (
+        <div key={c.key} className={`stat ${c.mod}`}>
+          <span className="stat__label">{c.label}</span>
+          <span className="stat__value">{c.value}</span>
+          {c.sub && <span className="stat__sub">{c.sub}</span>}
+        </div>
+      ))}
+    </div>
+  )
 }
