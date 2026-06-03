@@ -338,3 +338,45 @@ def test_maintenance_mutes_without_firing_resolved(session):
 
     assert [e for e, _ in fake.fired] == ["sla_breached"]
     assert ("core-sw-01", FP) in active_sla_breaches(session)
+
+
+# ---------------------------------------------------------------------------
+# v4.5 — severity-aware payloads (escalation routing)
+# ---------------------------------------------------------------------------
+
+def test_breach_payload_carries_structured_severity_fields(session):
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20)
+    session.commit()
+
+    fake = FakeDispatcher()
+    evaluate_sla(session, fake, now=NOW)
+
+    event_type, payload = fake.fired[0]
+    assert event_type == "sla_breached"
+    assert payload["severity"] == "critical"
+    assert payload["fingerprint"] == FP
+    assert payload["object"] == "interface:Ethernet1"
+    assert payload["field"] == "enabled"
+    assert payload["window_minutes"] == 10
+
+
+def test_resolved_payload_carries_the_breach_severity(session):
+    # The originating drift is gone by the time sla_resolved fires, so its
+    # severity must come from the stored breach row — letting the resolve be
+    # routed to the same tier as the breach.
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20)
+    session.commit()
+
+    fake = FakeDispatcher()
+    evaluate_sla(session, fake, now=NOW)
+    session.commit()
+    _clear_drift(session)
+    evaluate_sla(session, fake, now=NOW + timedelta(minutes=5))
+    session.commit()
+
+    resolved = [p for e, p in fake.fired if e == "sla_resolved"]
+    assert len(resolved) == 1
+    assert resolved[0]["severity"] == "critical"
+    assert resolved[0]["fingerprint"] == FP

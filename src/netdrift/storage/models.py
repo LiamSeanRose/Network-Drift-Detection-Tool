@@ -158,11 +158,17 @@ class SlaBreachState(Base):
     device: Mapped[str] = mapped_column(String, primary_key=True)
     fingerprint: Mapped[str] = mapped_column(String, primary_key=True)
     first_fired_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # The severity of the breaching drift (== the alert rule's severity). Stored
+    # so the sla_resolved event — which fires after the drift is gone — can be
+    # routed to the same tier (PagerDuty vs Slack) as the breach that opened it.
+    # Nullable for rows written before this column existed.
+    severity: Mapped[str | None] = mapped_column(String, nullable=True)
 
     def __repr__(self):
         return (
             f"<SlaBreachState device={self.device!r} "
-            f"fingerprint={self.fingerprint!r} since={self.first_fired_at}>"
+            f"fingerprint={self.fingerprint!r} severity={self.severity!r} "
+            f"since={self.first_fired_at}>"
         )
 
 
