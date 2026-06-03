@@ -111,6 +111,21 @@ def test_health_is_exempt_from_auth(auth_client):
     assert client.get("/health").status_code == 200
 
 
+def test_disable_auth_flag_allows_write_without_key(auth_client, monkeypatch):
+    # Trusted/local deployments can opt out of the key requirement entirely.
+    client, _ = auth_client
+    monkeypatch.setenv("NETDRIFT_DISABLE_API_AUTH", "true")
+    resp = client.post("/known-issues", json=_new_issue_payload())  # no X-API-Key
+    assert resp.status_code == 200
+
+
+def test_disable_auth_flag_default_off_still_requires_key(auth_client, monkeypatch):
+    client, _ = auth_client
+    monkeypatch.delenv("NETDRIFT_DISABLE_API_AUTH", raising=False)
+    resp = client.post("/known-issues", json=_new_issue_payload())
+    assert resp.status_code == 401
+
+
 def test_revoked_key_returns_401_on_next_request(auth_client):
     client, _ = auth_client
     # Mint a second key, use it once successfully, then revoke and retry.
