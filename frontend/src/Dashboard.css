@@ -692,6 +692,52 @@
 .triage-tag--new { color: var(--accent-bright); background: var(--accent-soft); }
 .triage-tag--chronic { color: var(--fg-muted); background: var(--surface-2); }
 
+/* AI4 anomaly-triage callout — teal accent to set it apart from the violet AI
+   explanation and the blue known-fix callouts. */
+.triage-block {
+  margin-bottom: 0.7rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid rgba(45, 212, 167, 0.28);
+  border-left: 2px solid var(--healthy);
+  border-radius: var(--r-sm);
+  background: rgba(45, 212, 167, 0.06);
+}
+
+.triage-block__label {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: var(--healthy);
+  margin-bottom: 0.4rem;
+}
+
+.triage-block__text {
+  font-family: var(--sans);
+  font-size: 0.84rem;
+  color: var(--fg);
+  margin: 0.25rem 0 0;
+  line-height: 1.5;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.assessment {
+  flex: none;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.1rem 0.5rem;
+}
+.assessment--incident { color: var(--sev-critical); background: var(--sev-critical-bg); }
+.assessment--noise { color: var(--fg-muted); background: var(--surface-2); }
+.assessment--unclear { color: var(--sev-warning); background: var(--sev-warning-bg); }
+
 .drift-table td.col-expand {
   width: 2ch;
   text-align: center;
