@@ -375,6 +375,25 @@ def test_clear_sla_breach_removes_only_that_key(session):
     assert active_sla_breaches(session) == {("core-sw-02", "a|b|value_mismatch")}
 
 
+def test_drift_first_seen_returns_earliest_per_identity(session):
+    from netdrift.storage.repository import drift_first_seen
+    # Same drift identity re-saved across two polls; the earliest is "first seen".
+    save_drifts(session, [
+        _drift(detected_at="2026-05-26T14:00:00Z"),
+        _drift(detected_at="2026-05-26T14:05:00Z"),
+    ])
+    session.commit()
+    ident = ("core-sw-01", "interface:Ethernet2", "untagged_vlan", "value_mismatch")
+    got = drift_first_seen(session, [ident])
+    # The earlier of the two timestamps (14:00, not 14:05).
+    assert (got[ident].hour, got[ident].minute) == (14, 0)
+
+
+def test_drift_first_seen_empty_input_skips_query(session):
+    from netdrift.storage.repository import drift_first_seen
+    assert drift_first_seen(session, []) == {}
+
+
 def test_record_sla_breach_stores_severity(session):
     from netdrift.storage.repository import record_sla_breach, sla_breach_severity_map
     now = datetime.now(tz=timezone.utc)

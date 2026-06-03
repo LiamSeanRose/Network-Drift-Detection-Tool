@@ -302,7 +302,10 @@ export default function Dashboard() {
                     onClick={() => setExpandedId(isExpanded ? null : d.id)}
                   >
                     <td>{d.device}</td>
-                    <td className="col-object" title={d.object}>{d.object}</td>
+                    <td className="col-object" title={d.object}>
+                      {d.object}
+                      {d.triage === 'new' && <span className="triage-badge">new</span>}
+                    </td>
                     <td>{d.field}</td>
                     <td className="col-intent">{formatValue(d.intent)}</td>
                     <td className="col-reality">{formatValue(d.reality)}</td>
@@ -327,6 +330,12 @@ export default function Dashboard() {
                           </button>
                           {d.acknowledged && <span className="ack-note">acknowledged — alerts suppressed</span>}
                         </div>
+                        {d.first_seen && (
+                          <p className="drift-meta">
+                            <span className={`triage-tag triage-tag--${d.triage}`}>{d.triage}</span>
+                            first seen {formatTimestamp(d.first_seen)}
+                          </p>
+                        )}
                         {d.known_fix && (
                           <div className="known-fix">
                             <span className="known-fix__label">known fix</span>
