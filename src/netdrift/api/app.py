@@ -39,6 +39,7 @@ from netdrift.appliers.registry import get_applier
 from netdrift.diagnose import diagnose
 from netdrift.fingerprint import fingerprint as make_fingerprint
 from netdrift.fingerprint import (
+    fuzzy_fingerprint,
     fuzzy_match,
     fuzzy_matching_enabled,
     fuzzy_threshold,
@@ -487,7 +488,13 @@ def list_drifts(request: Request, response: Response,
     # there is no exact hit. Off by default, so exact matching is unchanged.
     fuzzy_on = fuzzy_matching_enabled()
     threshold = fuzzy_threshold()
-    known_fps = list(known.keys())
+    # Fuzzy matches on the normalized fingerprints (object identifier tokenized);
+    # an exact fingerprint hit is still resolved first and wins at 1.0.
+    by_normalized = {
+        i.normalized_fingerprint: i for i in all_issues
+        if i.normalized_fingerprint
+    }
+    normalized_fps = list(by_normalized)
 
     rows = []
     for e in events:
@@ -496,8 +503,11 @@ def list_drifts(request: Request, response: Response,
         if issue is not None:
             match_confidence = 1.0
         elif fuzzy_on:
-            best_fp, score = fuzzy_match(fp, known_fps, threshold=threshold)
-            issue = known.get(best_fp) if best_fp is not None else None
+            target = fuzzy_fingerprint(
+                {"object": e.object_ref, "field": e.field, "drift_kind": e.drift_kind}
+            )
+            best_fp, score = fuzzy_match(target, normalized_fps, threshold=threshold)
+            issue = by_normalized.get(best_fp) if best_fp is not None else None
             match_confidence = score if issue is not None else None
         else:
             match_confidence = None
@@ -657,10 +667,17 @@ def triage_drift(event_id: int, session: Session = Depends(get_session)):
 @app.post("/known-issues")
 def create_known_issue(body: KnownIssueIn, session: Session = Depends(get_session)):
     """Record a cause and fix for a drift pattern identified by its fingerprint."""
-    fp = make_fingerprint({"object": body.object, "field": body.field, "drift_kind": body.drift_kind})
+    drift_id = {"object": body.object, "field": body.field, "drift_kind": body.drift_kind}
+    fp = make_fingerprint(drift_id)
+    # Precise normalized key from the original object (keeps interface/tunnel
+    # class, unlike a backfill that only had the exact fingerprint).
+    normalized_fp = fuzzy_fingerprint(drift_id)
     if body.remediation is not None:
         _validate_remediation_kind(body.remediation.get("kind"))
-    issue = save_known_issue(session, fp, body.cause, body.fix, body.remediation)
+    issue = save_known_issue(
+        session, fp, body.cause, body.fix, body.remediation,
+        normalized_fingerprint=normalized_fp,
+    )
     session.commit()
     return _issue_dict(issue, 0)
 

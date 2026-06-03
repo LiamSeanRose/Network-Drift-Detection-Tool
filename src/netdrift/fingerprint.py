@@ -98,6 +98,25 @@ def normalize_object_ref(object_ref: str) -> str:
     return f"{object_type}:{{ID}}"
 
 
+def normalize_fingerprint(exact_fp: str) -> str:
+    """Derive a normalized fingerprint from an exact ``object_type|field|drift_kind``.
+
+    Used to backfill known_issues that only carry the exact fingerprint (their
+    original object is gone). For bgp/vlan/ospf the normalized object is fully
+    determined by the type, so the result matches ``fuzzy_fingerprint`` exactly;
+    for interface/tunnel the class is unrecoverable, so a generic ``{IFACE}``
+    token stands in (a precise class lands when the issue is next recorded)."""
+    object_type, _, rest = exact_fp.partition("|")
+    token = _IDENTIFIER_TOKEN.get(object_type)
+    if token:
+        norm_obj = f"{object_type}:{token}"
+    elif object_type in ("interface", "tunnel"):
+        norm_obj = f"{object_type}:{{IFACE}}"
+    else:
+        norm_obj = object_type  # config / device / unknown — no identifier
+    return f"{norm_obj}|{rest}"
+
+
 def fuzzy_fingerprint(drift: dict) -> str:
     """The normalized fingerprint: like ``fingerprint()`` but with the object
     identifier template-normalized instead of dropped, so Jaccard can compare
