@@ -59,6 +59,29 @@ def test_post_allows_null_device_for_all_devices(client):
     assert resp.json()["device"] is None
 
 
+def test_post_creates_object_type_scoped_rule(client):
+    resp = client.post("/alert-rules", json={
+        "severity": "critical", "window_minutes": 10, "object_type": "interface",
+    })
+    assert resp.status_code == 200
+    assert resp.json()["object_type"] == "interface"
+
+
+def test_post_defaults_object_type_to_null(client):
+    resp = client.post("/alert-rules", json={
+        "severity": "critical", "window_minutes": 10,
+    })
+    assert resp.status_code == 200
+    assert resp.json()["object_type"] is None
+
+
+def test_post_rejects_invalid_object_type(client):
+    resp = client.post("/alert-rules", json={
+        "severity": "critical", "window_minutes": 10, "object_type": "bogus",
+    })
+    assert resp.status_code == 422
+
+
 def test_post_rejects_invalid_severity(client):
     resp = client.post("/alert-rules", json={
         "severity": "catastrophic", "window_minutes": 10,
