@@ -68,6 +68,27 @@ def test_health_returns_ok(client):
     assert response.json() == {"status": "ok"}
 
 
+def test_inventory_accuracy_endpoint(client, monkeypatch):
+    """The endpoint reports one row per inventory device with the summary keys."""
+    import netdrift.api.app as app_module
+    monkeypatch.setattr(
+        app_module, "_load_devices",
+        lambda: {"core-sw-01": {}, "core-sw-02": {}, "core-sw-03": {}},
+    )
+    response = client.get("/inventory-accuracy")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total_devices"] == 3
+    assert set(data) >= {
+        "accuracy_pct", "accurate", "drifted", "stale", "devices", "window_minutes",
+    }
+    assert {d["name"] for d in data["devices"]} == {
+        "core-sw-01", "core-sw-02", "core-sw-03",
+    }
+    # Read-only metric: reachable without an API key.
+    assert client.get("/inventory-accuracy", headers={}).status_code == 200
+
+
 def test_drifts_returns_all_events(client):
     response = client.get("/drifts")
     assert response.status_code == 200

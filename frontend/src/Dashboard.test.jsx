@@ -14,10 +14,11 @@ import Dashboard from './Dashboard'
 
 // A fetch stub that routes /drifts, /drifts/history, and /alert-rules to
 // separate payloads. /alert-rules defaults to empty so the panel renders quietly.
-function mockFetchRouted(drifts, history, alertRules = [], devices = [], maintenanceWindows = []) {
+function mockFetchRouted(drifts, history, alertRules = [], devices = [], maintenanceWindows = [], accuracy = null) {
   return vi.fn((url) => {
     let body = drifts
     if (url === '/drifts/history') body = history
+    else if (url.startsWith('/inventory-accuracy')) body = accuracy
     else if (url.startsWith('/alert-rules')) body = alertRules
     else if (url.startsWith('/maintenance-windows')) body = maintenanceWindows
     else if (url.startsWith('/devices')) body = devices
@@ -66,6 +67,33 @@ describe('Dashboard', () => {
     expect(await screen.findByText('core-sw-01')).toBeInTheDocument()
     expect(screen.getByText('interface:Ethernet1')).toBeInTheDocument()
     expect(screen.getByText('description')).toBeInTheDocument()
+  })
+
+  it('shows the inventory-accuracy headline when the metric is returned', async () => {
+    const accuracy = {
+      window_minutes: 60, total_devices: 4, accurate: 3, drifted: 1, stale: 0,
+      accuracy_pct: 75, generated_at: '2026-06-03T12:00:00+00:00', devices: [],
+    }
+    globalThis.fetch = mockFetchRouted([], [], [], [], [], accuracy)
+
+    render(<Dashboard />)
+
+    expect(await screen.findByText('75%')).toBeInTheDocument()
+    expect(screen.getByText(/inventory verified accurate/i)).toBeInTheDocument()
+    // The breakdown surfaces the drifted/stale counts.
+    expect(screen.getByRole('region', { name: /inventory accuracy/i })).toBeInTheDocument()
+  })
+
+  it('shows no accuracy banner for an empty inventory (null percentage)', async () => {
+    const accuracy = {
+      window_minutes: 60, total_devices: 0, accurate: 0, drifted: 0, stale: 0,
+      accuracy_pct: null, generated_at: '2026-06-03T12:00:00+00:00', devices: [],
+    }
+    globalThis.fetch = mockFetchRouted([], [], [], [], [], accuracy)
+
+    render(<Dashboard />)
+    await screen.findByText(/no drift events/i)
+    expect(screen.queryByRole('region', { name: /inventory accuracy/i })).not.toBeInTheDocument()
   })
 
   it('shows a loading message before the fetch resolves', () => {

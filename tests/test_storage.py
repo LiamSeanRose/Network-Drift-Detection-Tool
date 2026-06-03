@@ -427,3 +427,80 @@ def test_record_sla_breach_backfills_missing_severity(session):
     session.commit()
     # The second call backfills severity without re-timing the breach.
     assert sla_breach_severity_map(session)[("core-sw-01", fp)] == "warning"
+
+
+def test_inventory_accuracy_classifies_each_device(session):
+    from netdrift.storage.repository import inventory_accuracy, record_collection
+    now = datetime(2026, 6, 3, 12, 0, tzinfo=timezone.utc)
+
+    # core-sw-01: collected recently AND has drift in window -> drifted
+    save_drifts(session, [_drift(
+        device="core-sw-01",
+        detected_at=(now - timedelta(minutes=5)).isoformat(),
+    )])
+    record_collection(session, "core-sw-01", when=now - timedelta(minutes=2))
+    # core-sw-02: collected recently, no drift -> accurate
+    record_collection(session, "core-sw-02", when=now - timedelta(minutes=2))
+    # core-sw-03: never collected -> stale (absence of drift isn't trustworthy)
+    session.commit()
+
+    result = inventory_accuracy(
+        session, ["core-sw-01", "core-sw-02", "core-sw-03"],
+        window_minutes=60, now=now,
+    )
+
+    assert result["total_devices"] == 3
+    assert result["drifted"] == 1
+    assert result["accurate"] == 1
+    assert result["stale"] == 1
+    assert result["accuracy_pct"] == round(1 / 3 * 100, 1)
+    by_name = {d["name"]: d for d in result["devices"]}
+    assert by_name["core-sw-01"]["status"] == "drifted"
+    assert by_name["core-sw-02"]["status"] == "accurate"
+    assert by_name["core-sw-03"]["status"] == "stale"
+    assert by_name["core-sw-03"]["last_collected_at"] is None
+
+
+def test_inventory_accuracy_counts_distinct_drift_not_poll_rows(session):
+    """The same drift recorded across many polls is one drifted thing, not many."""
+    from netdrift.storage.repository import inventory_accuracy, record_collection
+    now = datetime(2026, 6, 3, 12, 0, tzinfo=timezone.utc)
+    # Same (object, field, drift_kind) seen on three separate polls.
+    for minutes in (5, 10, 15):
+        save_drifts(session, [_drift(
+            device="core-sw-01",
+            detected_at=(now - timedelta(minutes=minutes)).isoformat(),
+        )])
+    record_collection(session, "core-sw-01", when=now - timedelta(minutes=2))
+    session.commit()
+
+    result = inventory_accuracy(session, ["core-sw-01"], window_minutes=60, now=now)
+    assert result["devices"][0]["drift_count"] == 1
+    assert result["drifted"] == 1
+
+
+def test_inventory_accuracy_empty_inventory(session):
+    from netdrift.storage.repository import inventory_accuracy
+    result = inventory_accuracy(
+        session, [], now=datetime(2026, 6, 3, tzinfo=timezone.utc)
+    )
+    assert result["total_devices"] == 0
+    assert result["accuracy_pct"] is None
+    assert result["devices"] == []
+
+
+def test_inventory_accuracy_window_excludes_old_drift(session):
+    """A drift older than the window does not count a recently-collected device
+    as drifted."""
+    from netdrift.storage.repository import inventory_accuracy, record_collection
+    now = datetime(2026, 6, 3, 12, 0, tzinfo=timezone.utc)
+    save_drifts(session, [_drift(
+        device="core-sw-01",
+        detected_at=(now - timedelta(minutes=120)).isoformat(),  # outside 60-min window
+    )])
+    record_collection(session, "core-sw-01", when=now - timedelta(minutes=2))
+    session.commit()
+
+    result = inventory_accuracy(session, ["core-sw-01"], window_minutes=60, now=now)
+    assert result["devices"][0]["status"] == "accurate"
+    assert result["accuracy_pct"] == 100.0
