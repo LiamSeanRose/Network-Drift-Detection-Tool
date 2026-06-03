@@ -117,12 +117,13 @@ export default function Dashboard() {
     }), loadDevices)
   }, [mutate, loadDevices])
 
-  const handleAddRule = useCallback((device, severity, windowMinutes) => {
+  const handleAddRule = useCallback((device, severity, windowMinutes, objectType) => {
     return mutate(apiFetch('/alert-rules', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         device: device || null, severity, window_minutes: Number(windowMinutes),
+        object_type: objectType || null,
       }),
     }), loadAlertRules)
   }, [mutate, loadAlertRules])
@@ -557,11 +558,12 @@ function AlertRulesPanel({ rules, onAdd, onDelete }) {
   const [device, setDevice] = useState('')
   const [severity, setSeverity] = useState('critical')
   const [windowMinutes, setWindowMinutes] = useState(10)
+  const [objectType, setObjectType] = useState('')
 
   const submit = (e) => {
     e.preventDefault()
     if (!windowMinutes || Number(windowMinutes) <= 0) return
-    onAdd(device.trim(), severity, windowMinutes)
+    onAdd(device.trim(), severity, windowMinutes, objectType)
     setDevice('')
   }
 
@@ -578,6 +580,7 @@ function AlertRulesPanel({ rules, onAdd, onDelete }) {
             <li key={r.id} className="alert-rules__item">
               <span className="alert-rules__rule">
                 {r.device || 'all devices'} · {r.severity} · {r.window_minutes} min
+                {r.object_type ? ` · ${r.object_type}` : ''}
                 {r.enabled ? '' : ' · disabled'}
               </span>
               <button
@@ -604,6 +607,14 @@ function AlertRulesPanel({ rules, onAdd, onDelete }) {
           <option value="critical">critical</option>
           <option value="warning">warning</option>
           <option value="info">info</option>
+        </select>
+        <select aria-label="object type" value={objectType} onChange={(e) => setObjectType(e.target.value)}>
+          <option value="">any type</option>
+          <option value="interface">interface</option>
+          <option value="vlan">vlan</option>
+          <option value="bgp_neighbor">bgp_neighbor</option>
+          <option value="ospf_adjacency">ospf_adjacency</option>
+          <option value="tunnel">tunnel</option>
         </select>
         <input
           type="number"

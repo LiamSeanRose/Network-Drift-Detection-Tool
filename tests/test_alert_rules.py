@@ -43,7 +43,15 @@ def test_create_returns_row_with_fields(session):
     assert rule.severity == "critical"
     assert rule.window_minutes == 10
     assert rule.enabled is True       # default
+    assert rule.object_type is None   # default: any object type
     assert rule.created_at is not None
+
+
+def test_create_with_object_type(session):
+    rule = create_alert_rule(session, device="core-sw-01", severity="critical",
+                             window_minutes=10, object_type="vlan")
+    session.commit()
+    assert rule.object_type == "vlan"
 
 
 def test_device_is_nullable_meaning_all_devices(session):
