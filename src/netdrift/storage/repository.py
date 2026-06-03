@@ -728,16 +728,20 @@ def delete_acknowledgement(session, ack_id) -> bool:
 # v3.5 — alert_rules (per-device drift SLA)
 # ---------------------------------------------------------------------------
 
-def create_alert_rule(session, device, severity, window_minutes, enabled=True):
-    """Insert an AlertRule. device=None means "all devices". Does NOT commit.
+def create_alert_rule(session, device, severity, window_minutes, enabled=True,
+                      object_type=None):
+    """Insert an AlertRule. device=None means "all devices"; object_type=None
+    means "any object type". Does NOT commit.
 
-    Caller validates severity and window_minutes (the API rejects bad values).
+    Caller validates severity, window_minutes, and object_type (the API rejects
+    bad values).
     """
     rule = AlertRule(
         device=device,
         severity=severity,
         window_minutes=window_minutes,
         enabled=enabled,
+        object_type=object_type,
         created_at=datetime.now(tz=timezone.utc),
     )
     session.add(rule)

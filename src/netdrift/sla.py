@@ -111,6 +111,12 @@ def evaluate_sla(session, dispatcher, *, now=None, unreachable_after_minutes=Non
             session, severity=rule.severity, older_than=cutoff, device=rule.device
         )
         for event in events:
+            # Per-object-type scoping: a rule with object_type set only watches
+            # drift of that type (interface vs vlan vs bgp_neighbor …). The type
+            # is the prefix of the object ref ("interface:Ethernet1" -> interface;
+            # "config"/"device" have no prefix and match as-is).
+            if rule.object_type and event.object_ref.split(":")[0] != rule.object_type:
+                continue
             fp = make_fingerprint({
                 "object": event.object_ref,
                 "field": event.field,

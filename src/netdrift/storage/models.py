@@ -254,6 +254,10 @@ class AlertRule(Base):
     severity: Mapped[str] = mapped_column(String)
     window_minutes: Mapped[int] = mapped_column(Integer)
     enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    # null = applies to drift of any object type; a value (e.g. "interface",
+    # "vlan", "bgp_neighbor") scopes the SLA window to one object type, so an
+    # interface and a VLAN on the same device can carry different SLAs.
+    object_type: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
     def __repr__(self):

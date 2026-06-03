@@ -211,6 +211,7 @@ class AlertRuleIn(BaseModel):
     severity: str
     window_minutes: int
     enabled: bool = True
+    object_type: str | None = None  # null = any object type
 
 
 class MaintenanceWindowIn(BaseModel):
@@ -1011,6 +1012,11 @@ def delete_api_key_endpoint(key_id: int, session: Session = Depends(get_session)
 # ---------------------------------------------------------------------------
 
 _VALID_SEVERITIES = {"critical", "warning", "info"}
+# Object types an alert rule may scope to (the drift object-ref prefixes). null
+# on the rule means "any type" — these are validated only when a value is given.
+_VALID_OBJECT_TYPES = {
+    "interface", "vlan", "bgp_neighbor", "ospf_adjacency", "tunnel", "config", "device",
+}
 
 
 def _alert_rule_dict(rule) -> dict:
@@ -1020,6 +1026,7 @@ def _alert_rule_dict(rule) -> dict:
         "severity": rule.severity,
         "window_minutes": rule.window_minutes,
         "enabled": rule.enabled,
+        "object_type": rule.object_type,
         "created_at": rule.created_at.isoformat(),
     }
 
@@ -1034,8 +1041,14 @@ def create_alert_rule_endpoint(body: AlertRuleIn, session: Session = Depends(get
         )
     if body.window_minutes <= 0:
         raise HTTPException(status_code=422, detail="window_minutes must be positive.")
+    if body.object_type is not None and body.object_type not in _VALID_OBJECT_TYPES:
+        raise HTTPException(
+            status_code=422,
+            detail=f"object_type must be one of {sorted(_VALID_OBJECT_TYPES)!r} or null.",
+        )
     rule = create_alert_rule(
-        session, body.device, body.severity, body.window_minutes, enabled=body.enabled
+        session, body.device, body.severity, body.window_minutes,
+        enabled=body.enabled, object_type=body.object_type,
     )
     session.commit()
     return _alert_rule_dict(rule)
