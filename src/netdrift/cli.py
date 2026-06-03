@@ -248,6 +248,32 @@ def _cmd_validate_patterns(argv):
     )
 
 
+def _cmd_eval_fuzzy(argv):
+    """Score the v5.0 fuzzy matcher against a labeled corpus (no database).
+
+    Prints a threshold sweep with false-positive / false-negative rates and a
+    recommended threshold that meets the DoD gates. The output is what goes into
+    docs/v5.0-corpus-eval.md for sign-off.
+    """
+    from netdrift import fuzzy_eval
+
+    parser = argparse.ArgumentParser(
+        prog="driftcheck eval-fuzzy",
+        description="Evaluate fuzzy-match accuracy against a labeled corpus.",
+    )
+    parser.add_argument("corpus", help="path to a labeled corpus JSON file")
+    args = parser.parse_args(argv)
+
+    try:
+        corpus = fuzzy_eval.load_corpus(args.corpus)
+    except (OSError, ValueError) as e:
+        sys.exit(f"Could not load corpus: {e}")
+
+    print(fuzzy_eval.format_report(corpus))
+    if fuzzy_eval.recommend_threshold(corpus) is None:
+        sys.exit(1)
+
+
 def main(argv=None, collectors=None):
     """Run a one-shot drift check for one device.
 
@@ -272,6 +298,10 @@ def main(argv=None, collectors=None):
 
     if argv and argv[0] == "validate-patterns":
         _cmd_validate_patterns(argv[1:])
+        return
+
+    if argv and argv[0] == "eval-fuzzy":
+        _cmd_eval_fuzzy(argv[1:])
         return
 
     if collectors is None:
