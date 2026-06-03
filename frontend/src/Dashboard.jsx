@@ -28,6 +28,10 @@ export default function Dashboard() {
   // maintenance windows — planned change windows that suppress alerting
   const [maintenanceWindows, setMaintenanceWindows] = useState(null)
 
+  // Surfaced when a write fails. Mutating requests need an API key; without one
+  // they 401, and the handlers used to swallow that — every button looked dead.
+  const [actionError, setActionError] = useState(null)
+
   // v2.5 remediation state
   const [dryRunFor, setDryRunFor] = useState(null)       // {drift, issueId}
   const [dryRunResult, setDryRunResult] = useState(null)  // API response
@@ -87,63 +91,69 @@ export default function Dashboard() {
     () => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices(); loadMaintenanceWindows() },
     [loadDrifts, loadHistory, loadAlertRules, loadDevices, loadMaintenanceWindows])
 
+  // Run a mutating request and surface failures instead of swallowing them. A
+  // 401 means no/invalid API key — the single most common cause of a write
+  // appearing to do nothing — so it gets a specific, actionable message.
+  const mutate = useCallback((request, onOk) => {
+    return request
+      .then((r) => {
+        if (r.ok) { setActionError(null); return onOk && onOk() }
+        if (r.status === 401) {
+          setActionError(
+            'API key required or invalid. Paste a key (from `driftcheck ' +
+            'create-api-key`) into the field at the top right, then retry.')
+        } else {
+          setActionError(`Request failed (HTTP ${r.status}).`)
+        }
+      })
+      .catch(() => setActionError('Could not reach the API.'))
+  }, [])
+
   const handleToggleDevice = useCallback((device) => {
-    return apiFetch(`/devices/${device.name}/auto-apply`, {
+    return mutate(apiFetch(`/devices/${device.name}/auto-apply`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ paused: !device.auto_remediation_paused }),
-    })
-      .then((r) => { if (r.ok) loadDevices() })
-      .catch(() => {})
-  }, [loadDevices])
+    }), loadDevices)
+  }, [mutate, loadDevices])
 
   const handleAddRule = useCallback((device, severity, windowMinutes) => {
-    return apiFetch('/alert-rules', {
+    return mutate(apiFetch('/alert-rules', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         device: device || null, severity, window_minutes: Number(windowMinutes),
       }),
-    })
-      .then((r) => { if (r.ok) loadAlertRules() })
-      .catch(() => {})
-  }, [loadAlertRules])
+    }), loadAlertRules)
+  }, [mutate, loadAlertRules])
 
   const handleDeleteRule = useCallback((id) => {
-    return apiFetch(`/alert-rules/${id}`, { method: 'DELETE' })
-      .then(() => loadAlertRules())
-      .catch(() => {})
-  }, [loadAlertRules])
+    return mutate(apiFetch(`/alert-rules/${id}`, { method: 'DELETE' }), loadAlertRules)
+  }, [mutate, loadAlertRules])
 
   const handleAddWindow = useCallback((device, startsAt, endsAt, reason) => {
-    return apiFetch('/maintenance-windows', {
+    return mutate(apiFetch('/maintenance-windows', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         device: device || null, starts_at: startsAt, ends_at: endsAt,
         reason: reason || null,
       }),
-    })
-      .then((r) => { if (r.ok) loadMaintenanceWindows() })
-      .catch(() => {})
-  }, [loadMaintenanceWindows])
+    }), loadMaintenanceWindows)
+  }, [mutate, loadMaintenanceWindows])
 
   const handleDeleteWindow = useCallback((id) => {
-    return apiFetch(`/maintenance-windows/${id}`, { method: 'DELETE' })
-      .then(() => loadMaintenanceWindows())
-      .catch(() => {})
-  }, [loadMaintenanceWindows])
+    return mutate(apiFetch(`/maintenance-windows/${id}`, { method: 'DELETE' }),
+      loadMaintenanceWindows)
+  }, [mutate, loadMaintenanceWindows])
 
   const handleSubmitFix = useCallback((drift, cause, fix) => {
-    apiFetch('/known-issues', {
+    return mutate(apiFetch('/known-issues', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ object: drift.object, field: drift.field, drift_kind: drift.drift_kind, cause, fix }),
-    })
-      .then((r) => { if (!r.ok) throw new Error(`API returned ${r.status}`) })
-      .then(() => { setRecordingFor(null); loadDrifts() })
-      .catch(() => setRecordingFor(null))
-  }, [loadDrifts])
+    }), () => { setRecordingFor(null); loadDrifts() })
+  }, [mutate, loadDrifts])
 
   // v2.5 — initiate a dry run for a drift event
   const handleDryRun = useCallback((drift) => {
@@ -188,8 +198,8 @@ export default function Dashboard() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ acknowledged_until: null }),
         })
-    return req.then((r) => { if (r.ok) loadDrifts() }).catch(() => {})
-  }, [loadDrifts])
+    return mutate(req, loadDrifts)
+  }, [mutate, loadDrifts])
 
   // v2.5 — load audit log for a known issue
   const handleShowAuditLog = useCallback((issueId) => {
@@ -226,6 +236,20 @@ export default function Dashboard() {
           </button>
         </div>
       </header>
+
+      {actionError && (
+        <div className="dashboard__action-error" role="alert">
+          <span>{actionError}</span>
+          <button
+            type="button"
+            className="dashboard__action-error-dismiss"
+            aria-label="dismiss error"
+            onClick={() => setActionError(null)}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <AlertRulesPanel rules={alertRules} onAdd={handleAddRule} onDelete={handleDeleteRule} />
       <MaintenanceWindowsPanel windows={maintenanceWindows} onAdd={handleAddWindow} onDelete={handleDeleteWindow} />
