@@ -68,6 +68,12 @@ class KnownIssue(Base):
     cause: Mapped[str] = mapped_column(String)
     fix: Mapped[str] = mapped_column(String)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # v5.0: the template-normalized fingerprint (object identifier tokenized),
+    # used by the fuzzy matcher when FUZZY_MATCHING_ENABLED is on. The exact
+    # ``fingerprint`` above stays the primary match key, so the default
+    # (fuzzy off) path is unchanged. Nullable for rows written before v5.0;
+    # backfilled by the migration from the exact fingerprint.
+    normalized_fingerprint: Mapped[str | None] = mapped_column(String, nullable=True)
     # Discriminated union per schema.md §9: restore_intent | raw_snippet | null.
     # null means diagnosis-only (no executable fix recorded yet).
     remediation: Mapped[object] = mapped_column(JSON, nullable=True)

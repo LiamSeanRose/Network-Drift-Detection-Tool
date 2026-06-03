@@ -37,6 +37,23 @@ def test_save_and_retrieve(session):
     assert confirmed_count(session, result.id) == 0
 
 
+def test_save_derives_normalized_fingerprint_when_omitted(session):
+    issue = save_known_issue(session, "bgp_neighbor|session_state|value_mismatch", "c", "f")
+    session.commit()
+    assert issue.normalized_fingerprint == "bgp_neighbor:{IP}|session_state|value_mismatch"
+
+
+def test_save_stores_precise_normalized_fingerprint_when_given(session):
+    # A caller with the original object passes the precise class (Ethernet), which
+    # a derive-from-exact backfill could not recover.
+    issue = save_known_issue(
+        session, "interface|enabled|value_mismatch", "c", "f",
+        normalized_fingerprint="interface:Ethernet|enabled|value_mismatch",
+    )
+    session.commit()
+    assert issue.normalized_fingerprint == "interface:Ethernet|enabled|value_mismatch"
+
+
 def test_get_returns_none_for_unknown(session):
     assert get_known_issue(session, "nonexistent|fingerprint|here") is None
 
