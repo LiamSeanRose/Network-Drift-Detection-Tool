@@ -798,6 +798,23 @@
 }
 .known-fix__text strong { color: var(--fg-muted); font-weight: 600; }
 
+/* v5.0 — how confidently a known fix was matched to this drift. */
+.match-badge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  font-family: var(--sans);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.08rem 0.5rem;
+  vertical-align: middle;
+}
+.match-badge--exact { color: var(--healthy); background: rgba(45, 212, 167, 0.14); }
+.match-badge--fuzzy { color: var(--accent-bright); background: var(--accent-soft); }
+.match-badge--weak { color: var(--sev-warning); background: var(--sev-warning-bg); }
+
 /* AI callout — violet accent to set it apart from deterministic content */
 .ai-explanation {
   margin-bottom: 0.7rem;
