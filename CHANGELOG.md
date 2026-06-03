@@ -5,6 +5,52 @@ All notable changes to this project are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Tunnel / overlay drift** (v4.75 track). An optional top-level `tunnels` block
+  in the normalized schema; per-vendor tunnel collection (Arista, Cisco, Junos,
+  Nokia); tunnel intent from NetBox `local_context_data`; differ rules that raise
+  `critical` when intent says a tunnel is up but it is down, and `warning` for
+  config mismatches; and bundled tunnel patterns.
+- **Edge-triggered SLA alerting.** `sla_breached` fires once when a breach opens
+  and `sla_resolved` once when the drift clears, instead of re-firing every
+  scheduler cycle. Backed by an `sla_breach_state` table.
+- **Severity-aware SLA payloads.** Breach and resolve webhooks carry structured
+  `severity`, `fingerprint`, `object`, `field`, and `window_minutes` so a
+  receiver can route by tier; the resolve event carries the same severity as the
+  breach that opened it.
+- **Per-object-type SLA windows.** An alert rule can scope to one object type
+  (interface, vlan, bgp_neighbor, …), so interfaces and VLANs on the same device
+  can carry different SLAs.
+- **Maintenance windows.** Time-boxed, whole-device change windows that suppress
+  SLA alerting and auto-apply while active — the time-boxed sibling of
+  acknowledgement. `maintenance_windows` table, `POST`/`GET`/`DELETE
+  /maintenance-windows`, and a dashboard panel.
+- **Drift triage (new vs chronic).** `GET /drifts` reports each drift's
+  `first_seen` and a `triage` flag (`new` if first seen within the hour, else
+  `chronic`), so a fresh problem stands out from long-standing noise.
+- **AI assist** — opt-in, **off by default**, local model by default, grounded
+  with a deterministic fallback, sharing one `NETDRIFT_EXPLAIN_*` config:
+  natural-language drift explanations (AI1, cached per fingerprint, generated on
+  the scheduler cycle), remediation summaries on dry-run (AI2), a suggested
+  cause/fix that pre-fills the record-fix form (AI3), and incident-vs-noise
+  anomaly triage (AI4). Each falls back to a deterministic result and never
+  calls the network when off.
+- **`driftcheck demo`** — run the diff engine over a bundled two-device network
+  with no NetBox, device, or database; `--seed` loads it into the dashboard.
+
+### Changed
+- **Redesigned dashboard** into a dark network-ops console: summary stat cards,
+  severity pills, device status dots, a sticky table header, a responsive layout,
+  and AI / triage callouts in the expanded row.
+
+### Fixed
+- Dashboard writes failed silently when no API key was set or a route was not
+  proxied. Failures now surface an error banner, and every panel route is proxied.
+- The drift-history sparkline and the drift table no longer force a horizontal
+  page scroll, and the sticky table header no longer overlaps the first row.
+
 ## [4.0.0] - 2026-06-01 — Community Pattern Library
 
 ### Added
