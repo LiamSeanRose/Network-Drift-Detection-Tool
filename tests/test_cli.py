@@ -321,3 +321,12 @@ def test_demo_seed_reports_count(db_session_factory, capsys):
     out = capsys.readouterr().out
     assert "Seeded" in out
     assert "dashboard" in out
+
+
+def test_eval_fuzzy_prints_report(capsys):
+    from pathlib import Path
+    corpus = Path(__file__).parent / "fixtures" / "fuzzy_corpus.json"
+    cli.main(argv=["eval-fuzzy", str(corpus)])
+    out = capsys.readouterr().out
+    assert "Fuzzy-match evaluation" in out
+    assert "Recommended threshold" in out
