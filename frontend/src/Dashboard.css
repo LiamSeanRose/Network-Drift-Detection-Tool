@@ -563,7 +563,11 @@
   border: 1px solid var(--border);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-1);
-  overflow: hidden;
+  /* overflow:clip rounds the corners WITHOUT becoming a scroll container —
+     unlike overflow:hidden, which would make this card the containing block for
+     the sticky thead and pin the header 57px down INTO the rows instead of to
+     the viewport. */
+  overflow: clip;
 }
 
 .drift-table {
@@ -575,7 +579,7 @@
 
 .drift-table thead th {
   position: sticky;
-  top: 57px;
+  top: 62px;          /* sits just under the 63px sticky topbar */
   z-index: 10;
   text-align: left;
   font-family: var(--sans);
@@ -904,6 +908,8 @@
 @media (max-width: 640px) {
   .dashboard { padding: 1rem 1rem 4rem; }
   .dashboard__header { margin: -1rem -1rem 1.25rem; padding: 0.75rem 1rem; }
-  .drift-table thead th { top: 64px; }
+  /* The topbar wraps to a variable height on narrow screens, so a fixed sticky
+     offset would overlap. Let the header scroll normally here. */
+  .drift-table thead th { position: static; }
   .device-history { grid-template-columns: 10ch 1fr 3ch; gap: 0.6rem; }
 }
