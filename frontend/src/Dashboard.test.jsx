@@ -204,6 +204,46 @@ describe('Dashboard', () => {
     expect(screen.getByText(/no shutdown/i)).toBeInTheDocument()
   })
 
+  it('shows an exact-match badge on a known fix with confidence 1.0', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-31T12:00:00+00:00', causes: [],
+        known_fix: { id: 7, cause: 'shut', fix: 'no shutdown' },
+        match_confidence: 1.0,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+
+    fireEvent.click(screen.getByText('core-sw-01'))
+    expect(screen.getByText(/exact match/i)).toBeInTheDocument()
+  })
+
+  it('shows a fuzzy-match warning badge when confidence is below 0.7', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-31T12:00:00+00:00', causes: [],
+        known_fix: { id: 7, cause: 'shut', fix: 'no shutdown' },
+        match_confidence: 0.6,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+
+    fireEvent.click(screen.getByText('core-sw-01'))
+    const badge = screen.getByText(/fuzzy match · 60%/i)
+    expect(badge).toBeInTheDocument()
+    expect(badge).toHaveClass('match-badge--weak')
+  })
+
   it('shows record fix button when known_fix is null', async () => {
     const drifts = [
       {
