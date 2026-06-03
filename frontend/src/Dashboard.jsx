@@ -340,6 +340,7 @@ export default function Dashboard() {
                         {d.known_fix && (
                           <div className="known-fix">
                             <span className="known-fix__label">known fix</span>
+                            <MatchConfidenceBadge confidence={d.match_confidence} />
                             <p className="known-fix__text"><strong>Cause:</strong> {d.known_fix.cause}</p>
                             <p className="known-fix__text"><strong>Fix:</strong> {d.known_fix.fix}</p>
 
@@ -441,6 +442,24 @@ export default function Dashboard() {
 // body so it is an intentional, isolated impurity rather than inline noise.
 function nowMs() {
   return Date.now()
+}
+
+// MatchConfidenceBadge — how a known fix was matched to this drift (v5.0).
+// 1.0 (or absent, the exact-only default) is an exact match; anything lower is a
+// fuzzy match, and below 0.7 it carries a warning so a weak match is not trusted
+// blindly.
+function MatchConfidenceBadge({ confidence }) {
+  if (confidence == null || confidence >= 1) {
+    return <span className="match-badge match-badge--exact">exact match</span>
+  }
+  const pct = Math.round(confidence * 100)
+  const weak = confidence < 0.7
+  return (
+    <span className={`match-badge match-badge--fuzzy${weak ? ' match-badge--weak' : ''}`}>
+      {weak && <span aria-hidden="true">⚠ </span>}
+      fuzzy match · {pct}%
+    </span>
+  )
 }
 
 // TriageBlock — AI4 anomaly triage. Fetches an incident-vs-noise assessment for
