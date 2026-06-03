@@ -217,6 +217,35 @@ def _build_tunnels_from_context(device):
     return context.get("tunnels", {}) or {}
 
 
+def list_devices(*, nb=None, status="active", site=None, role=None):
+    """List devices from NetBox as inventory entries.
+
+    Returns ``[{"name": str, "hostname": str}]`` — the device LIST treated as the
+    source of truth (the GoC model where NetBox owns "what exists"). Credentials
+    are deliberately NOT included: NetBox stores none; inventory.resolve_inventory
+    pairs these names with a service-account credential. ``hostname`` is the
+    device's primary IP (management address) with the CIDR mask stripped, falling
+    back to the device name when no primary IP is set.
+
+    Filters narrow the fleet so one poller can own a slice: ``status`` (default
+    "active"), ``site``, ``role``. ``nb`` is injectable for tests; by default a
+    pynetbox handle is built from NETBOX_URL / NETBOX_TOKEN.
+    """
+    nb = nb or _connect()
+    filters = {k: v for k, v in (("status", status), ("site", site), ("role", role))
+               if v is not None}
+    devices = nb.dcim.devices.filter(**filters) if filters else nb.dcim.devices.all()
+
+    result = []
+    for device in devices:
+        hostname = None
+        primary_ip = getattr(device, "primary_ip", None)
+        if primary_ip is not None and getattr(primary_ip, "address", None):
+            hostname = str(primary_ip.address).split("/")[0]
+        result.append({"name": device.name, "hostname": hostname or device.name})
+    return result
+
+
 def get_intent(device_name):
     """
     Return the intended state of `device_name` from NetBox, in the normalized

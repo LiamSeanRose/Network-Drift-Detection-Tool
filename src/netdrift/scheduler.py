@@ -36,7 +36,7 @@ from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from netdrift.auto_apply import run_auto_apply
-from netdrift.cli import load_devices
+from netdrift.inventory import resolve_inventory
 from netdrift.pipeline import run_drift_check
 from netdrift.reachability import check_reachability
 from netdrift.sla import evaluate_sla
@@ -322,7 +322,10 @@ def main():
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    devices = load_devices()
+    # Device inventory: devices.yml by default, or NetBox when DEVICE_SOURCE=netbox
+    # (credentials then come from the NETDRIFT_DEVICE_USERNAME/PASSWORD service
+    # account, with devices.yml as optional per-device overrides).
+    devices = resolve_inventory()
     scheduler = BlockingScheduler()
     register_listeners(scheduler)
 
