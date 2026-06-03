@@ -50,6 +50,25 @@ netdrift needs four secrets. None of them belongs in git.
 `devices.yml` holds device credentials and is gitignored — never commit it. Copy
 `devices.example.yml` to create it.
 
+### Device inventory source (yaml or NetBox)
+
+By default the scheduler reads its device list from `devices.yml`. To treat
+**NetBox as the source of truth for which devices exist** — the usual model in a
+NetBox shop — set `DEVICE_SOURCE=netbox`. The list (names + management IPs) then
+comes from NetBox, and credentials come from a single fleet-wide service account:
+
+| Variable | What it is |
+|----------|-----------|
+| `DEVICE_SOURCE` | `yaml` (default) or `netbox` |
+| `NETDRIFT_DEVICE_USERNAME` | Read-only service-account username (e.g. a TACACS+/RADIUS account) used for every NetBox-sourced device |
+| `NETDRIFT_DEVICE_PASSWORD` | That account's password — source it from a secrets manager, never a literal in `.env` |
+
+Under `DEVICE_SOURCE=netbox`, `devices.yml` becomes optional and holds only
+**per-device overrides** (a different hostname, a one-off credential, a
+`reachability_port`). NetBox stores no device passwords, so credentials never
+come from it. The default (`DEVICE_SOURCE` unset) is unchanged from prior
+releases.
+
 ## Database
 
 - **Set a strong `POSTGRES_PASSWORD`.** There is no default. `docker compose up`
