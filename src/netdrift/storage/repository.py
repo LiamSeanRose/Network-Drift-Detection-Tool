@@ -15,6 +15,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy import func, tuple_
 
 from netdrift.auth import KEY_PREFIX, generate_api_key, hash_api_key
+from netdrift.fingerprint import normalize_fingerprint
 from netdrift.storage.models import (
     Acknowledgement,
     AlertRule,
@@ -187,12 +188,17 @@ def delete_drifts_older_than(session, cutoff):
 # known_issues
 # ---------------------------------------------------------------------------
 
-def save_known_issue(session, fingerprint, cause, fix, remediation=None):
+def save_known_issue(session, fingerprint, cause, fix, remediation=None,
+                     normalized_fingerprint=None):
     """Insert a new KnownIssue row.
 
     Does NOT commit. Raises on duplicate fingerprint (unique constraint).
     remediation defaults to None (diagnosis-only, no executable fix).
-    """
+    ``normalized_fingerprint`` (v5.0) is the template-normalized key for fuzzy
+    matching; callers with the original object pass the precise value, otherwise
+    it is derived from the exact fingerprint."""
+    if normalized_fingerprint is None:
+        normalized_fingerprint = normalize_fingerprint(fingerprint)
     issue = KnownIssue(
         fingerprint=fingerprint,
         cause=cause,
@@ -200,6 +206,7 @@ def save_known_issue(session, fingerprint, cause, fix, remediation=None):
         created_at=datetime.now(tz=timezone.utc),
         remediation=remediation,
         auto_apply_enabled=False,
+        normalized_fingerprint=normalized_fingerprint,
     )
     session.add(issue)
     session.flush()

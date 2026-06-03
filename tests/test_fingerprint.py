@@ -144,3 +144,26 @@ def test_fuzzy_threshold_falls_back_on_garbage(monkeypatch):
     monkeypatch.setenv("FUZZY_MATCH_THRESHOLD", "not-a-number")
     from netdrift.fingerprint import fuzzy_threshold
     assert fuzzy_threshold() == DEFAULT_FUZZY_THRESHOLD
+
+
+def test_normalize_fingerprint_derives_from_exact():
+    from netdrift.fingerprint import normalize_fingerprint
+    assert normalize_fingerprint("bgp_neighbor|session_state|value_mismatch") == \
+        "bgp_neighbor:{IP}|session_state|value_mismatch"
+    assert normalize_fingerprint("vlan|name|value_mismatch") == \
+        "vlan:{VLAN_ID}|name|value_mismatch"
+    # Interface class is unrecoverable from the exact fp -> generic token.
+    assert normalize_fingerprint("interface|enabled|value_mismatch") == \
+        "interface:{IFACE}|enabled|value_mismatch"
+    # config/device have no identifier.
+    assert normalize_fingerprint("config|running_config|value_mismatch") == \
+        "config|running_config|value_mismatch"
+
+
+def test_normalize_fingerprint_matches_fuzzy_for_ip_types():
+    # For bgp/vlan/ospf the derived-from-exact value equals the precise one.
+    from netdrift.fingerprint import normalize_fingerprint
+    exact = "bgp_neighbor|session_state|value_mismatch"
+    precise = fuzzy_fingerprint({"object": "bgp_neighbor:10.9.9.9",
+                                 "field": "session_state", "drift_kind": "value_mismatch"})
+    assert normalize_fingerprint(exact) == precise
