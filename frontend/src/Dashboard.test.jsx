@@ -326,6 +326,28 @@ describe('Dashboard', () => {
     expect(screen.getByRole('button', { name: /^resume$/i })).toBeInTheDocument()
   })
 
+  it('surfaces an API-key error when a write is rejected with 401', async () => {
+    const devices = [{ name: 'core-sw-01', auto_remediation_paused: false }]
+    // GETs succeed; the mutating PATCH is rejected as unauthorized (no key).
+    globalThis.fetch = vi.fn((url, options = {}) => {
+      const method = (options.method || 'GET').toUpperCase()
+      if (method !== 'GET') {
+        return Promise.resolve({ ok: false, status: 401, json: () => Promise.resolve({}) })
+      }
+      let body = []
+      if (url.startsWith('/devices')) body = devices
+      return Promise.resolve({ ok: true, status: 200, json: () => Promise.resolve(body) })
+    })
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    fireEvent.click(screen.getByRole('button', { name: /^pause$/i }))
+
+    // The failure must be visible, not swallowed — and point at the API key.
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/api key/i)
+  })
+
   it('shows an Acknowledge button on an unacknowledged drift', async () => {
     const drifts = [
       {
