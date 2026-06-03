@@ -178,6 +178,24 @@
 }
 .dashboard__help-btn:hover { color: var(--accent-bright); border-color: var(--accent); }
 
+/* Back-link to the fleet-health home; sits at the head of the actions row. */
+.dashboard__overview-link {
+  color: var(--fg-muted);
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+.dashboard__overview-link:hover { color: var(--accent-bright); }
+
+/* Note shown when the table is deep-linked with a severity/device filter. */
+.dashboard__filter-note {
+  margin: 0 0 12px;
+  font-size: 0.85rem;
+  color: var(--fg-muted);
+}
+.dashboard__filter-note strong { color: var(--fg); text-transform: capitalize; }
+.dashboard__filter-note a { color: var(--accent); }
+
 /* ---- intent-vs-reality explainer banner ---- */
 .intent-banner {
   display: flex;

@@ -1,13 +1,13 @@
 // Dashboard.jsx — drift events page with history panel and v2.5 remediation UI.
 
-import { useState, useEffect, useCallback, Fragment } from 'react'
+import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
 import { apiFetch, getApiKey, setApiKey } from './api'
 import { GLOSSARY, SEVERITY_LEGEND } from './help'
 import './Dashboard.css'
 
 const HELP_BANNER_KEY = 'netdrift_help_banner_dismissed'
 
-export default function Dashboard() {
+export default function Dashboard({ initialFilter = null }) {
   const [drifts, setDrifts] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -226,6 +226,23 @@ export default function Dashboard() {
       .catch(() => { setAuditLog([]); setAuditLogLoading(false) })
   }, [auditLogFor])
 
+  // When the fleet-health home deep-links here with a severity/device filter,
+  // narrow the already-fetched list client-side — no extra API call. With no
+  // filter (the standalone drift console) visibleDrifts is just drifts, so all
+  // existing behaviour is unchanged.
+  const visibleDrifts = useMemo(() => {
+    if (!drifts || !initialFilter) return drifts
+    return drifts.filter((d) => {
+      if (initialFilter.severity && d.severity !== initialFilter.severity) return false
+      if (initialFilter.device && d.device !== initialFilter.device) return false
+      return true
+    })
+  }, [drifts, initialFilter])
+
+  const filterLabel = initialFilter
+    ? [initialFilter.severity, initialFilter.device].filter(Boolean).join(' · ')
+    : null
+
   return (
     <div className="dashboard">
       <header className="dashboard__header">
@@ -242,10 +259,11 @@ export default function Dashboard() {
           <h1 className="dashboard__title">netdrift</h1>
           <span className="dashboard__subtitle">
             drift console
-            {drifts && <> · <span className="dashboard__count">{drifts.length}</span> events</>}
+            {visibleDrifts && <> · <span className="dashboard__count">{visibleDrifts.length}</span> events</>}
           </span>
         </div>
         <div className="dashboard__actions">
+          <a href="#" className="dashboard__overview-link">← Overview</a>
           <input
             type="password"
             className="dashboard__apikey"
@@ -302,8 +320,15 @@ export default function Dashboard() {
         </div>
       )}
 
-      {drifts && drifts.length > 0 && (
-        <StatsBar drifts={drifts} devices={devices} windows={maintenanceWindows} />
+      {visibleDrifts && visibleDrifts.length > 0 && (
+        <StatsBar drifts={visibleDrifts} devices={devices} windows={maintenanceWindows} />
+      )}
+
+      {filterLabel && (
+        <p className="dashboard__filter-note">
+          Showing <strong>{filterLabel}</strong> drift only.{' '}
+          <a href="#drifts">Clear filter</a>
+        </p>
       )}
 
       <div className="section-title">configuration</div>
@@ -317,9 +342,9 @@ export default function Dashboard() {
       {historyError && <p className="dashboard__state dashboard__state--error">History unavailable: {historyError}</p>}
       {loading && !drifts && <p className="dashboard__state">Loading…</p>}
       {error && <p className="dashboard__state dashboard__state--error">Failed to load drifts: {error}</p>}
-      {!loading && !error && drifts && drifts.length === 0 && <p className="dashboard__state">No drift events yet.</p>}
+      {!loading && !error && visibleDrifts && visibleDrifts.length === 0 && <p className="dashboard__state">No drift events yet.</p>}
 
-      {drifts && drifts.length > 0 && (
+      {visibleDrifts && visibleDrifts.length > 0 && (
         <>
         <div className="section-title">drift events</div>
         <div className="table-card">
@@ -332,7 +357,7 @@ export default function Dashboard() {
             </tr>
           </thead>
           <tbody>
-            {drifts.map((d) => {
+            {visibleDrifts.map((d) => {
               const causes = d.causes || []
               const isExpanded = expandedId === d.id
               const hasExecutableFix = d.known_fix?.remediation?.kind != null
