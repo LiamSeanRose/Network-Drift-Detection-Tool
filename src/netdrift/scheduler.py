@@ -35,13 +35,19 @@ from datetime import datetime, timedelta, timezone
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 from apscheduler.schedulers.blocking import BlockingScheduler
 
+from netdrift import lifecycle as _lifecycle
+from netdrift import netbox_client
 from netdrift.auto_apply import run_auto_apply
 from netdrift.inventory import resolve_inventory
 from netdrift.pipeline import run_drift_check
 from netdrift.reachability import check_reachability
 from netdrift.sla import evaluate_sla
 from netdrift.storage.database import get_sessionmaker
-from netdrift.storage.repository import delete_drifts_older_than, record_reachability
+from netdrift.storage.repository import (
+    delete_drifts_older_than,
+    record_lifecycle,
+    record_reachability,
+)
 from netdrift.syslog_receiver import SyslogReceiver, DEFAULT_PORT as DEFAULT_SYSLOG_PORT
 from netdrift.webhook import WebhookDispatcher
 
@@ -49,6 +55,7 @@ logger = logging.getLogger("netdrift.scheduler")
 
 DEFAULT_INTERVAL_MINUTES = 5
 DEFAULT_REACHABILITY_INTERVAL_MINUTES = 1
+DEFAULT_LIFECYCLE_INTERVAL_HOURS = 24
 REPOLL_DELAY_SECONDS = 60
 DEFAULT_RETENTION_DAYS = 90
 RETENTION_INTERVAL_HOURS = 24
@@ -246,6 +253,45 @@ def schedule_sla_evaluation(scheduler, job, interval_minutes=DEFAULT_INTERVAL_MI
     return j.id
 
 
+def _run_lifecycle_sync(session_factory, *, lister=None):
+    """Sync device lifecycle dates (warranty / end-of-life) from NetBox into
+    device_settings, then commit and close.
+
+    Reads NetBox custom fields (netbox_client.list_lifecycle), parses each date,
+    and upserts it per device. Swallows errors so one bad cycle never kills the
+    scheduler — the same resilience the other jobs have. ``lister`` is injectable
+    for tests (no live NetBox).
+    """
+    if lister is None:
+        lister = netbox_client.list_lifecycle
+    try:
+        entries = lister()
+        session = session_factory()
+        try:
+            for entry in entries:
+                record_lifecycle(
+                    session, entry["name"],
+                    _lifecycle._parse_date(entry.get("warranty_expiry")),
+                    _lifecycle._parse_date(entry.get("end_of_life")),
+                )
+            session.commit()
+            logger.info("Lifecycle sync updated %d device(s).", len(entries))
+        finally:
+            session.close()
+    except Exception as e:  # noqa: BLE001 — a scheduler job must not die on one cycle
+        logger.error("Lifecycle sync failed: %s", e)
+
+
+def schedule_lifecycle_sync(scheduler, job, hours=DEFAULT_LIFECYCLE_INTERVAL_HOURS):
+    """Register the single recurring lifecycle-sync job. Returns its job id.
+
+    `job` is a no-arg callable (main() binds the session factory into it); tests
+    inject a fake to assert registration without firing.
+    """
+    j = scheduler.add_job(job, trigger="interval", hours=hours, id="lifecycle-sync")
+    return j.id
+
+
 def _run_retention(session_factory, retention_days, *, now=None,
                    delete=delete_drifts_older_than):
     """Delete drift events older than ``retention_days``, then commit and close.
@@ -389,6 +435,14 @@ def main():
         _run_retention(session_factory, retention_days)
 
     schedule_retention(scheduler, retention_job)
+
+    # Lifecycle sync: pull warranty / end-of-life dates from NetBox custom fields
+    # into device_settings once a day, so the /devices endpoint can serve them
+    # (and flag expiries) without the API ever calling NetBox.
+    def lifecycle_job():
+        _run_lifecycle_sync(session_factory)
+
+    schedule_lifecycle_sync(scheduler, lifecycle_job)
     logger.info(
         "Scheduled %d device(s) every %d min: %s. Reachability probe every %d min "
         "(%d job(s)). Syslog trigger on UDP:%d. SLA evaluation every %d min. "

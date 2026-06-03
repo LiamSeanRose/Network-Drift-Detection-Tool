@@ -412,6 +412,41 @@ describe('Dashboard', () => {
     expect(screen.getByText(/^reachable$/i)).toBeInTheDocument()
   })
 
+  it('flags an expiring warranty on a device', async () => {
+    const devices = [{
+      name: 'core-sw-01', auto_remediation_paused: false,
+      warranty_status: 'expiring', warranty_days_left: 12,
+    }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.getByText(/warranty expires in 12d/i)).toBeInTheDocument()
+  })
+
+  it('flags an expired end-of-life on a device', async () => {
+    const devices = [{
+      name: 'core-sw-01', auto_remediation_paused: false, eol_status: 'expired',
+    }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.getByText(/EoL expired/i)).toBeInTheDocument()
+  })
+
+  it('shows no lifecycle badge when nothing is expiring', async () => {
+    const devices = [{
+      name: 'core-sw-01', auto_remediation_paused: false,
+      warranty_status: 'ok', eol_status: null,
+    }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.queryByText(/warranty|EoL/i)).not.toBeInTheDocument()
+  })
+
   it('shows an unreachable device status', async () => {
     const devices = [{ name: 'core-sw-01', auto_remediation_paused: false, reachable: false }]
     globalThis.fetch = mockFetchRouted([], [], [], devices)

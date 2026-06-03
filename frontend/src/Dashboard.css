@@ -1218,6 +1218,23 @@
 .devices__reach--down .devices__reach-dot { background: var(--sev-critical); }
 .devices__reach--unknown { color: var(--fg-dim); }
 
+/* Lifecycle (warranty / EoL) badge — shown only when expiring or expired. */
+.devices__lifecycle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+}
+.devices__lifecycle-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+}
+.devices__lifecycle--expiring { color: var(--sev-warning); }
+.devices__lifecycle--expiring .devices__lifecycle-dot { background: var(--sev-warning); }
+.devices__lifecycle--expired { color: var(--sev-critical); }
+.devices__lifecycle--expired .devices__lifecycle-dot { background: var(--sev-critical); }
+
 /* =========================================================== Responsive === */
 
 @media (max-width: 640px) {
