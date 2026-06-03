@@ -3,11 +3,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react'
 import { apiFetch, getApiKey, setApiKey } from './api'
 import { GLOSSARY, SEVERITY_LEGEND } from './help'
+import { LanguageToggle, useI18n } from './i18n'
 import './Dashboard.css'
 
 const HELP_BANNER_KEY = 'netdrift_help_banner_dismissed'
 
 export default function Dashboard({ initialFilter = null }) {
+  const { t } = useI18n()
   const [drifts, setDrifts] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -27,6 +29,11 @@ export default function Dashboard({ initialFilter = null }) {
 
   // v3.5 — devices + per-device auto-apply pause state
   const [devices, setDevices] = useState(null)
+
+  // Inventory-accuracy headline: share of the inventory whose live reality
+  // matches its intended state. Self-guarding — the banner renders nothing
+  // until a well-formed payload arrives.
+  const [accuracy, setAccuracy] = useState(null)
 
   // maintenance windows — planned change windows that suppress alerting
   const [maintenanceWindows, setMaintenanceWindows] = useState(null)
@@ -94,15 +101,22 @@ export default function Dashboard({ initialFilter = null }) {
       .catch(() => setMaintenanceWindows([]))
   }, [])
 
+  const loadAccuracy = useCallback(() => {
+    return fetch('/inventory-accuracy')
+      .then((r) => { if (!r.ok) throw new Error(`API returned ${r.status}`); return r.json() })
+      .then((data) => setAccuracy(data))
+      .catch(() => setAccuracy(null))
+  }, [])
+
   // Initial load on mount. The loaders set a loading flag synchronously, which
   // the fetch-on-mount pattern requires; that is intentional here.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices(); loadMaintenanceWindows() },
-    [loadDrifts, loadHistory, loadAlertRules, loadDevices, loadMaintenanceWindows])
+  useEffect(() => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices(); loadMaintenanceWindows(); loadAccuracy() },
+    [loadDrifts, loadHistory, loadAlertRules, loadDevices, loadMaintenanceWindows, loadAccuracy])
 
   const handleRefresh = useCallback(
-    () => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices(); loadMaintenanceWindows() },
-    [loadDrifts, loadHistory, loadAlertRules, loadDevices, loadMaintenanceWindows])
+    () => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices(); loadMaintenanceWindows(); loadAccuracy() },
+    [loadDrifts, loadHistory, loadAlertRules, loadDevices, loadMaintenanceWindows, loadAccuracy])
 
   // Run a mutating request and surface failures instead of swallowing them. A
   // 401 means no/invalid API key — the single most common cause of a write
@@ -259,12 +273,13 @@ export default function Dashboard({ initialFilter = null }) {
           </span>
           <h1 className="dashboard__title">netdrift</h1>
           <span className="dashboard__subtitle">
-            drift console
+            {t('app.driftConsole')}
             {visibleDrifts && <> · <span className="dashboard__count">{visibleDrifts.length}</span> events</>}
           </span>
         </div>
         <div className="dashboard__actions">
           <a href="#" className="dashboard__overview-link">← Overview</a>
+          <LanguageToggle />
           <input
             type="password"
             className="dashboard__apikey"
@@ -274,10 +289,10 @@ export default function Dashboard({ initialFilter = null }) {
             onChange={(e) => { setApiKeyState(e.target.value); setApiKey(e.target.value) }}
           />
           <button type="button" className="dashboard__refresh" onClick={handleRefresh} disabled={loading}>
-            {loading ? 'Refreshing…' : 'Refresh'}
+            {loading ? t('app.refreshing') : t('app.refresh')}
           </button>
           <button type="button" className="dashboard__help-btn" onClick={() => setHelpOpen(true)}>
-            Help
+            {t('app.help')}
           </button>
         </div>
       </header>
@@ -322,6 +337,8 @@ export default function Dashboard({ initialFilter = null }) {
         </div>
       )}
 
+      <AccuracyBanner accuracy={accuracy} />
+
       {visibleDrifts && visibleDrifts.length > 0 && (
         <StatsBar drifts={visibleDrifts} devices={devices} windows={maintenanceWindows} />
       )}
@@ -333,7 +350,7 @@ export default function Dashboard({ initialFilter = null }) {
         </p>
       )}
 
-      <h2 className="section-title">configuration</h2>
+      <h2 className="section-title">{t('section.configuration')}</h2>
       <div className="panel-grid">
         <AlertRulesPanel rules={alertRules} onAdd={handleAddRule} onDelete={handleDeleteRule} />
         <MaintenanceWindowsPanel windows={maintenanceWindows} onAdd={handleAddWindow} onDelete={handleDeleteWindow} />
@@ -342,13 +359,13 @@ export default function Dashboard({ initialFilter = null }) {
 
       {history && history.length > 0 && <HistoryPanel history={history} />}
       {historyError && <p className="dashboard__state dashboard__state--error">History unavailable: {historyError}</p>}
-      {loading && !drifts && <p className="dashboard__state">Loading…</p>}
+      {loading && !drifts && <p className="dashboard__state">{t('state.loading')}</p>}
       {error && <p className="dashboard__state dashboard__state--error">Failed to load drifts: {error}</p>}
-      {!loading && !error && visibleDrifts && visibleDrifts.length === 0 && <p className="dashboard__state">No drift events yet.</p>}
+      {!loading && !error && visibleDrifts && visibleDrifts.length === 0 && <p className="dashboard__state">{t('state.noDrift')}</p>}
 
       {visibleDrifts && visibleDrifts.length > 0 && (
         <>
-        <h2 className="section-title">drift events</h2>
+        <h2 className="section-title">{t('section.driftEvents')}</h2>
         <div className="table-card">
         <table className="drift-table">
           <thead>
@@ -369,6 +386,16 @@ export default function Dashboard({ initialFilter = null }) {
                   <tr
                     className={`sev-${d.severity} expandable${isExpanded ? ' is-open' : ''}${d.acknowledged ? ' acknowledged' : ''}`}
                     onClick={() => setExpandedId(isExpanded ? null : d.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setExpandedId(isExpanded ? null : d.id)
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-expanded={isExpanded}
+                    aria-label={`${d.device} ${d.object} ${d.field} — ${isExpanded ? 'collapse' : 'expand'} details`}
                   >
                     <td>{d.device}</td>
                     <td className="col-object" title={d.object}>
@@ -948,7 +975,53 @@ function MaintenanceWindowsPanel({ windows, onAdd, onDelete }) {
   )
 }
 
-// DevicesPanel — list inventory devices with a per-device auto-apply toggle (v3.5).
+// Liveness status for a device, from the reachability probe. Tri-state: the
+// probe may not have run yet (reachable null/undefined). Text + a dot, never
+// colour alone, so the status survives a colour-blind or greyscale view.
+function reachabilityLabel(d) {
+  if (d.reachable === true) return { cls: 'up', text: 'reachable' }
+  if (d.reachable === false) return { cls: 'down', text: 'unreachable' }
+  return { cls: 'unknown', text: 'not probed' }
+}
+
+function ReachabilityBadge({ device }) {
+  const r = reachabilityLabel(device)
+  const lastSeen = device.last_reachable_at
+    ? `last seen ${formatTimestamp(device.last_reachable_at)}`
+    : undefined
+  return (
+    <span className={`devices__reach devices__reach--${r.cls}`} title={lastSeen}>
+      <span className="devices__reach-dot" aria-hidden="true" />
+      {r.text}
+    </span>
+  )
+}
+
+// Warranty / end-of-life badge. Only renders when something needs attention
+// (expiring or expired); a device with plenty of runway or no dates stays quiet
+// so the panel isn't cluttered. Text + dot, never colour alone.
+function LifecycleBadge({ device }) {
+  const items = [
+    { label: 'warranty', status: device.warranty_status, days: device.warranty_days_left },
+    { label: 'EoL', status: device.eol_status, days: device.eol_days_left },
+  ].filter((i) => i.status === 'expiring' || i.status === 'expired')
+  if (items.length === 0) return null
+  return (
+    <>
+      {items.map((i) => (
+        <span key={i.label} className={`devices__lifecycle devices__lifecycle--${i.status}`}>
+          <span className="devices__lifecycle-dot" aria-hidden="true" />
+          {i.status === 'expired'
+            ? `${i.label} expired`
+            : `${i.label} expires in ${i.days}d`}
+        </span>
+      ))}
+    </>
+  )
+}
+
+// DevicesPanel — list inventory devices with reachability, lifecycle, and a
+// per-device auto-apply toggle (v3.5).
 function DevicesPanel({ devices, onToggle }) {
   if (!devices || devices.length === 0) return null
   return (
@@ -961,6 +1034,8 @@ function DevicesPanel({ devices, onToggle }) {
         {devices.map((d) => (
           <li key={d.name} className="devices__item">
             <span className="devices__name">{d.name}</span>
+            <ReachabilityBadge device={d} />
+            <LifecycleBadge device={d} />
             <span className={`devices__state${d.auto_remediation_paused ? ' devices__state--paused' : ''}`}>
               {d.auto_remediation_paused ? 'auto-apply paused' : 'auto-apply active'}
             </span>
@@ -1011,7 +1086,9 @@ function DeviceHistory({ device, buckets, maxCount }) {
             key={b.detected_at}
             className={`history-bar history-bar--${worstSeverity(b)}`}
             style={{ height: `${Math.max((b.count / maxCount) * 100, 4)}%` }}
-            title={`${b.detected_at}: ${b.count} drift(s)`}
+            role="img"
+            aria-label={`${b.detected_at}: ${b.count} drift(s), worst severity ${worstSeverity(b)}`}
+            title={`${b.detected_at}: ${b.count} drift(s) · ${worstSeverity(b)}`}
           />
         ))}
       </div>
@@ -1041,6 +1118,44 @@ function formatTimestamp(iso) {
   return d.toLocaleString(undefined, {
     month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit',
   })
+}
+
+// AccuracyBanner — the headline "is your inventory true?" metric. One number a
+// director can read at a glance: the share of inventory devices whose live
+// reality matches their intended state (NetBox/Nautobot). Self-guarding: renders
+// nothing until a well-formed /inventory-accuracy payload arrives, so an empty
+// inventory or a failed fetch simply shows no banner rather than a broken card.
+function AccuracyBanner({ accuracy }) {
+  const { t } = useI18n()
+  if (!accuracy || typeof accuracy.accuracy_pct !== 'number') return null
+  const pct = accuracy.accuracy_pct
+  const tone = pct >= 95 ? 'good' : pct >= 80 ? 'warn' : 'bad'
+  const window = accuracy.window_minutes
+  return (
+    <section className="accuracy" aria-label="Inventory accuracy">
+      <div className={`accuracy__score accuracy__score--${tone}`}>
+        <span className="accuracy__pct">{pct}%</span>
+        <span className="accuracy__caption">
+          {t('accuracy.caption')}
+          {window ? <span className="accuracy__window"> · last {window} min</span> : null}
+        </span>
+      </div>
+      <dl className="accuracy__breakdown">
+        <div className="accuracy__stat">
+          <dt>Devices</dt><dd>{accuracy.total_devices}</dd>
+        </div>
+        <div className="accuracy__stat accuracy__stat--good">
+          <dt>Accurate</dt><dd>{accuracy.accurate}</dd>
+        </div>
+        <div className="accuracy__stat accuracy__stat--drifted">
+          <dt>Drifted</dt><dd>{accuracy.drifted}</dd>
+        </div>
+        <div className="accuracy__stat accuracy__stat--stale">
+          <dt>Not seen</dt><dd>{accuracy.stale}</dd>
+        </div>
+      </dl>
+    </section>
+  )
 }
 
 // StatsBar — at-a-glance summary cards across the top of the console. Derived

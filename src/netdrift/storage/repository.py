@@ -184,6 +184,101 @@ def delete_drifts_older_than(session, cutoff):
     )
 
 
+def inventory_accuracy(session, device_names, window_minutes=60, now=None):
+    """Summarize how much of the inventory currently matches its intended state.
+
+    The headline "is the inventory true?" metric: NetBox (or Nautobot) says what
+    should exist; this answers what share of those devices reality actually
+    agrees with right now. Read-only; derived entirely from data the pipeline
+    already persists (DriftEvent rows + DeviceSetting.last_collected_at). Does
+    NOT commit.
+
+    For ``cutoff = now - window_minutes`` each inventory device is classified:
+      - "drifted"  — has at least one distinct drift in the window
+      - "accurate" — collected within the window and free of drift
+      - "stale"    — not collected within the window, so its accuracy cannot be
+                     vouched for (it may be unreachable)
+
+    ``device_names`` is the inventory list (e.g. the keys of devices.yml); a
+    device with no DriftEvent and no DeviceSetting row counts as "stale", not
+    "accurate", because absence of drift is only trustworthy once we know the
+    device was actually polled. ``accuracy_pct`` is accurate/total*100, or None
+    when the inventory is empty. ``now`` is injectable for tests.
+
+    Returns a dict: window_minutes, generated_at, total_devices, accurate,
+    drifted, stale, accuracy_pct, and a per-device ``devices`` list
+    (name, status, drift_count, last_collected_at).
+    """
+    if now is None:
+        now = datetime.now(tz=timezone.utc)
+    names = sorted(set(device_names))
+    cutoff = now - timedelta(minutes=window_minutes)
+
+    # Distinct drift identities per device within the window. Counting distinct
+    # (object, field, drift_kind) rather than raw rows keeps the number honest:
+    # the same drift recorded across many polls is one drifted thing, not many.
+    drift_counts: dict[str, int] = {}
+    last_collected: dict[str, datetime] = {}
+    if names:
+        identity_rows = (
+            session.query(
+                DriftEvent.device, DriftEvent.object_ref,
+                DriftEvent.field, DriftEvent.drift_kind,
+            )
+            .filter(DriftEvent.detected_at >= cutoff, DriftEvent.device.in_(names))
+            .distinct()
+            .all()
+        )
+        for device, *_ in identity_rows:
+            drift_counts[device] = drift_counts.get(device, 0) + 1
+
+        collected_rows = (
+            session.query(
+                DeviceSetting.device_name, DeviceSetting.last_collected_at
+            )
+            .filter(DeviceSetting.device_name.in_(names))
+            .all()
+        )
+        last_collected = {name: ts for name, ts in collected_rows}
+
+    devices = []
+    accurate = drifted = stale = 0
+    for name in names:
+        lc = last_collected.get(name)
+        if lc is not None and lc.tzinfo is None:
+            lc = lc.replace(tzinfo=timezone.utc)
+        collected_recently = lc is not None and lc >= cutoff
+        count = drift_counts.get(name, 0)
+        if not collected_recently:
+            status = "stale"
+            stale += 1
+        elif count > 0:
+            status = "drifted"
+            drifted += 1
+        else:
+            status = "accurate"
+            accurate += 1
+        devices.append({
+            "name": name,
+            "status": status,
+            "drift_count": count,
+            "last_collected_at": lc.isoformat() if lc else None,
+        })
+
+    total = len(names)
+    accuracy_pct = round(accurate / total * 100, 1) if total else None
+    return {
+        "window_minutes": window_minutes,
+        "generated_at": now.isoformat(),
+        "total_devices": total,
+        "accurate": accurate,
+        "drifted": drifted,
+        "stale": stale,
+        "accuracy_pct": accuracy_pct,
+        "devices": devices,
+    }
+
+
 # ---------------------------------------------------------------------------
 # known_issues
 # ---------------------------------------------------------------------------
@@ -600,6 +695,48 @@ def device_last_collected(session, device_name):
     """Return the device's last successful collection time, or None."""
     setting = get_device_setting(session, device_name)
     return setting.last_collected_at if setting else None
+
+
+def record_reachability(session, device_name, reachable, when=None):
+    """Record the result of a liveness probe for a device (upsert). Does NOT
+    commit.
+
+    Creates the device_settings row if absent, preserving any pause/collection
+    state. Always stamps ``reachable`` and ``reachability_checked_at``; only a
+    *reachable* result advances ``last_reachable_at`` ("last seen"), which is
+    retained across later unreachable probes so the UI can show how long a
+    device has been down. ``when`` defaults to UTC now.
+    """
+    if when is None:
+        when = datetime.now(tz=timezone.utc)
+    setting = get_device_setting(session, device_name)
+    if setting is None:
+        setting = DeviceSetting(device_name=device_name)
+        session.add(setting)
+    setting.reachable = reachable
+    setting.reachability_checked_at = when
+    if reachable:
+        setting.last_reachable_at = when
+    session.flush()
+    return setting
+
+
+def record_lifecycle(session, device_name, warranty_expiry, end_of_life):
+    """Store a device's lifecycle dates (upsert). Does NOT commit.
+
+    Creates the device_settings row if absent, preserving any other state.
+    ``warranty_expiry`` and ``end_of_life`` are ``datetime.date`` (or None to
+    clear) — the caller (lifecycle sync) parses NetBox's strings to dates before
+    calling. Synced periodically from NetBox custom fields.
+    """
+    setting = get_device_setting(session, device_name)
+    if setting is None:
+        setting = DeviceSetting(device_name=device_name)
+        session.add(setting)
+    setting.warranty_expiry = warranty_expiry
+    setting.end_of_life = end_of_life
+    session.flush()
+    return setting
 
 
 # ---------------------------------------------------------------------------

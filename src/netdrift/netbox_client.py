@@ -217,6 +217,68 @@ def _build_tunnels_from_context(device):
     return context.get("tunnels", {}) or {}
 
 
+def list_devices(*, nb=None, status="active", site=None, role=None):
+    """List devices from NetBox as inventory entries.
+
+    Returns ``[{"name": str, "hostname": str}]`` — the device LIST treated as the
+    source of truth (the GoC model where NetBox owns "what exists"). Credentials
+    are deliberately NOT included: NetBox stores none; inventory.resolve_inventory
+    pairs these names with a service-account credential. ``hostname`` is the
+    device's primary IP (management address) with the CIDR mask stripped, falling
+    back to the device name when no primary IP is set.
+
+    Filters narrow the fleet so one poller can own a slice: ``status`` (default
+    "active"), ``site``, ``role``. ``nb`` is injectable for tests; by default a
+    pynetbox handle is built from NETBOX_URL / NETBOX_TOKEN.
+    """
+    nb = nb or _connect()
+    filters = {k: v for k, v in (("status", status), ("site", site), ("role", role))
+               if v is not None}
+    devices = nb.dcim.devices.filter(**filters) if filters else nb.dcim.devices.all()
+
+    result = []
+    for device in devices:
+        hostname = None
+        primary_ip = getattr(device, "primary_ip", None)
+        if primary_ip is not None and getattr(primary_ip, "address", None):
+            hostname = str(primary_ip.address).split("/")[0]
+        result.append({"name": device.name, "hostname": hostname or device.name})
+    return result
+
+
+def list_lifecycle(*, nb=None, warranty_field=None, eol_field=None,
+                   status="active", site=None, role=None):
+    """List devices with their lifecycle dates from NetBox custom fields.
+
+    Returns ``[{"name", "warranty_expiry", "end_of_life"}]`` where the two dates
+    are whatever the device's custom fields hold (ISO date strings, or None when
+    unset). NetBox has no native warranty/EoL model, so these live in custom
+    fields; the field names default to ``warranty_expiry`` / ``end_of_life`` and
+    are overridable via NETDRIFT_WARRANTY_FIELD / NETDRIFT_EOL_FIELD (or the
+    keyword args) for a deployment that names them differently.
+
+    ``nb`` is injectable for tests. Filters mirror list_devices.
+    """
+    nb = nb or _connect()
+    warranty_field = warranty_field or os.environ.get(
+        "NETDRIFT_WARRANTY_FIELD", "warranty_expiry")
+    eol_field = eol_field or os.environ.get("NETDRIFT_EOL_FIELD", "end_of_life")
+
+    filters = {k: v for k, v in (("status", status), ("site", site), ("role", role))
+               if v is not None}
+    devices = nb.dcim.devices.filter(**filters) if filters else nb.dcim.devices.all()
+
+    result = []
+    for device in devices:
+        custom = getattr(device, "custom_fields", None) or {}
+        result.append({
+            "name": device.name,
+            "warranty_expiry": custom.get(warranty_field),
+            "end_of_life": custom.get(eol_field),
+        })
+    return result
+
+
 def get_intent(device_name):
     """
     Return the intended state of `device_name` from NetBox, in the normalized

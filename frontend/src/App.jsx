@@ -7,6 +7,7 @@
 import { useState, useEffect } from 'react'
 import Dashboard from './Dashboard'
 import FleetHome from './FleetHome'
+import { I18nProvider } from './i18n'
 
 // Parse the hash into a view + optional drift-table filter.
 //   ''                         → home
@@ -35,8 +36,11 @@ export default function App() {
     return () => window.removeEventListener('hashchange', onHash)
   }, [])
 
-  if (route.view === 'drifts') {
-    return <Dashboard initialFilter={route.filter} />
-  }
-  return <FleetHome />
+  return (
+    <I18nProvider>
+      {route.view === 'drifts'
+        ? <Dashboard initialFilter={route.filter} />
+        : <FleetHome />}
+    </I18nProvider>
+  )
 }

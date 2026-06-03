@@ -1138,6 +1138,103 @@
 .audit-row--failure td { color: var(--sev-critical); }
 .audit-row--dry_run_only td { color: var(--fg-muted); }
 
+/* ============================================ Inventory-accuracy banner === */
+
+.accuracy {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  flex-wrap: wrap;
+  margin: 0 0 1.25rem;
+  padding: 1.25rem 1.5rem;
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-1);
+}
+.accuracy__score { display: flex; flex-direction: column; gap: 0.25rem; }
+.accuracy__pct {
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1;
+  font-feature-settings: var(--tabular);
+}
+.accuracy__score--good .accuracy__pct { color: var(--healthy); }
+.accuracy__score--warn .accuracy__pct { color: var(--sev-warning); }
+.accuracy__score--bad .accuracy__pct  { color: var(--sev-critical); }
+.accuracy__caption { font-size: 0.8rem; color: var(--fg-muted); }
+.accuracy__window { color: var(--fg-dim); }
+.accuracy__breakdown { display: flex; gap: 1.75rem; margin: 0; }
+.accuracy__stat { display: flex; flex-direction: column; gap: 0.25rem; margin: 0; }
+.accuracy__stat dt {
+  font-size: 0.72rem; color: var(--fg-dim);
+  text-transform: uppercase; letter-spacing: 0.04em;
+}
+.accuracy__stat dd {
+  margin: 0; font-size: 1.4rem; font-weight: 600; color: var(--fg);
+  font-feature-settings: var(--tabular);
+}
+.accuracy__stat--good dd { color: var(--healthy); }
+.accuracy__stat--drifted dd { color: var(--sev-critical); }
+.accuracy__stat--stale dd { color: var(--fg-muted); }
+
+/* ================================================================ a11y === */
+
+/* Visually hidden but available to assistive technology. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Visible keyboard focus ring for the expandable drift rows (role="button"). */
+.drift-table tbody tr.expandable:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+/* ===================================== Device reachability badge === */
+
+.devices__reach {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+}
+.devices__reach-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--fg-dim);
+}
+.devices__reach--up { color: var(--healthy); }
+.devices__reach--up .devices__reach-dot { background: var(--healthy); }
+.devices__reach--down { color: var(--sev-critical); }
+.devices__reach--down .devices__reach-dot { background: var(--sev-critical); }
+.devices__reach--unknown { color: var(--fg-dim); }
+
+/* Lifecycle (warranty / EoL) badge — shown only when expiring or expired. */
+.devices__lifecycle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+}
+.devices__lifecycle-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+}
+.devices__lifecycle--expiring { color: var(--sev-warning); }
+.devices__lifecycle--expiring .devices__lifecycle-dot { background: var(--sev-warning); }
+.devices__lifecycle--expired { color: var(--sev-critical); }
+.devices__lifecycle--expired .devices__lifecycle-dot { background: var(--sev-critical); }
+
 /* =========================================================== Responsive === */
 
 @media (max-width: 640px) {
@@ -1147,4 +1244,6 @@
      offset would overlap. Let the header scroll normally here. */
   .drift-table thead th { position: static; }
   .device-history { grid-template-columns: 10ch 1fr 3ch; gap: 0.6rem; }
+  .accuracy { gap: 1.25rem; }
+  .accuracy__breakdown { gap: 1.25rem; }
 }

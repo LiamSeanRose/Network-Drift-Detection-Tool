@@ -11,9 +11,9 @@ v2.5 additions:
 - RemediationEvent: append-only audit log for every dry-run and apply attempt
 """
 
-from datetime import datetime
+from datetime import date, datetime
 
-from sqlalchemy import JSON, Boolean, DateTime, ForeignKey, Integer, String
+from sqlalchemy import JSON, Boolean, Date, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 
@@ -203,11 +203,29 @@ class DeviceSetting(Base):
     last_collected_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Lightweight liveness probe (reachability.py), independent of full
+    # collection. ``reachable`` is the last probe result (null = never probed);
+    # ``reachability_checked_at`` is when that probe ran; ``last_reachable_at``
+    # is the most recent time the device answered ("last seen"), retained even
+    # after it goes down so the UI can show how long it has been unreachable.
+    reachable: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    reachability_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_reachable_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    # Device lifecycle dates synced from NetBox custom fields by the scheduler's
+    # lifecycle sync (null = unset/unknown). The API serves them read-only and
+    # lifecycle.py classifies them as expired/expiring/ok — the warranty + EoL
+    # tracking Lighthouse had, against NetBox as the record of truth.
+    warranty_expiry: Mapped[date | None] = mapped_column(Date, nullable=True)
+    end_of_life: Mapped[date | None] = mapped_column(Date, nullable=True)
 
     def __repr__(self):
         return (
             f"<DeviceSetting device_name={self.device_name!r} "
-            f"paused={self.auto_remediation_paused}>"
+            f"paused={self.auto_remediation_paused} reachable={self.reachable}>"
         )
 
 

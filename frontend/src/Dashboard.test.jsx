@@ -11,13 +11,15 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import Dashboard from './Dashboard'
+import { I18nProvider } from './i18n'
 
 // A fetch stub that routes /drifts, /drifts/history, and /alert-rules to
 // separate payloads. /alert-rules defaults to empty so the panel renders quietly.
-function mockFetchRouted(drifts, history, alertRules = [], devices = [], maintenanceWindows = []) {
+function mockFetchRouted(drifts, history, alertRules = [], devices = [], maintenanceWindows = [], accuracy = null) {
   return vi.fn((url) => {
     let body = drifts
     if (url === '/drifts/history') body = history
+    else if (url.startsWith('/inventory-accuracy')) body = accuracy
     else if (url.startsWith('/alert-rules')) body = alertRules
     else if (url.startsWith('/maintenance-windows')) body = maintenanceWindows
     else if (url.startsWith('/devices')) body = devices
@@ -66,6 +68,33 @@ describe('Dashboard', () => {
     expect(await screen.findByText('core-sw-01')).toBeInTheDocument()
     expect(screen.getByText('interface:Ethernet1')).toBeInTheDocument()
     expect(screen.getByText('description')).toBeInTheDocument()
+  })
+
+  it('shows the inventory-accuracy headline when the metric is returned', async () => {
+    const accuracy = {
+      window_minutes: 60, total_devices: 4, accurate: 3, drifted: 1, stale: 0,
+      accuracy_pct: 75, generated_at: '2026-06-03T12:00:00+00:00', devices: [],
+    }
+    globalThis.fetch = mockFetchRouted([], [], [], [], [], accuracy)
+
+    render(<Dashboard />)
+
+    expect(await screen.findByText('75%')).toBeInTheDocument()
+    expect(screen.getByText(/inventory verified accurate/i)).toBeInTheDocument()
+    // The breakdown surfaces the drifted/stale counts.
+    expect(screen.getByRole('region', { name: /inventory accuracy/i })).toBeInTheDocument()
+  })
+
+  it('shows no accuracy banner for an empty inventory (null percentage)', async () => {
+    const accuracy = {
+      window_minutes: 60, total_devices: 0, accurate: 0, drifted: 0, stale: 0,
+      accuracy_pct: null, generated_at: '2026-06-03T12:00:00+00:00', devices: [],
+    }
+    globalThis.fetch = mockFetchRouted([], [], [], [], [], accuracy)
+
+    render(<Dashboard />)
+    await screen.findByText(/no drift events/i)
+    expect(screen.queryByRole('region', { name: /inventory accuracy/i })).not.toBeInTheDocument()
   })
 
   it('shows a loading message before the fetch resolves', () => {
@@ -370,6 +399,83 @@ describe('Dashboard', () => {
     expect(await screen.findByRole('heading', { name: /^devices$/i })).toBeInTheDocument()
     expect(screen.getByText('core-sw-01')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /^pause$/i })).toBeInTheDocument()
+  })
+
+  it('translates the dashboard to French when FR is selected', async () => {
+    localStorage.clear()
+    globalThis.fetch = mockFetchRouted([], [])
+    render(<I18nProvider><Dashboard /></I18nProvider>)
+    await screen.findByText(/no drift events yet/i)
+
+    fireEvent.click(screen.getByRole('button', { name: 'FR' }))
+    expect(screen.getByText(/aucun événement de dérive/i)).toBeInTheDocument()
+    expect(screen.queryByText(/no drift events yet/i)).not.toBeInTheDocument()
+    localStorage.clear()
+  })
+
+  it('shows a reachable device status', async () => {
+    const devices = [{
+      name: 'core-sw-01', auto_remediation_paused: false,
+      reachable: true, last_reachable_at: '2026-06-03T12:00:00+00:00',
+    }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.getByText(/^reachable$/i)).toBeInTheDocument()
+  })
+
+  it('flags an expiring warranty on a device', async () => {
+    const devices = [{
+      name: 'core-sw-01', auto_remediation_paused: false,
+      warranty_status: 'expiring', warranty_days_left: 12,
+    }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.getByText(/warranty expires in 12d/i)).toBeInTheDocument()
+  })
+
+  it('flags an expired end-of-life on a device', async () => {
+    const devices = [{
+      name: 'core-sw-01', auto_remediation_paused: false, eol_status: 'expired',
+    }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.getByText(/EoL expired/i)).toBeInTheDocument()
+  })
+
+  it('shows no lifecycle badge when nothing is expiring', async () => {
+    const devices = [{
+      name: 'core-sw-01', auto_remediation_paused: false,
+      warranty_status: 'ok', eol_status: null,
+    }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.queryByText(/warranty|EoL/i)).not.toBeInTheDocument()
+  })
+
+  it('shows an unreachable device status', async () => {
+    const devices = [{ name: 'core-sw-01', auto_remediation_paused: false, reachable: false }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.getByText(/^unreachable$/i)).toBeInTheDocument()
+  })
+
+  it('shows "not probed" when reachability is unknown', async () => {
+    const devices = [{ name: 'core-sw-01', auto_remediation_paused: false }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.getByText(/not probed/i)).toBeInTheDocument()
   })
 
   it('shows resume for a paused device', async () => {

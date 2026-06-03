@@ -35,18 +35,27 @@ from datetime import datetime, timedelta, timezone
 from apscheduler.events import EVENT_JOB_ERROR, EVENT_JOB_EXECUTED
 from apscheduler.schedulers.blocking import BlockingScheduler
 
+from netdrift import lifecycle as _lifecycle
+from netdrift import netbox_client
 from netdrift.auto_apply import run_auto_apply
-from netdrift.cli import load_devices
+from netdrift.inventory import resolve_inventory
 from netdrift.pipeline import run_drift_check
+from netdrift.reachability import check_reachability
 from netdrift.sla import evaluate_sla
 from netdrift.storage.database import get_sessionmaker
-from netdrift.storage.repository import delete_drifts_older_than
+from netdrift.storage.repository import (
+    delete_drifts_older_than,
+    record_lifecycle,
+    record_reachability,
+)
 from netdrift.syslog_receiver import SyslogReceiver, DEFAULT_PORT as DEFAULT_SYSLOG_PORT
 from netdrift.webhook import WebhookDispatcher
 
 logger = logging.getLogger("netdrift.scheduler")
 
 DEFAULT_INTERVAL_MINUTES = 5
+DEFAULT_REACHABILITY_INTERVAL_MINUTES = 1
+DEFAULT_LIFECYCLE_INTERVAL_HOURS = 24
 REPOLL_DELAY_SECONDS = 60
 DEFAULT_RETENTION_DAYS = 90
 RETENTION_INTERVAL_HOURS = 24
@@ -144,6 +153,50 @@ def schedule_drift_checks(scheduler, devices, interval_minutes=DEFAULT_INTERVAL_
     return job_ids
 
 
+def _probe_one(device, *, session_factory=None, check_fn=check_reachability):
+    """Probe one device's reachability and persist the result, swallowing
+    per-device errors so one bad probe never kills the loop.
+
+    Storage-only by design: it records reachable/last-seen but does NOT fire
+    webhooks. The ``device_unreachable`` alert is owned by SLA evaluation off
+    collection silence, so the cheap probe stays a pure status signal and cannot
+    double-page.
+    """
+    if session_factory is None:
+        session_factory = get_sessionmaker()
+    name = device["name"]
+    try:
+        result = check_fn(device)
+        with session_factory() as session:
+            record_reachability(session, name, result["reachable"])
+            session.commit()
+        logger.info("%s: reachable=%s", name, result["reachable"])
+    except Exception as e:  # noqa: BLE001 — a poller must not die on one device
+        logger.error("%s: reachability probe failed: %s", name, e)
+
+
+def schedule_reachability_checks(
+    scheduler, devices,
+    interval_minutes=DEFAULT_REACHABILITY_INTERVAL_MINUTES, check=_probe_one,
+):
+    """Register one recurring reachability-probe job per device.
+
+    A separate, faster cadence than schedule_drift_checks: liveness is cheap and
+    operators expect "is it up?" to refresh more often than full compliance.
+    Returns the list of job ids (one per device). ``check`` is injectable so
+    tests assert registration without probing.
+    """
+    job_ids = []
+    for name, details in devices.items():
+        device = {"name": name, **details}
+        job = scheduler.add_job(
+            check, trigger="interval", minutes=interval_minutes,
+            args=[device], id=f"reachability:{name}",
+        )
+        job_ids.append(job.id)
+    return job_ids
+
+
 def start_syslog_receiver(devices, check=_check_one, port=DEFAULT_SYSLOG_PORT,
                           _factory=SyslogReceiver):
     """Create and start a SyslogReceiver daemon thread.
@@ -197,6 +250,45 @@ def schedule_sla_evaluation(scheduler, job, interval_minutes=DEFAULT_INTERVAL_MI
     j = scheduler.add_job(
         job, trigger="interval", minutes=interval_minutes, id="sla-evaluation",
     )
+    return j.id
+
+
+def _run_lifecycle_sync(session_factory, *, lister=None):
+    """Sync device lifecycle dates (warranty / end-of-life) from NetBox into
+    device_settings, then commit and close.
+
+    Reads NetBox custom fields (netbox_client.list_lifecycle), parses each date,
+    and upserts it per device. Swallows errors so one bad cycle never kills the
+    scheduler — the same resilience the other jobs have. ``lister`` is injectable
+    for tests (no live NetBox).
+    """
+    if lister is None:
+        lister = netbox_client.list_lifecycle
+    try:
+        entries = lister()
+        session = session_factory()
+        try:
+            for entry in entries:
+                record_lifecycle(
+                    session, entry["name"],
+                    _lifecycle._parse_date(entry.get("warranty_expiry")),
+                    _lifecycle._parse_date(entry.get("end_of_life")),
+                )
+            session.commit()
+            logger.info("Lifecycle sync updated %d device(s).", len(entries))
+        finally:
+            session.close()
+    except Exception as e:  # noqa: BLE001 — a scheduler job must not die on one cycle
+        logger.error("Lifecycle sync failed: %s", e)
+
+
+def schedule_lifecycle_sync(scheduler, job, hours=DEFAULT_LIFECYCLE_INTERVAL_HOURS):
+    """Register the single recurring lifecycle-sync job. Returns its job id.
+
+    `job` is a no-arg callable (main() binds the session factory into it); tests
+    inject a fake to assert registration without firing.
+    """
+    j = scheduler.add_job(job, trigger="interval", hours=hours, id="lifecycle-sync")
     return j.id
 
 
@@ -261,6 +353,14 @@ def main():
         "--syslog-port", type=int, default=DEFAULT_SYSLOG_PORT,
         help=f"UDP port to listen for syslog triggers (default {DEFAULT_SYSLOG_PORT})",
     )
+    parser.add_argument(
+        "--reachability-interval", type=int,
+        default=DEFAULT_REACHABILITY_INTERVAL_MINUTES,
+        help=(
+            "minutes between lightweight reachability probes "
+            f"(default {DEFAULT_REACHABILITY_INTERVAL_MINUTES})"
+        ),
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -268,7 +368,10 @@ def main():
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
 
-    devices = load_devices()
+    # Device inventory: devices.yml by default, or NetBox when DEVICE_SOURCE=netbox
+    # (credentials then come from the NETDRIFT_DEVICE_USERNAME/PASSWORD service
+    # account, with devices.yml as optional per-device overrides).
+    devices = resolve_inventory()
     scheduler = BlockingScheduler()
     register_listeners(scheduler)
 
@@ -306,6 +409,15 @@ def main():
     # drift that has outlived an alert rule's window.
     session_factory = get_sessionmaker()
 
+    # Reachability probes run on their own faster cadence (storage-only).
+    def probe(device):
+        _probe_one(device, session_factory=session_factory)
+
+    reach_ids = schedule_reachability_checks(
+        scheduler, devices,
+        interval_minutes=args.reachability_interval, check=probe,
+    )
+
     # A device silent for 2 poll cycles is treated as unreachable, so a stale
     # drift never produces a false SLA breach.
     unreachable_after = 2 * args.interval
@@ -323,11 +435,20 @@ def main():
         _run_retention(session_factory, retention_days)
 
     schedule_retention(scheduler, retention_job)
+
+    # Lifecycle sync: pull warranty / end-of-life dates from NetBox custom fields
+    # into device_settings once a day, so the /devices endpoint can serve them
+    # (and flag expiries) without the API ever calling NetBox.
+    def lifecycle_job():
+        _run_lifecycle_sync(session_factory)
+
+    schedule_lifecycle_sync(scheduler, lifecycle_job)
     logger.info(
-        "Scheduled %d device(s) every %d min: %s. Syslog trigger on UDP:%d. "
-        "SLA evaluation every %d min. Drift retention %d day(s). Webhooks %s. "
-        "Ctrl+C to stop.",
-        len(ids), args.interval, ", ".join(sorted(devices)), args.syslog_port,
+        "Scheduled %d device(s) every %d min: %s. Reachability probe every %d min "
+        "(%d job(s)). Syslog trigger on UDP:%d. SLA evaluation every %d min. "
+        "Drift retention %d day(s). Webhooks %s. Ctrl+C to stop.",
+        len(ids), args.interval, ", ".join(sorted(devices)),
+        args.reachability_interval, len(reach_ids), args.syslog_port,
         args.interval, retention_days, "enabled" if dispatcher.enabled else "disabled",
     )
     try:
