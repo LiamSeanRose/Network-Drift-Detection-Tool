@@ -22,7 +22,11 @@
   /* ---- text ---- */
   --fg:           #e9edf6;
   --fg-muted:     #98a3bd;
-  --fg-dim:       #626d88;
+  /* WCAG 2.1 AA (1.4.3): the old #626d88 measured ~3.3:1 on raised surfaces —
+     below the 4.5:1 minimum for the small text this token paints (subtitle,
+     section titles, stat labels, timestamps). #828fa8 measures ~5:1 across all
+     surfaces it appears on. */
+  --fg-dim:       #828fa8;
 
   /* ---- brand / accent ---- */
   --accent:       #7c8cff;
@@ -61,6 +65,25 @@
   margin: 0 auto;
   padding: 1.5rem 1.75rem 5rem;
 }
+
+/* Skip link (WCAG 2.4.1 Bypass Blocks): off-screen until focused, then it
+   appears top-left so a keyboard user can jump past the header controls. */
+.skip-link {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  z-index: 200;
+  padding: 0.5rem 0.9rem;
+  background: var(--surface-2);
+  color: var(--fg);
+  border: 1px solid var(--accent);
+  border-radius: var(--r-sm);
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: top 140ms var(--ease);
+}
+.skip-link:focus { top: 8px; }
 
 /* ============================================================= Top bar === */
 
@@ -840,6 +863,22 @@
   font-size: 0.7rem;
   user-select: none;
 }
+/* The expand affordance is a real <button> so it is keyboard-focusable and
+   announces aria-expanded; styled chromeless so it still reads as just a
+   chevron. The global :focus-visible ring gives it a visible focus state. */
+.expand-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0.2rem 0.3rem;
+  margin: -0.2rem -0.3rem;
+  color: inherit;
+  cursor: pointer;
+  border-radius: var(--r-sm);
+}
+
 .drift-table tr.expandable .chevron { display: inline-block; transition: transform 160ms var(--ease); }
 .drift-table tr.expandable.is-open .chevron { transform: rotate(90deg); color: var(--accent-bright); }
 

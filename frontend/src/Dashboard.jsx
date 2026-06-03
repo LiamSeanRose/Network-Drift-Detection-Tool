@@ -1,6 +1,6 @@
 // Dashboard.jsx — drift events page with history panel and v2.5 remediation UI.
 
-import { useState, useEffect, useCallback, useMemo, Fragment } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef, Fragment } from 'react'
 import { apiFetch, getApiKey, setApiKey } from './api'
 import { GLOSSARY, SEVERITY_LEGEND } from './help'
 import './Dashboard.css'
@@ -245,6 +245,7 @@ export default function Dashboard({ initialFilter = null }) {
 
   return (
     <div className="dashboard">
+      <a href="#main-content" className="skip-link">Skip to main content</a>
       <header className="dashboard__header">
         <div className="dashboard__title-group">
           <span className="brand__glyph" aria-hidden="true">
@@ -281,6 +282,7 @@ export default function Dashboard({ initialFilter = null }) {
         </div>
       </header>
 
+      <main id="main-content">
       {!bannerDismissed && (
         <div className="intent-banner">
           <p className="intent-banner__text">
@@ -331,7 +333,7 @@ export default function Dashboard({ initialFilter = null }) {
         </p>
       )}
 
-      <div className="section-title">configuration</div>
+      <h2 className="section-title">configuration</h2>
       <div className="panel-grid">
         <AlertRulesPanel rules={alertRules} onAdd={handleAddRule} onDelete={handleDeleteRule} />
         <MaintenanceWindowsPanel windows={maintenanceWindows} onAdd={handleAddWindow} onDelete={handleDeleteWindow} />
@@ -346,14 +348,15 @@ export default function Dashboard({ initialFilter = null }) {
 
       {visibleDrifts && visibleDrifts.length > 0 && (
         <>
-        <div className="section-title">drift events</div>
+        <h2 className="section-title">drift events</h2>
         <div className="table-card">
         <table className="drift-table">
           <thead>
             <tr>
-              <th>Device</th><th>Object</th><th>Field</th>
-              <th>Intent</th><th>Reality</th><th>Kind</th>
-              <th>Severity</th><th>Detected at</th><th></th>
+              <th scope="col">Device</th><th scope="col">Object</th><th scope="col">Field</th>
+              <th scope="col">Intent</th><th scope="col">Reality</th><th scope="col">Kind</th>
+              <th scope="col">Severity</th><th scope="col">Detected at</th>
+              <th scope="col" aria-label="Details" />
             </tr>
           </thead>
           <tbody>
@@ -380,7 +383,17 @@ export default function Dashboard({ initialFilter = null }) {
                       <span className={`sev-pill sev-pill--${d.severity}`}>{d.severity}</span>
                     </td>
                     <td className="col-detected">{formatTimestamp(d.detected_at)}</td>
-                    <td className="col-expand"><span className="chevron" aria-hidden="true">▸</span></td>
+                    <td className="col-expand">
+                      <button
+                        type="button"
+                        className="expand-btn"
+                        aria-expanded={isExpanded}
+                        aria-label={`${isExpanded ? 'Hide' : 'Show'} details for ${d.device} ${d.object}`}
+                        onClick={(e) => { e.stopPropagation(); setExpandedId(isExpanded ? null : d.id) }}
+                      >
+                        <span className="chevron" aria-hidden="true">▸</span>
+                      </button>
+                    </td>
                   </tr>
 
                   {isExpanded && (
@@ -478,6 +491,8 @@ export default function Dashboard({ initialFilter = null }) {
         </>
       )}
 
+      </main>
+
       {recordingFor && (
         <RecordFixModal
           drift={recordingFor}
@@ -510,13 +525,81 @@ function nowMs() {
   return Date.now()
 }
 
+// Elements that can hold keyboard focus — used to find where to send focus when
+// a dialog opens and to wrap Tab around inside it.
+const FOCUSABLE_SELECTOR =
+  'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), ' +
+  'textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+// ModalShell — the accessible plumbing shared by every modal: dialog semantics
+// (role + aria-modal + a label), focus moved inside on open and restored to the
+// trigger on close, Escape-to-close, and a Tab focus-trap. Each modal supplies
+// its own labelled title via `labelledBy`; behaviour and chrome live here so the
+// three modals do not each re-implement (and skip) accessibility.
+function ModalShell({ labelledBy, onClose, className = '', children }) {
+  const dialogRef = useRef(null)
+
+  useEffect(() => {
+    const node = dialogRef.current
+    const previouslyFocused = document.activeElement
+
+    // Move focus to the first focusable control (or the dialog itself).
+    const focusables = node.querySelectorAll(FOCUSABLE_SELECTOR)
+    ;(focusables[0] || node).focus()
+
+    function onKeyDown(e) {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        onClose()
+        return
+      }
+      if (e.key !== 'Tab') return
+      const items = node.querySelectorAll(FOCUSABLE_SELECTOR)
+      if (items.length === 0) { e.preventDefault(); return }
+      const first = items[0]
+      const last = items[items.length - 1]
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault()
+        last.focus()
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault()
+        first.focus()
+      }
+    }
+
+    node.addEventListener('keydown', onKeyDown)
+    return () => {
+      node.removeEventListener('keydown', onKeyDown)
+      // Restore focus to whatever opened the dialog.
+      if (previouslyFocused && typeof previouslyFocused.focus === 'function') {
+        previouslyFocused.focus()
+      }
+    }
+  }, [onClose])
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        ref={dialogRef}
+        className={`modal ${className}`.trim()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={labelledBy}
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  )
+}
+
 // HelpPanel — the in-app glossary + severity legend. A finite reference so an
 // operator does not have to leave the app to look up a term.
 function HelpPanel({ onClose }) {
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal modal--wide help-panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Help and glossary">
-        <h2 className="modal__title">Help &amp; glossary</h2>
+    <ModalShell labelledBy="help-modal-title" onClose={onClose} className="modal--wide help-panel">
+      <h2 id="help-modal-title" className="modal__title">Help &amp; glossary</h2>
 
         <h3 className="help-panel__subhead">Severity</h3>
         <ul className="help-panel__legend">
@@ -541,8 +624,7 @@ function HelpPanel({ onClose }) {
         <div className="modal__actions">
           <button type="button" className="modal__cancel" onClick={onClose}>Close</button>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }
 
@@ -617,9 +699,8 @@ function RecordFixModal({ drift, onSubmit, onCancel }) {
   }, [drift.id])
 
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal__title">Record fix</h2>
+    <ModalShell labelledBy="record-fix-title" onClose={onCancel}>
+        <h2 id="record-fix-title" className="modal__title">Record fix</h2>
         <p className="modal__pattern">{pattern}</p>
         {suggested && <p className="modal__hint">AI-suggested — review and edit before saving.</p>}
         <label className="modal__label">
@@ -638,8 +719,7 @@ function RecordFixModal({ drift, onSubmit, onCancel }) {
           </button>
           <button type="button" className="modal__cancel" onClick={onCancel}>Cancel</button>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }
 
@@ -647,9 +727,8 @@ function RecordFixModal({ drift, onSubmit, onCancel }) {
 function DryRunModal({ drift, loading, result, error, applyLoading, applyError, onApply, onCancel }) {
   const pattern = `${drift.object.split(':')[0]} · ${drift.field} · ${drift.drift_kind}`
   return (
-    <div className="modal-overlay" onClick={onCancel}>
-      <div className="modal modal--wide" onClick={(e) => e.stopPropagation()}>
-        <h2 className="modal__title">Dry run — {pattern}</h2>
+    <ModalShell labelledBy="dry-run-title" onClose={onCancel} className="modal--wide">
+        <h2 id="dry-run-title" className="modal__title">Dry run — {pattern}</h2>
 
         {loading && <p className="modal__state">Running dry-run on device…</p>}
         {error && <p className="modal__state modal__state--error">Dry-run failed: {error}</p>}
@@ -681,8 +760,7 @@ function DryRunModal({ drift, loading, result, error, applyLoading, applyError, 
           )}
           <button type="button" className="modal__cancel" onClick={onCancel}>Cancel</button>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }
 
@@ -695,7 +773,8 @@ function RemediationAuditLog({ events, loading }) {
       <table className="audit-log__table">
         <thead>
           <tr>
-            <th>When</th><th>Platform</th><th>Result</th><th>By</th>
+            <th scope="col">When</th><th scope="col">Platform</th>
+            <th scope="col">Result</th><th scope="col">By</th>
           </tr>
         </thead>
         <tbody>
@@ -729,10 +808,10 @@ function AlertRulesPanel({ rules, onAdd, onDelete }) {
 
   return (
     <section className="alert-rules">
-      <h2 className="alert-rules__heading">
+      <h3 className="alert-rules__heading">
         alert rules
         {rules && rules.length > 0 && <span className="count-badge" aria-hidden="true">{rules.length}</span>}
-      </h2>
+      </h3>
 
       {rules && rules.length > 0 && (
         <ul className="alert-rules__list">
@@ -808,10 +887,10 @@ function MaintenanceWindowsPanel({ windows, onAdd, onDelete }) {
   const now = nowMs()
   return (
     <section className="alert-rules">
-      <h2 className="alert-rules__heading">
+      <h3 className="alert-rules__heading">
         maintenance windows
         {windows && windows.length > 0 && <span className="count-badge" aria-hidden="true">{windows.length}</span>}
-      </h2>
+      </h3>
 
       {windows && windows.length > 0 && (
         <ul className="alert-rules__list">
@@ -874,10 +953,10 @@ function DevicesPanel({ devices, onToggle }) {
   if (!devices || devices.length === 0) return null
   return (
     <section className="devices">
-      <h2 className="devices__heading">
+      <h3 className="devices__heading">
         devices
         <span className="count-badge" aria-hidden="true">{devices.length}</span>
-      </h2>
+      </h3>
       <ul className="devices__list">
         {devices.map((d) => (
           <li key={d.name} className="devices__item">

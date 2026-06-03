@@ -519,6 +519,72 @@ describe('Dashboard', () => {
     expect(screen.getByRole('button', { name: /unacknowledge/i })).toBeInTheDocument()
   })
 
+  it('exposes each drift row via a keyboard-focusable expand button', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-26T12:00:00+00:00',
+        causes: ['Interface was manually shut on the device without updating NetBox.'],
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+
+    // The expand affordance is a real <button> (focusable, Enter/Space works),
+    // named for its row, and reports collapsed state via aria-expanded.
+    const toggle = screen.getByRole('button', { name: /details for core-sw-01/i })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+    // Activating it expands the row and flips the state for assistive tech.
+    fireEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByText(/manually shut/i)).toBeInTheDocument()
+  })
+
+  it('renders the record fix modal as an accessible dialog', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-31T12:00:00+00:00', causes: [], known_fix: null,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+    fireEvent.click(screen.getByText('core-sw-01'))
+    fireEvent.click(screen.getByRole('button', { name: /record fix/i }))
+
+    // It is a labelled modal dialog, and focus has moved inside it.
+    const dialog = screen.getByRole('dialog', { name: /record fix/i })
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog.contains(document.activeElement)).toBe(true)
+  })
+
+  it('closes the record fix modal when Escape is pressed', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-05-31T12:00:00+00:00', causes: [], known_fix: null,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+    fireEvent.click(screen.getByText('core-sw-01'))
+    fireEvent.click(screen.getByRole('button', { name: /record fix/i }))
+
+    const dialog = screen.getByRole('dialog', { name: /record fix/i })
+    fireEvent.keyDown(dialog, { key: 'Escape' })
+    expect(screen.queryByRole('dialog', { name: /record fix/i })).not.toBeInTheDocument()
+  })
+
   it('shows an error message when the fetch fails', async () => {
     // /drifts returns 500; /drifts/history returns empty so only one "500"
     // is in the document (avoiding a `getByText` ambiguity).

@@ -46,7 +46,7 @@ export default function FleetHome() {
   const { cards, lastActivity } = buildFleetSummary(data)
 
   return (
-    <section className="fleet-home" aria-label="Fleet health summary">
+    <main id="main-content" className="fleet-home" aria-label="Fleet health summary">
       <header className="fleet-home__header">
         <h1>Fleet health</h1>
         <p className="fleet-activity">
@@ -69,6 +69,6 @@ export default function FleetHome() {
           </a>
         ))}
       </div>
-    </section>
+    </main>
   )
 }
