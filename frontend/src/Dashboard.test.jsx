@@ -363,6 +363,41 @@ describe('Dashboard', () => {
     expect(alert).toHaveTextContent(/api key/i)
   })
 
+  it('shows a "new" badge on a freshly-appeared drift', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-06-03T12:00:00+00:00',
+        first_seen: '2026-06-03T11:55:00+00:00', triage: 'new',
+        causes: [], known_fix: null,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+    expect(screen.getByText(/^new$/i)).toBeInTheDocument()
+  })
+
+  it('shows no "new" badge on a chronic drift', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-06-03T12:00:00+00:00',
+        first_seen: '2026-05-01T00:00:00+00:00', triage: 'chronic',
+        causes: [], known_fix: null,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+    // The collapsed row carries no "new" badge (chronic drift).
+    expect(screen.queryByText(/^new$/i)).not.toBeInTheDocument()
+  })
+
   it('shows an Acknowledge button on an unacknowledged drift', async () => {
     const drifts = [
       {
