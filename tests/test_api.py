@@ -133,6 +133,23 @@ def test_suggested_fix_404_for_unknown_event(client):
     assert client.get("/drifts/999999/suggested-fix").status_code == 404
 
 
+def test_triage_returns_assessment(client):
+    # AI4: the endpoint assesses incident vs noise (deterministic by default).
+    event_id = client.get("/drifts").json()[0]["id"]
+    resp = client.get(f"/drifts/{event_id}/triage")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["assessment"] in ("incident", "noise", "unclear")
+    assert body["rationale"]
+    assert body["source"] == "deterministic"
+    assert body["triage"] in ("new", "chronic")
+    assert body["occurrences"] >= 1
+
+
+def test_triage_404_for_unknown_event(client):
+    assert client.get("/drifts/999999/triage").status_code == 404
+
+
 # --- maintenance windows -----------------------------------------------------
 
 def test_create_and_list_maintenance_window(client):

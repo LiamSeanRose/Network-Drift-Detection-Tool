@@ -148,6 +148,22 @@ def drift_first_seen(session, identities):
     return {(device, obj, field, kind): first for device, obj, field, kind, first in rows}
 
 
+def count_drifts_for_identity(session, device, object_ref, field, drift_kind) -> int:
+    """How many DriftEvent rows share this exact identity — i.e. how many polls
+    this specific drift has been recorded across. A rough recurrence signal for
+    triage. Does NOT commit."""
+    return (
+        session.query(func.count(DriftEvent.id))
+        .filter(
+            DriftEvent.device == device,
+            DriftEvent.object_ref == object_ref,
+            DriftEvent.field == field,
+            DriftEvent.drift_kind == drift_kind,
+        )
+        .scalar()
+    )
+
+
 def get_drift_event(session, event_id):
     """Return a single DriftEvent by primary key, or None."""
     return session.query(DriftEvent).filter(DriftEvent.id == event_id).one_or_none()
