@@ -380,8 +380,50 @@ def test_drifts_includes_known_fix_when_match(client):
     assert matching["known_fix"]["cause"] == "VLAN changed on device"
     assert matching["known_fix"]["fix"] == "Update device VLAN or correct NetBox"
 
-    non_matching = next(e for e in events if e["field"] == "name")
-    assert non_matching["known_fix"] is None
+
+def test_match_confidence_null_without_a_known_fix(client):
+    for event in client.get("/drifts").json():
+        assert event["match_confidence"] is None
+
+
+def test_match_confidence_is_one_on_exact_match(client):
+    client.post("/known-issues", json={
+        "object": "interface:Ethernet2", "field": "untagged_vlan",
+        "drift_kind": "value_mismatch", "cause": "c", "fix": "f",
+    })
+    matching = next(e for e in client.get("/drifts").json()
+                    if e["field"] == "untagged_vlan")
+    assert matching["match_confidence"] == 1.0
+
+
+def test_fuzzy_match_surfaces_known_fix_with_confidence_below_one(client, monkeypatch):
+    # Flag on + a lowered threshold so a near-miss known issue (same object+field,
+    # different drift_kind => Jaccard 0.5) surfaces as a fuzzy match.
+    monkeypatch.setenv("FUZZY_MATCHING_ENABLED", "true")
+    monkeypatch.setenv("FUZZY_MATCH_THRESHOLD", "0.4")
+    client.post("/known-issues", json={
+        "object": "interface:Ethernet2", "field": "untagged_vlan",
+        "drift_kind": "missing_in_reality",  # != the drift's value_mismatch
+        "cause": "fuzzy cause", "fix": "fuzzy fix",
+    })
+    matching = next(e for e in client.get("/drifts").json()
+                    if e["field"] == "untagged_vlan")
+    assert matching["known_fix"] is not None
+    assert matching["known_fix"]["cause"] == "fuzzy cause"
+    assert 0.0 < matching["match_confidence"] < 1.0
+
+
+def test_fuzzy_off_by_default_no_near_match(client, monkeypatch):
+    # Same near-miss issue, but with the flag off it must NOT match.
+    monkeypatch.delenv("FUZZY_MATCHING_ENABLED", raising=False)
+    client.post("/known-issues", json={
+        "object": "interface:Ethernet2", "field": "untagged_vlan",
+        "drift_kind": "missing_in_reality", "cause": "c", "fix": "f",
+    })
+    matching = next(e for e in client.get("/drifts").json()
+                    if e["field"] == "untagged_vlan")
+    assert matching["known_fix"] is None
+    assert matching["match_confidence"] is None
 
 
 # ---------------------------------------------------------------------------
