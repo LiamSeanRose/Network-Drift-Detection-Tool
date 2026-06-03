@@ -17,6 +17,9 @@ export default defineConfig({
       '/drifts': 'http://localhost:8001',
       '/health': 'http://localhost:8001',
       '/known-issues': 'http://localhost:8001',
+      '/alert-rules': 'http://localhost:8001',
+      '/maintenance-windows': 'http://localhost:8001',
+      '/devices': 'http://localhost:8001',
     },
   },
   test: {

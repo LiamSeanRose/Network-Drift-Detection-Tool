@@ -274,6 +274,31 @@
   color: var(--sev-critical);
 }
 
+.dashboard__action-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--sev-critical);
+  border-radius: 6px;
+  background: rgba(216, 58, 82, 0.08);
+  color: var(--sev-critical);
+  font-size: 0.9rem;
+}
+
+.dashboard__action-error-dismiss {
+  flex: none;
+  border: none;
+  background: none;
+  color: var(--sev-critical);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.25rem;
+}
+
 /* ---- History panel ----------------------------------------------- */
 
 .history-panel {
