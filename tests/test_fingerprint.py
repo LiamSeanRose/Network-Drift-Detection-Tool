@@ -126,3 +126,21 @@ def test_fuzzy_match_returns_none_below_threshold():
     best, conf = fuzzy_match(target, candidates, threshold=DEFAULT_FUZZY_THRESHOLD)
     assert best is None
     assert conf == 0.0
+
+
+def test_fuzzy_threshold_default(monkeypatch):
+    monkeypatch.delenv("FUZZY_MATCH_THRESHOLD", raising=False)
+    from netdrift.fingerprint import fuzzy_threshold
+    assert fuzzy_threshold() == DEFAULT_FUZZY_THRESHOLD
+
+
+def test_fuzzy_threshold_reads_env(monkeypatch):
+    monkeypatch.setenv("FUZZY_MATCH_THRESHOLD", "0.5")
+    from netdrift.fingerprint import fuzzy_threshold
+    assert fuzzy_threshold() == 0.5
+
+
+def test_fuzzy_threshold_falls_back_on_garbage(monkeypatch):
+    monkeypatch.setenv("FUZZY_MATCH_THRESHOLD", "not-a-number")
+    from netdrift.fingerprint import fuzzy_threshold
+    assert fuzzy_threshold() == DEFAULT_FUZZY_THRESHOLD

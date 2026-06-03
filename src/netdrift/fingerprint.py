@@ -46,6 +46,21 @@ def fuzzy_matching_enabled() -> bool:
     return os.environ.get("FUZZY_MATCHING_ENABLED", "").strip().lower() in _TRUTHY
 
 
+def fuzzy_threshold() -> float:
+    """The accept threshold for a fuzzy match (``FUZZY_MATCH_THRESHOLD``).
+
+    Defaults to ``DEFAULT_FUZZY_THRESHOLD``; an operator tunes it against their
+    labeled corpus (see ``driftcheck eval-fuzzy``). Falls back to the default on a
+    missing or unparseable value."""
+    raw = os.environ.get("FUZZY_MATCH_THRESHOLD", "").strip()
+    if not raw:
+        return DEFAULT_FUZZY_THRESHOLD
+    try:
+        return float(raw)
+    except ValueError:
+        return DEFAULT_FUZZY_THRESHOLD
+
+
 # Per-object-type identifier normalization. The identifier (the part after the
 # first ":") is the variable bit; replacing it with a class token lets the same
 # structural drift match across devices, peers, VLANs, and interfaces.

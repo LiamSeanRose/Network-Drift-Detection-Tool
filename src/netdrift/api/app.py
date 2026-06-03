@@ -38,6 +38,11 @@ from netdrift.appliers.base import RemediationBlockedError, check_blocked
 from netdrift.appliers.registry import get_applier
 from netdrift.diagnose import diagnose
 from netdrift.fingerprint import fingerprint as make_fingerprint
+from netdrift.fingerprint import (
+    fuzzy_match,
+    fuzzy_matching_enabled,
+    fuzzy_threshold,
+)
 from netdrift.storage.database import get_sessionmaker
 from netdrift.webhook import WebhookDispatcher
 from netdrift.storage.repository import (
@@ -478,10 +483,24 @@ def list_drifts(request: Request, response: Response,
     first_seen = drift_first_seen(session, identities)
     now = datetime.now(tz=timezone.utc)
 
+    # v5.0: fall back to a fuzzy known-issue match only when the flag is on and
+    # there is no exact hit. Off by default, so exact matching is unchanged.
+    fuzzy_on = fuzzy_matching_enabled()
+    threshold = fuzzy_threshold()
+    known_fps = list(known.keys())
+
     rows = []
     for e in events:
         fp = event_fps[e.id]
         issue = known.get(fp)
+        if issue is not None:
+            match_confidence = 1.0
+        elif fuzzy_on:
+            best_fp, score = fuzzy_match(fp, known_fps, threshold=threshold)
+            issue = known.get(best_fp) if best_fp is not None else None
+            match_confidence = score if issue is not None else None
+        else:
+            match_confidence = None
         fs = first_seen.get((e.device, e.object_ref, e.field, e.drift_kind))
         rows.append({
             "id": e.id,
@@ -503,6 +522,7 @@ def list_drifts(request: Request, response: Response,
             }),
             "explanation": _explanation_dict(explanations.get(fp)),
             "known_fix": _known_fix_dict(issue, counts.get(issue.id, 0) if issue else 0),
+            "match_confidence": match_confidence,
             "acknowledged": is_acknowledged(session, e.device, fp),
         })
 
