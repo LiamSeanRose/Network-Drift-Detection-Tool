@@ -818,6 +818,16 @@ def list_devices(session: Session = Depends(get_session)):
                 setting.paused_at.isoformat() if setting and setting.paused_at else None
             ),
             "paused_reason": setting.paused_reason if setting else None,
+            # Liveness probe state (null reachable = never probed).
+            "reachable": setting.reachable if setting else None,
+            "reachability_checked_at": (
+                setting.reachability_checked_at.isoformat()
+                if setting and setting.reachability_checked_at else None
+            ),
+            "last_reachable_at": (
+                setting.last_reachable_at.isoformat()
+                if setting and setting.last_reachable_at else None
+            ),
         })
     return result
 

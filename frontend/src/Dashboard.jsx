@@ -972,7 +972,30 @@ function MaintenanceWindowsPanel({ windows, onAdd, onDelete }) {
   )
 }
 
-// DevicesPanel — list inventory devices with a per-device auto-apply toggle (v3.5).
+// Liveness status for a device, from the reachability probe. Tri-state: the
+// probe may not have run yet (reachable null/undefined). Text + a dot, never
+// colour alone, so the status survives a colour-blind or greyscale view.
+function reachabilityLabel(d) {
+  if (d.reachable === true) return { cls: 'up', text: 'reachable' }
+  if (d.reachable === false) return { cls: 'down', text: 'unreachable' }
+  return { cls: 'unknown', text: 'not probed' }
+}
+
+function ReachabilityBadge({ device }) {
+  const r = reachabilityLabel(device)
+  const lastSeen = device.last_reachable_at
+    ? `last seen ${formatTimestamp(device.last_reachable_at)}`
+    : undefined
+  return (
+    <span className={`devices__reach devices__reach--${r.cls}`} title={lastSeen}>
+      <span className="devices__reach-dot" aria-hidden="true" />
+      {r.text}
+    </span>
+  )
+}
+
+// DevicesPanel — list inventory devices with reachability + a per-device
+// auto-apply toggle (v3.5).
 function DevicesPanel({ devices, onToggle }) {
   if (!devices || devices.length === 0) return null
   return (
@@ -985,6 +1008,7 @@ function DevicesPanel({ devices, onToggle }) {
         {devices.map((d) => (
           <li key={d.name} className="devices__item">
             <span className="devices__name">{d.name}</span>
+            <ReachabilityBadge device={d} />
             <span className={`devices__state${d.auto_remediation_paused ? ' devices__state--paused' : ''}`}>
               {d.auto_remediation_paused ? 'auto-apply paused' : 'auto-apply active'}
             </span>

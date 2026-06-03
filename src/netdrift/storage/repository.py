@@ -697,6 +697,30 @@ def device_last_collected(session, device_name):
     return setting.last_collected_at if setting else None
 
 
+def record_reachability(session, device_name, reachable, when=None):
+    """Record the result of a liveness probe for a device (upsert). Does NOT
+    commit.
+
+    Creates the device_settings row if absent, preserving any pause/collection
+    state. Always stamps ``reachable`` and ``reachability_checked_at``; only a
+    *reachable* result advances ``last_reachable_at`` ("last seen"), which is
+    retained across later unreachable probes so the UI can show how long a
+    device has been down. ``when`` defaults to UTC now.
+    """
+    if when is None:
+        when = datetime.now(tz=timezone.utc)
+    setting = get_device_setting(session, device_name)
+    if setting is None:
+        setting = DeviceSetting(device_name=device_name)
+        session.add(setting)
+    setting.reachable = reachable
+    setting.reachability_checked_at = when
+    if reachable:
+        setting.last_reachable_at = when
+    session.flush()
+    return setting
+
+
 # ---------------------------------------------------------------------------
 # v3.5 — api_keys (REST API authentication)
 # ---------------------------------------------------------------------------

@@ -489,6 +489,45 @@ def test_inventory_accuracy_empty_inventory(session):
     assert result["devices"] == []
 
 
+def test_record_reachability_upserts_and_retains_last_seen(session):
+    from netdrift.storage.repository import get_device_setting, record_reachability
+    t1 = datetime(2026, 6, 3, 12, 0, tzinfo=timezone.utc)
+    record_reachability(session, "core-sw-01", True, when=t1)
+    session.commit()
+    setting = get_device_setting(session, "core-sw-01")
+    assert setting.reachable is True
+    first_seen = setting.last_reachable_at
+    assert first_seen is not None
+
+    # A later unreachable probe flips reachable and advances the checked-at
+    # stamp, but last_reachable_at (last seen) is retained.
+    t2 = t1 + timedelta(minutes=5)
+    record_reachability(session, "core-sw-01", False, when=t2)
+    session.commit()
+    setting = get_device_setting(session, "core-sw-01")
+    assert setting.reachable is False
+    assert setting.last_reachable_at == first_seen
+    assert setting.reachability_checked_at > setting.last_reachable_at
+
+
+def test_record_reachability_preserves_pause_and_collection(session):
+    """Probing must not clobber unrelated device state."""
+    from netdrift.storage.repository import (
+        get_device_setting,
+        record_collection,
+        record_reachability,
+        set_device_paused,
+    )
+    set_device_paused(session, "core-sw-01", True, reason="change freeze")
+    record_collection(session, "core-sw-01")
+    record_reachability(session, "core-sw-01", True)
+    session.commit()
+    setting = get_device_setting(session, "core-sw-01")
+    assert setting.auto_remediation_paused is True
+    assert setting.last_collected_at is not None
+    assert setting.reachable is True
+
+
 def test_inventory_accuracy_window_excludes_old_drift(session):
     """A drift older than the window does not count a recently-collected device
     as drifted."""

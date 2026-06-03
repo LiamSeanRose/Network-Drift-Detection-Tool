@@ -1197,6 +1197,27 @@
   outline-offset: -2px;
 }
 
+/* ===================================== Device reachability badge === */
+
+.devices__reach {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--fg-muted);
+}
+.devices__reach-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  background: var(--fg-dim);
+}
+.devices__reach--up { color: var(--healthy); }
+.devices__reach--up .devices__reach-dot { background: var(--healthy); }
+.devices__reach--down { color: var(--sev-critical); }
+.devices__reach--down .devices__reach-dot { background: var(--sev-critical); }
+.devices__reach--unknown { color: var(--fg-dim); }
+
 /* =========================================================== Responsive === */
 
 @media (max-width: 640px) {

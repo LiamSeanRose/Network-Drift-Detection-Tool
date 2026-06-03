@@ -400,6 +400,36 @@ describe('Dashboard', () => {
     expect(screen.getByRole('button', { name: /^pause$/i })).toBeInTheDocument()
   })
 
+  it('shows a reachable device status', async () => {
+    const devices = [{
+      name: 'core-sw-01', auto_remediation_paused: false,
+      reachable: true, last_reachable_at: '2026-06-03T12:00:00+00:00',
+    }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.getByText(/^reachable$/i)).toBeInTheDocument()
+  })
+
+  it('shows an unreachable device status', async () => {
+    const devices = [{ name: 'core-sw-01', auto_remediation_paused: false, reachable: false }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.getByText(/^unreachable$/i)).toBeInTheDocument()
+  })
+
+  it('shows "not probed" when reachability is unknown', async () => {
+    const devices = [{ name: 'core-sw-01', auto_remediation_paused: false }]
+    globalThis.fetch = mockFetchRouted([], [], [], devices)
+
+    render(<Dashboard />)
+    await screen.findByRole('heading', { name: /^devices$/i })
+    expect(screen.getByText(/not probed/i)).toBeInTheDocument()
+  })
+
   it('shows resume for a paused device', async () => {
     const devices = [{ name: 'core-sw-01', auto_remediation_paused: true }]
     globalThis.fetch = mockFetchRouted([], [], [], devices)
