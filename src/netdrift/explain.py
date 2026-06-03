@@ -188,6 +188,118 @@ def suggest_known_issue(drift, *, llm=None):
     return {"cause": cause, "fix": fix, "source": "llm"}
 
 
+# AI4 — anomaly triage: is this drift a real incident or expected noise?
+_VALID_ASSESSMENTS = {"incident", "noise", "unclear"}
+
+
+def _deterministic_assessment(drift, triage_status, occurrences=None):
+    """Offline triage (the grounding and the fallback): classify a drift as
+    incident / noise / unclear from its severity and how long it has persisted.
+
+    The deterministic ``new`` vs ``chronic`` signal already on /drifts does the
+    heavy lifting; this turns it into an actionable call. Returns
+    ``(assessment, rationale)``."""
+    severity = (drift.get("severity") or "").lower()
+    if severity == "critical":
+        if triage_status == "new":
+            return ("incident",
+                    "A critical drift that first appeared within the last hour — a "
+                    "recent change worth investigating now.")
+        return ("incident",
+                "A critical drift that has persisted across many polls — an "
+                "unresolved incident, not noise.")
+    if triage_status == "chronic":
+        return ("noise",
+                f"A {severity or 'low'}-severity drift that has been present for a "
+                "long time — most likely accepted or known noise.")
+    return ("unclear",
+            f"A {severity or 'low'}-severity drift that appeared recently — new but "
+            "low impact; watch whether it persists or clears on its own.")
+
+
+def build_triage_prompt(drift, triage_status, occurrences=None, co_occurring=None):
+    """Build the grounding prompt for an AI4 anomaly-triage assessment.
+
+    Asks for a strict two-line ASSESSMENT/RATIONALE so the result parses
+    deterministically; grounded on the deterministic age signal, severity, the
+    diagnose.py hints, and any co-occurring drift (which often reveals a shared
+    root cause, e.g. a bulk change rather than N independent incidents).
+    """
+    object_type = drift["object"].split(":")[0]
+    hints = diagnose(drift)
+    grounding = "\n".join(f"- {h}" for h in hints) or "- (no deterministic hint)"
+    age = ("first seen within the last hour" if triage_status == "new"
+           else "has persisted for a long time")
+    lines = [
+        "You are a senior network engineer triaging a configuration drift. Decide "
+        "whether it is most likely a real incident to act on, or expected noise. "
+        "Reply in EXACTLY two lines, no markdown:",
+        "ASSESSMENT: <incident|noise|unclear>",
+        "RATIONALE: <one sentence>",
+        "",
+        f"Object: {drift['object']} ({object_type})  Field: {drift['field']}",
+        f"Drift kind: {drift['drift_kind']}  Severity: {drift.get('severity', '?')}",
+        f"Intended (NetBox): {drift['intent']!r}",
+        f"Actual (device):   {drift['reality']!r}",
+        f"Age: {age} ({triage_status}).",
+    ]
+    if occurrences is not None:
+        lines.append(f"Recorded {occurrences} time(s) in recent history.")
+    if co_occurring:
+        summary = ", ".join(f"{d['object']}/{d['field']}" for d in co_occurring)
+        lines.append(f"Co-occurring drift on this device: {summary}.")
+    lines += ["", "Known typical causes:", grounding]
+    return "\n".join(lines)
+
+
+def _parse_assessment(text):
+    """Pull (assessment, rationale) out of the two-line ASSESSMENT:/RATIONALE:
+    format. Returns ("", "") if either is missing, which triggers the
+    deterministic fallback in the caller."""
+    assessment = rationale = ""
+    for line in (text or "").splitlines():
+        stripped = line.strip()
+        upper = stripped.upper()
+        if upper.startswith("ASSESSMENT:"):
+            assessment = stripped[len("ASSESSMENT:"):].strip().lower()
+        elif upper.startswith("RATIONALE:"):
+            rationale = stripped[len("RATIONALE:"):].strip()
+    return assessment, rationale
+
+
+def assess_anomaly(drift, *, triage_status, occurrences=None, co_occurring=None,
+                   llm=None):
+    """Assess whether a drift is a real incident or expected noise (AI4).
+
+    Same opt-in / off-by-default / grounded-with-fallback contract as the other
+    explain functions. Off by default returns the deterministic assessment built
+    from the drift's severity and age; the LLM path is used only when configured
+    and only if it returns a valid ASSESSMENT plus a RATIONALE (otherwise the
+    deterministic pair is used). Returns ``{"assessment", "rationale", "source"}``.
+    Read-only — it never records or applies anything.
+    """
+    fb_assessment, fb_rationale = _deterministic_assessment(
+        drift, triage_status, occurrences
+    )
+
+    if llm is None:
+        llm = _resolve_llm(_config())
+    if llm is None:
+        return {"assessment": fb_assessment, "rationale": fb_rationale,
+                "source": "deterministic"}
+
+    try:
+        text = llm(build_triage_prompt(drift, triage_status, occurrences, co_occurring))
+    except Exception:
+        text = ""
+    assessment, rationale = _parse_assessment(text)
+    if assessment not in _VALID_ASSESSMENTS or not rationale:
+        return {"assessment": fb_assessment, "rationale": fb_rationale,
+                "source": "deterministic"}
+
+    return {"assessment": assessment, "rationale": rationale, "source": "llm"}
+
+
 def _deterministic_remediation_text(rendered_commands, dry_run_diff):
     """Offline fallback for a remediation summary: a factual command count.
 

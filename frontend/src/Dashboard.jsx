@@ -336,6 +336,7 @@ export default function Dashboard() {
                             first seen {formatTimestamp(d.first_seen)}
                           </p>
                         )}
+                        <TriageBlock driftId={d.id} />
                         {d.known_fix && (
                           <div className="known-fix">
                             <span className="known-fix__label">known fix</span>
@@ -440,6 +441,35 @@ export default function Dashboard() {
 // body so it is an intentional, isolated impurity rather than inline noise.
 function nowMs() {
   return Date.now()
+}
+
+// TriageBlock — AI4 anomaly triage. Fetches an incident-vs-noise assessment for
+// one drift when its row expands. Read-only and self-contained; shows the
+// deterministic assessment by default and an LLM one when a provider is set.
+function TriageBlock({ driftId }) {
+  const [data, setData] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/drifts/${driftId}/triage`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => { if (!cancelled && d) setData(d) })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [driftId])
+
+  if (!data) return null
+  return (
+    <div className="triage-block">
+      <span className="triage-block__label">
+        anomaly triage{data.source === 'deterministic' ? ' (offline)' : ''}
+      </span>
+      <p className="triage-block__text">
+        <span className={`assessment assessment--${data.assessment}`}>{data.assessment}</span>
+        {data.rationale}
+      </p>
+    </div>
+  )
 }
 
 // RecordFixModal — overlay form for recording a cause and fix for a drift pattern.

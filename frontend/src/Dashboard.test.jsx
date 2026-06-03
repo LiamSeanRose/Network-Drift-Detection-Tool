@@ -22,6 +22,7 @@ function mockFetchRouted(drifts, history, alertRules = [], devices = [], mainten
     else if (url.startsWith('/maintenance-windows')) body = maintenanceWindows
     else if (url.startsWith('/devices')) body = devices
     else if (url.includes('/suggested-fix')) body = { cause: 'Suggested cause', fix: 'Suggested fix', source: 'deterministic' }
+    else if (url.includes('/triage')) body = { assessment: 'noise', rationale: 'Stable low-severity drift.', source: 'deterministic', triage: 'chronic' }
     return Promise.resolve({
       ok: true,
       status: 200,
@@ -396,6 +397,25 @@ describe('Dashboard', () => {
     await screen.findByText('core-sw-01')
     // The collapsed row carries no "new" badge (chronic drift).
     expect(screen.queryByText(/^new$/i)).not.toBeInTheDocument()
+  })
+
+  it('shows the AI anomaly-triage assessment in the expanded row', async () => {
+    const drifts = [
+      {
+        id: 1, device: 'core-sw-01', object: 'interface:Ethernet1',
+        field: 'enabled', intent: true, reality: false,
+        drift_kind: 'value_mismatch', severity: 'critical',
+        detected_at: '2026-06-03T12:00:00+00:00', causes: [], known_fix: null,
+      },
+    ]
+    globalThis.fetch = mockFetchRouted(drifts, [])
+    render(<Dashboard />)
+    await screen.findByText('core-sw-01')
+
+    fireEvent.click(screen.getByText('core-sw-01'))
+    // The assessment + rationale are fetched on expand and shown.
+    expect(await screen.findByText(/anomaly triage/i)).toBeInTheDocument()
+    expect(screen.getByText(/stable low-severity drift/i)).toBeInTheDocument()
   })
 
   it('shows an Acknowledge button on an unacknowledged drift', async () => {

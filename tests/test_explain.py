@@ -202,6 +202,66 @@ def test_parse_suggestion_is_case_insensitive():
     assert fix == "mixed"
 
 
+# --- AI4 anomaly triage -----------------------------------------------------
+
+def test_triage_off_by_default_returns_deterministic(monkeypatch):
+    for var in ("NETDRIFT_EXPLAIN_PROVIDER", "NETDRIFT_EXPLAIN_MODEL",
+                "NETDRIFT_EXPLAIN_URL", "NETDRIFT_EXPLAIN_API_KEY"):
+        monkeypatch.delenv(var, raising=False)
+
+    def explode(*a, **k):
+        raise AssertionError("must not call the network when off")
+
+    monkeypatch.setattr(explain.httpx, "post", explode)
+    result = explain.assess_anomaly(_drift(), triage_status="new")
+    assert result["source"] == "deterministic"
+    assert result["assessment"] in {"incident", "noise", "unclear"}
+    assert result["rationale"]
+
+
+def test_triage_deterministic_critical_is_incident():
+    # A critical drift is an incident whether new or chronic.
+    new = explain._deterministic_assessment(_drift(severity="critical"), "new")
+    chronic = explain._deterministic_assessment(_drift(severity="critical"), "chronic")
+    assert new[0] == "incident"
+    assert chronic[0] == "incident"
+
+
+def test_triage_deterministic_chronic_low_severity_is_noise():
+    assessment, _ = explain._deterministic_assessment(
+        _drift(severity="info"), "chronic"
+    )
+    assert assessment == "noise"
+
+
+def test_triage_uses_llm_when_output_is_valid():
+    def fake_llm(prompt):
+        return "ASSESSMENT: noise\nRATIONALE: Three ports flapped together — a bulk change."
+
+    result = explain.assess_anomaly(_drift(), triage_status="new", llm=fake_llm)
+    assert result["source"] == "llm"
+    assert result["assessment"] == "noise"
+    assert "bulk change" in result["rationale"]
+
+
+def test_triage_falls_back_on_invalid_assessment():
+    # An assessment outside the allowed set -> deterministic, not a junk label.
+    result = explain.assess_anomaly(
+        _drift(), triage_status="new", llm=lambda p: "ASSESSMENT: maybe\nRATIONALE: x"
+    )
+    assert result["source"] == "deterministic"
+    assert result["assessment"] in {"incident", "noise", "unclear"}
+
+
+def test_triage_falls_back_when_llm_raises():
+    def boom(p):
+        raise RuntimeError("down")
+
+    assert explain.assess_anomaly(
+        _drift(), triage_status="new", llm=boom
+    )["source"] == "deterministic"
+
+
 # --- AI2 remediation summaries ----------------------------------------------
 
 _COMMANDS = "interface Ethernet1\n  no shutdown\n"

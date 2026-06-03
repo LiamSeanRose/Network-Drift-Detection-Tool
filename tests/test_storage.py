@@ -394,6 +394,20 @@ def test_drift_first_seen_empty_input_skips_query(session):
     assert drift_first_seen(session, []) == {}
 
 
+def test_count_drifts_for_identity(session):
+    from netdrift.storage.repository import count_drifts_for_identity
+    save_drifts(session, [
+        _drift(detected_at="2026-05-26T14:00:00Z"),
+        _drift(detected_at="2026-05-26T14:05:00Z"),
+        _drift(device="core-sw-02", detected_at="2026-05-26T14:05:00Z"),
+    ])
+    session.commit()
+    n = count_drifts_for_identity(
+        session, "core-sw-01", "interface:Ethernet2", "untagged_vlan", "value_mismatch"
+    )
+    assert n == 2  # the two core-sw-01 rows, not the core-sw-02 one
+
+
 def test_record_sla_breach_stores_severity(session):
     from netdrift.storage.repository import record_sla_breach, sla_breach_severity_map
     now = datetime.now(tz=timezone.utc)

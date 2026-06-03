@@ -50,6 +50,7 @@ from netdrift.storage.repository import (
     delete_acknowledgements_for,
     delete_alert_rule,
     delete_api_key,
+    count_drifts_for_identity,
     delete_maintenance_window,
     drift_first_seen,
     get_device_setting,
@@ -576,6 +577,35 @@ def suggested_fix(event_id: int, session: Session = Depends(get_session)):
         raise HTTPException(status_code=404, detail=f"Drift event {event_id} not found.")
     suggestion = explain.suggest_known_issue(_build_drift_record(event))
     return suggestion
+
+
+@app.get("/drifts/{event_id}/triage")
+def triage_drift(event_id: int, session: Session = Depends(get_session)):
+    """AI4: assess whether a drift is a real incident or expected noise.
+
+    Grounded on the deterministic new-vs-chronic age signal and an occurrence
+    count. Read-only; off by default (deterministic assessment), with the LLM
+    path used only when a provider is configured. 404 if the event does not
+    exist."""
+    event = get_drift_event(session, event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail=f"Drift event {event_id} not found.")
+
+    identity = (event.device, event.object_ref, event.field, event.drift_kind)
+    first_seen = drift_first_seen(session, [identity]).get(identity)
+    triage = _triage_status(first_seen, datetime.now(tz=timezone.utc))
+    occurrences = count_drifts_for_identity(session, *identity)
+
+    result = explain.assess_anomaly(
+        _build_drift_record(event), triage_status=triage, occurrences=occurrences
+    )
+    return {
+        "event_id": event_id,
+        "triage": triage,
+        "first_seen": first_seen.isoformat() if first_seen else None,
+        "occurrences": occurrences,
+        **result,
+    }
 
 
 # ---------------------------------------------------------------------------
