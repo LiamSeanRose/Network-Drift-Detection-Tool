@@ -654,6 +654,44 @@
   font-feature-settings: var(--tabular);
 }
 
+/* "new" badge on a freshly-appeared drift — draws the eye to what changed
+   recently versus chronic, long-standing drift. */
+.triage-badge {
+  margin-left: 0.5rem;
+  font-family: var(--sans);
+  font-size: 0.6rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-bright);
+  background: var(--accent-soft);
+  border: 1px solid rgba(124, 140, 255, 0.4);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  vertical-align: middle;
+}
+
+.drift-meta {
+  margin: 0 0 0.7rem;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  color: var(--fg-dim);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.triage-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  padding: 0.08rem 0.5rem;
+}
+.triage-tag--new { color: var(--accent-bright); background: var(--accent-soft); }
+.triage-tag--chronic { color: var(--fg-muted); background: var(--surface-2); }
+
 .drift-table td.col-expand {
   width: 2ch;
   text-align: center;

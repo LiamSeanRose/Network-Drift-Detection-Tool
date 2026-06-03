@@ -51,6 +51,7 @@ from netdrift.storage.repository import (
     delete_alert_rule,
     delete_api_key,
     delete_maintenance_window,
+    drift_first_seen,
     get_device_setting,
     get_drift_event,
     list_alert_rules,
@@ -354,6 +355,21 @@ def _explanation_dict(exp) -> dict | None:
     }
 
 
+# A drift first seen within this window is "new" (worth a look); anything older
+# is "chronic" — it has persisted across many poll cycles and is likely known
+# noise. The deterministic signal AI4 anomaly triage will build on.
+TRIAGE_NEW_WITHIN = timedelta(minutes=60)
+
+
+def _triage_status(first_seen, now) -> str:
+    """Classify a drift as 'new' or 'chronic' from when it first appeared."""
+    if first_seen is None:
+        return "new"
+    if first_seen.tzinfo is None:
+        first_seen = first_seen.replace(tzinfo=timezone.utc)
+    return "new" if (now - first_seen) < TRIAGE_NEW_WITHIN else "chronic"
+
+
 def _remediation_event_dict(ev) -> dict:
     return {
         "id": ev.id,
@@ -433,10 +449,17 @@ def list_drifts(request: Request, response: Response,
     }
     explanations = get_explanations(session, set(event_fps.values()))
 
+    # When did each drift on this page first appear? One grouped query; drives
+    # the new-vs-chronic triage signal.
+    identities = {(e.device, e.object_ref, e.field, e.drift_kind) for e in events}
+    first_seen = drift_first_seen(session, identities)
+    now = datetime.now(tz=timezone.utc)
+
     rows = []
     for e in events:
         fp = event_fps[e.id]
         issue = known.get(fp)
+        fs = first_seen.get((e.device, e.object_ref, e.field, e.drift_kind))
         rows.append({
             "id": e.id,
             "device": e.device,
@@ -448,6 +471,8 @@ def list_drifts(request: Request, response: Response,
             "severity": e.severity,
             "detected_at": e.detected_at.isoformat(),
             "platform": e.platform,
+            "first_seen": fs.isoformat() if fs else None,
+            "triage": _triage_status(fs, now),
             "causes": diagnose({
                 "object": e.object_ref,
                 "field": e.field,

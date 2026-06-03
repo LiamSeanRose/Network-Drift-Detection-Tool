@@ -89,6 +89,16 @@ def test_drifts_includes_platform_field(client):
         assert "platform" in event
 
 
+def test_drifts_includes_triage_fields(client):
+    response = client.get("/drifts")
+    events = response.json()
+    for event in events:
+        assert "first_seen" in event
+        assert event["triage"] in ("new", "chronic")
+    # The seeded events are dated May 2026 — long past the new-within window.
+    assert all(e["triage"] == "chronic" for e in events)
+
+
 def test_drifts_filters_by_device(client):
     response = client.get("/drifts?device=core-sw-02")
     events = response.json()
