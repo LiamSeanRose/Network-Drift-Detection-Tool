@@ -33,7 +33,7 @@ logger = logging.getLogger("netdrift.webhook")
 
 DEFAULT_EVENTS = (
     "critical_drift", "apply_success", "apply_failure",
-    "sla_breached", "device_unreachable",
+    "sla_breached", "sla_resolved", "device_unreachable",
 )
 DEFAULT_QUEUE_SIZE = 100
 DEFAULT_TIMEOUT = 5

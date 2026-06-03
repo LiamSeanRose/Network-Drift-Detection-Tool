@@ -334,3 +334,42 @@ def test_delete_maintenance_window(session):
     assert r.delete_maintenance_window(session, w.id) == 1
     session.commit()
     assert r.list_maintenance_windows(session) == []
+
+
+# --- SLA breach state (v4.5 edge-triggered alerting) -------------------------
+
+def test_record_and_read_active_sla_breach(session):
+    from netdrift.storage.repository import active_sla_breaches, record_sla_breach
+    now = datetime.now(tz=timezone.utc)
+    record_sla_breach(session, "core-sw-01", "interface|enabled|value_mismatch", now)
+    session.commit()
+    assert active_sla_breaches(session) == {
+        ("core-sw-01", "interface|enabled|value_mismatch")
+    }
+
+
+def test_record_sla_breach_is_idempotent(session):
+    from netdrift.storage.repository import active_sla_breaches, record_sla_breach
+    now = datetime.now(tz=timezone.utc)
+    fp = "tunnel|tunnel_state|value_mismatch"
+    first = record_sla_breach(session, "core-sw-01", fp, now)
+    again = record_sla_breach(session, "core-sw-01", fp, now + timedelta(minutes=5))
+    session.commit()
+    # Same row returned; first_fired_at is not bumped on the second call.
+    assert again.first_fired_at == first.first_fired_at
+    assert len(active_sla_breaches(session)) == 1
+
+
+def test_clear_sla_breach_removes_only_that_key(session):
+    from netdrift.storage.repository import (
+        active_sla_breaches,
+        clear_sla_breach,
+        record_sla_breach,
+    )
+    now = datetime.now(tz=timezone.utc)
+    record_sla_breach(session, "core-sw-01", "a|b|value_mismatch", now)
+    record_sla_breach(session, "core-sw-02", "a|b|value_mismatch", now)
+    session.commit()
+    assert clear_sla_breach(session, "core-sw-01", "a|b|value_mismatch") == 1
+    session.commit()
+    assert active_sla_breaches(session) == {("core-sw-02", "a|b|value_mismatch")}

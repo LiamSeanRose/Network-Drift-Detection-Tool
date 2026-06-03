@@ -138,6 +138,34 @@ class DriftExplanation(Base):
         )
 
 
+class SlaBreachState(Base):
+    """One currently-active SLA breach — the memory that makes alerting edge-triggered.
+
+    Without this, evaluate_sla refires ``sla_breached`` for the same drift on every
+    scheduler cycle: a breach that persists for an hour at a 5-minute poll pages
+    twelve times. A row here records that a ``(device, fingerprint)`` breach has
+    already been alerted, so the next cycle stays silent while it persists and
+    fires exactly one ``sla_resolved`` when the underlying drift finally clears.
+
+    Keyed by ``(device, fingerprint)`` — the same composite identity Acknowledgement
+    uses — because DriftEvent rows are recreated every poll and an id-keyed breach
+    would be lost on the next cycle. ``first_fired_at`` is when the breach was first
+    alerted, carried for forensic/UI use.
+    """
+
+    __tablename__ = "sla_breach_state"
+
+    device: Mapped[str] = mapped_column(String, primary_key=True)
+    fingerprint: Mapped[str] = mapped_column(String, primary_key=True)
+    first_fired_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+    def __repr__(self):
+        return (
+            f"<SlaBreachState device={self.device!r} "
+            f"fingerprint={self.fingerprint!r} since={self.first_fired_at}>"
+        )
+
+
 class DeviceSetting(Base):
     """Per-device operational settings — one row per device, keyed by name.
 
