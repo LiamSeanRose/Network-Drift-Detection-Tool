@@ -12,7 +12,7 @@ v2.5 additions:
 
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import func
+from sqlalchemy import func, tuple_
 
 from netdrift.auth import KEY_PREFIX, generate_api_key, hash_api_key
 from netdrift.storage.models import (
@@ -123,6 +123,29 @@ def get_drifts_older_than(session, *, severity, older_than, device=None):
     if device is not None:
         query = query.filter(DriftEvent.device == device)
     return query.order_by(DriftEvent.detected_at).all()
+
+
+def drift_first_seen(session, identities):
+    """Return ``{(device, object_ref, field, drift_kind): earliest detected_at}``.
+
+    A persisting drift writes a fresh DriftEvent row every poll, so the earliest
+    row for a given identity is when that drift first appeared. Used to triage a
+    drift as newly-arrived vs chronic. One grouped query over the identities in
+    the caller's page (not the whole table). Does NOT commit."""
+    identities = list({tuple(i) for i in identities})
+    if not identities:
+        return {}
+    cols = (
+        DriftEvent.device, DriftEvent.object_ref,
+        DriftEvent.field, DriftEvent.drift_kind,
+    )
+    rows = (
+        session.query(*cols, func.min(DriftEvent.detected_at))
+        .filter(tuple_(*cols).in_(identities))
+        .group_by(*cols)
+        .all()
+    )
+    return {(device, obj, field, kind): first for device, obj, field, kind, first in rows}
 
 
 def get_drift_event(session, event_id):
