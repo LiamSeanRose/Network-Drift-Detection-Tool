@@ -30,13 +30,13 @@ from datetime import datetime, timedelta, timezone
 from netdrift.fingerprint import fingerprint as make_fingerprint
 from netdrift.storage.repository import (
     active_maintenance_windows,
-    active_sla_breaches,
     clear_sla_breach,
     device_last_collected,
     get_drifts_older_than,
     is_acknowledged,
     list_alert_rules,
     record_sla_breach,
+    sla_breach_severity_map,
 )
 
 logger = logging.getLogger("netdrift.sla")
@@ -71,6 +71,11 @@ def evaluate_sla(session, dispatcher, *, now=None, unreachable_after_minutes=Non
     tests): the newly-started breaches, the newly-resolved breaches, and any
     unreachable-device alerts. A persisting breach contributes nothing — that is
     the point. Writes breach-state rows; the caller commits.
+
+    Breach and resolve payloads carry a structured ``severity`` (plus
+    ``fingerprint``, ``object``, ``field``, ``window_minutes``) so a receiver can
+    route by tier — critical to PagerDuty, warning to Slack — instead of parsing
+    the human-readable ``detail`` string.
     """
     if now is None:
         now = datetime.now(tz=timezone.utc)
@@ -137,8 +142,15 @@ def evaluate_sla(session, dispatcher, *, now=None, unreachable_after_minutes=Non
             if in_maintenance(device) or is_acknowledged(session, device, fp, now=now):
                 continue
 
+            # Structured payload so a receiver can route on severity (escalation
+            # tiers) without parsing the prose detail string.
             firable.setdefault(key, {
                 "device": device,
+                "fingerprint": fp,
+                "severity": event.severity,
+                "object": event.object_ref,
+                "field": event.field,
+                "window_minutes": rule.window_minutes,
                 "timestamp": now.isoformat(),
                 "detail": (
                     f"SLA breach: {event.severity} drift on {event.object_ref} "
@@ -146,7 +158,7 @@ def evaluate_sla(session, dispatcher, *, now=None, unreachable_after_minutes=Non
                 ),
             })
 
-    prev_active = active_sla_breaches(session)
+    prev_active = sla_breach_severity_map(session)
 
     # Rising edge: a firable breach we were not already tracking.
     for key, payload in firable.items():
@@ -154,26 +166,34 @@ def evaluate_sla(session, dispatcher, *, now=None, unreachable_after_minutes=Non
             continue
         device, fp = key
         dispatcher.fire("sla_breached", payload)
-        record_sla_breach(session, device, fp, now)
-        logger.info("SLA breach (new): device=%r fingerprint=%r", device, fp)
-        dispatched.append({"fingerprint": fp, **payload})
+        record_sla_breach(session, device, fp, now, severity=payload["severity"])
+        logger.info(
+            "SLA breach (new): device=%r fingerprint=%r severity=%r",
+            device, fp, payload["severity"],
+        )
+        dispatched.append(dict(payload))
 
     # Falling edge: a tracked breach whose drift is gone this cycle and is not
     # merely muted (an acked / maintenance / unreachable breach stays tracked).
-    for key in prev_active - breaching:
+    for key in prev_active.keys() - breaching:
         device, fp = key
         if in_maintenance(device) or device in unreachable_devices:
             continue
         if is_acknowledged(session, device, fp, now=now):
             continue
+        severity = prev_active[key]
         payload = {
             "device": device,
+            "fingerprint": fp,
+            "severity": severity,
             "timestamp": now.isoformat(),
-            "detail": f"SLA resolved: drift on {device} ({fp}) cleared",
+            "detail": f"SLA resolved: {severity or 'drift'} on {device} ({fp}) cleared",
         }
         dispatcher.fire("sla_resolved", payload)
         clear_sla_breach(session, device, fp)
-        logger.info("SLA resolved: device=%r fingerprint=%r", device, fp)
-        dispatched.append({"fingerprint": fp, "resolved": True, **payload})
+        logger.info(
+            "SLA resolved: device=%r fingerprint=%r severity=%r", device, fp, severity
+        )
+        dispatched.append({"resolved": True, **payload})
 
     return dispatched

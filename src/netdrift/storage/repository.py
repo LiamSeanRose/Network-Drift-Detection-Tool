@@ -311,14 +311,31 @@ def active_sla_breaches(session) -> set[tuple[str, str]]:
     return {(device, fingerprint) for device, fingerprint in rows}
 
 
-def record_sla_breach(session, device, fingerprint, first_fired_at):
+def sla_breach_severity_map(session) -> dict[tuple[str, str], str | None]:
+    """Return ``{(device, fingerprint): severity}`` for every tracked breach.
+
+    evaluate_sla uses this to detect persisting/resolved breaches (the key set)
+    and to tag the sla_resolved event with the severity stored when the breach
+    first fired — the originating drift is gone by then, so its severity can only
+    come from here. Does NOT commit."""
+    rows = session.query(
+        SlaBreachState.device, SlaBreachState.fingerprint, SlaBreachState.severity
+    ).all()
+    return {(device, fingerprint): severity for device, fingerprint, severity in rows}
+
+
+def record_sla_breach(session, device, fingerprint, first_fired_at, severity=None):
     """Begin tracking a ``(device, fingerprint)`` breach. Idempotent — a second
-    call for an already-tracked breach is a no-op. Does NOT commit."""
+    call for an already-tracked breach does not re-time it, but will backfill a
+    missing severity. Does NOT commit."""
     existing = session.get(SlaBreachState, (device, fingerprint))
     if existing is not None:
+        if existing.severity is None and severity is not None:
+            existing.severity = severity
         return existing
     row = SlaBreachState(
-        device=device, fingerprint=fingerprint, first_fired_at=first_fired_at
+        device=device, fingerprint=fingerprint,
+        first_fired_at=first_fired_at, severity=severity,
     )
     session.add(row)
     session.flush()

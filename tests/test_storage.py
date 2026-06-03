@@ -373,3 +373,24 @@ def test_clear_sla_breach_removes_only_that_key(session):
     assert clear_sla_breach(session, "core-sw-01", "a|b|value_mismatch") == 1
     session.commit()
     assert active_sla_breaches(session) == {("core-sw-02", "a|b|value_mismatch")}
+
+
+def test_record_sla_breach_stores_severity(session):
+    from netdrift.storage.repository import record_sla_breach, sla_breach_severity_map
+    now = datetime.now(tz=timezone.utc)
+    record_sla_breach(session, "core-sw-01", "a|b|value_mismatch", now, severity="critical")
+    session.commit()
+    assert sla_breach_severity_map(session) == {
+        ("core-sw-01", "a|b|value_mismatch"): "critical"
+    }
+
+
+def test_record_sla_breach_backfills_missing_severity(session):
+    from netdrift.storage.repository import record_sla_breach, sla_breach_severity_map
+    now = datetime.now(tz=timezone.utc)
+    fp = "a|b|value_mismatch"
+    record_sla_breach(session, "core-sw-01", fp, now)  # severity omitted
+    record_sla_breach(session, "core-sw-01", fp, now + timedelta(minutes=5), severity="warning")
+    session.commit()
+    # The second call backfills severity without re-timing the breach.
+    assert sla_breach_severity_map(session)[("core-sw-01", fp)] == "warning"
