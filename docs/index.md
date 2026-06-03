@@ -17,7 +17,7 @@ This tool is the checker. It polls your devices on a schedule, diffs what it fin
 - **Interface, VLAN, and routing drift** — descriptions, admin state, IP addresses, VLANs, BGP neighbors, and OSPF adjacencies.
 - **Config-level drift** — compares the device's running config against a NetBox-rendered intended config.
 - **Opt-in auto-remediation** — push a fix back to a device to restore intent. Off by default, gated (global switch, per-issue flag, per-device pause), with management interfaces and operational-symptom fields on a hard do-not-apply list, and a dry-run before every apply.
-- **Webhook notifications** — dispatch apply outcomes to Slack, PagerDuty, or a custom endpoint.
+- **Webhook notifications** — dispatch drift and apply outcomes to Slack, PagerDuty, or a custom endpoint. Wire them to an Ansible AWX/Tower job template to trigger remediation playbooks ([Ansible integration](ansible-integration.md)).
 - **React dashboard** — per-device drift history with severity levels (critical / warning / info).
 - **Syslog trigger** — a device event triggers an immediate targeted poll rather than waiting for the next cycle.
 - **One command to run** — `docker compose up` starts the full stack: Postgres, API, scheduler, and frontend.
