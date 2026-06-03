@@ -380,3 +380,34 @@ def test_resolved_payload_carries_the_breach_severity(session):
     assert len(resolved) == 1
     assert resolved[0]["severity"] == "critical"
     assert resolved[0]["fingerprint"] == FP
+
+
+# ---------------------------------------------------------------------------
+# v4.5 — per-object-type SLA windows
+# ---------------------------------------------------------------------------
+
+def test_object_type_rule_only_fires_for_that_type(session):
+    # An interface-scoped rule must ignore a VLAN drift of the same severity.
+    create_alert_rule(session, device="core-sw-01", severity="critical",
+                      window_minutes=10, object_type="interface")
+    _seed_drift(session, minutes_ago=20, object="interface:Ethernet1", field="enabled")
+    _seed_drift(session, minutes_ago=20, object="vlan:10", field="name")
+    session.commit()
+
+    fake = FakeDispatcher()
+    evaluate_sla(session, fake, now=NOW)
+
+    fired_objects = [p["object"] for e, p in fake.fired if e == "sla_breached"]
+    assert fired_objects == ["interface:Ethernet1"]
+
+
+def test_null_object_type_rule_fires_for_all_types(session):
+    create_alert_rule(session, device="core-sw-01", severity="critical", window_minutes=10)
+    _seed_drift(session, minutes_ago=20, object="interface:Ethernet1", field="enabled")
+    _seed_drift(session, minutes_ago=20, object="vlan:10", field="name")
+    session.commit()
+
+    fake = FakeDispatcher()
+    evaluate_sla(session, fake, now=NOW)
+
+    assert len([e for e, _ in fake.fired if e == "sla_breached"]) == 2

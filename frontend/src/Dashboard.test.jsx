@@ -289,6 +289,21 @@ describe('Dashboard', () => {
     await screen.findByRole('heading', { name: /alert rules/i })
     expect(screen.getByRole('button', { name: /add rule/i })).toBeInTheDocument()
     expect(screen.getByLabelText(/window/i)).toBeInTheDocument()
+    expect(screen.getByLabelText(/object type/i)).toBeInTheDocument()
+  })
+
+  it('shows an object-type-scoped rule with its type', async () => {
+    const rules = [
+      { id: 1, device: 'core-sw-01', severity: 'critical', window_minutes: 10,
+        enabled: true, object_type: 'interface' },
+    ]
+    globalThis.fetch = mockFetchRouted([], [], rules)
+
+    render(<Dashboard />)
+
+    await screen.findByRole('heading', { name: /alert rules/i })
+    // Scope to the rule line so the form's <option>interface</option> isn't matched.
+    expect(screen.getByText(/10 min · interface/)).toBeInTheDocument()
   })
 
   it('lists maintenance windows from the API', async () => {
