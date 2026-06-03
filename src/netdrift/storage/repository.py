@@ -25,6 +25,7 @@ from netdrift.storage.models import (
     KnownIssue,
     MaintenanceWindow,
     RemediationEvent,
+    SlaBreachState,
 )
 
 
@@ -298,6 +299,43 @@ def is_in_maintenance_window(session, device, now=None) -> bool:
         if window.device is None or window.device == device:
             return True
     return False
+
+
+def active_sla_breaches(session) -> set[tuple[str, str]]:
+    """Return the set of ``(device, fingerprint)`` breaches currently being tracked.
+
+    These are the breaches that have already fired an ``sla_breached`` webhook and
+    have not yet resolved — evaluate_sla uses this to stay silent on a persisting
+    breach and to detect when one clears. Does NOT commit."""
+    rows = session.query(SlaBreachState.device, SlaBreachState.fingerprint).all()
+    return {(device, fingerprint) for device, fingerprint in rows}
+
+
+def record_sla_breach(session, device, fingerprint, first_fired_at):
+    """Begin tracking a ``(device, fingerprint)`` breach. Idempotent — a second
+    call for an already-tracked breach is a no-op. Does NOT commit."""
+    existing = session.get(SlaBreachState, (device, fingerprint))
+    if existing is not None:
+        return existing
+    row = SlaBreachState(
+        device=device, fingerprint=fingerprint, first_fired_at=first_fired_at
+    )
+    session.add(row)
+    session.flush()
+    return row
+
+
+def clear_sla_breach(session, device, fingerprint):
+    """Stop tracking a breach (it resolved). Returns rows removed (0 or 1).
+    Does NOT commit."""
+    return (
+        session.query(SlaBreachState)
+        .filter(
+            SlaBreachState.device == device,
+            SlaBreachState.fingerprint == fingerprint,
+        )
+        .delete()
+    )
 
 
 def get_explanations(session, fingerprints=None):

@@ -178,6 +178,8 @@ def _run_sla_evaluation(dispatcher, session_factory, unreachable_after_minutes=N
             breaches = evaluate(
                 session, dispatcher, unreachable_after_minutes=unreachable_after_minutes
             )
+            # evaluate_sla records/clears breach-state rows (edge tracking).
+            session.commit()
             if breaches:
                 logger.info("SLA evaluation fired %d alert(s).", len(breaches))
         finally:
