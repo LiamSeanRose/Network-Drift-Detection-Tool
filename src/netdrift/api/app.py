@@ -69,6 +69,7 @@ from netdrift.storage.repository import (
     get_drifts,
     get_drift_history,
     get_explanations,
+    inventory_accuracy,
     is_acknowledged,
     list_known_issues,
     save_known_issue,
@@ -439,6 +440,21 @@ def list_drift_history(device: str | None = None,
                        session: Session = Depends(get_session)):
     """Return drift counts bucketed into 5-minute intervals, oldest first."""
     return get_drift_history(session, hours=hours, device=device)
+
+
+@app.get("/inventory-accuracy")
+def get_inventory_accuracy(window_minutes: int = Query(60, ge=1, le=10080),
+                           session: Session = Depends(get_session)):
+    """Inventory-accuracy headline: what share of the inventory matches reality.
+
+    The "is your NetBox/Nautobot record actually true?" number. Over the last
+    ``window_minutes`` each inventory device is classed accurate (collected, no
+    drift), drifted (has drift), or stale (not collected in the window — possibly
+    unreachable). Read-only, so unauthenticated by design — derived from drift
+    history and last-collection stamps already persisted by the pipeline.
+    """
+    device_names = sorted(_load_devices())
+    return inventory_accuracy(session, device_names, window_minutes=window_minutes)
 
 
 @app.get("/drifts")

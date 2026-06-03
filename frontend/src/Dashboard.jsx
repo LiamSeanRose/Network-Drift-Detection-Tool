@@ -28,6 +28,11 @@ export default function Dashboard({ initialFilter = null }) {
   // v3.5 — devices + per-device auto-apply pause state
   const [devices, setDevices] = useState(null)
 
+  // Inventory-accuracy headline: share of the inventory whose live reality
+  // matches its intended state. Self-guarding — the banner renders nothing
+  // until a well-formed payload arrives.
+  const [accuracy, setAccuracy] = useState(null)
+
   // maintenance windows — planned change windows that suppress alerting
   const [maintenanceWindows, setMaintenanceWindows] = useState(null)
 
@@ -94,15 +99,22 @@ export default function Dashboard({ initialFilter = null }) {
       .catch(() => setMaintenanceWindows([]))
   }, [])
 
+  const loadAccuracy = useCallback(() => {
+    return fetch('/inventory-accuracy')
+      .then((r) => { if (!r.ok) throw new Error(`API returned ${r.status}`); return r.json() })
+      .then((data) => setAccuracy(data))
+      .catch(() => setAccuracy(null))
+  }, [])
+
   // Initial load on mount. The loaders set a loading flag synchronously, which
   // the fetch-on-mount pattern requires; that is intentional here.
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices(); loadMaintenanceWindows() },
-    [loadDrifts, loadHistory, loadAlertRules, loadDevices, loadMaintenanceWindows])
+  useEffect(() => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices(); loadMaintenanceWindows(); loadAccuracy() },
+    [loadDrifts, loadHistory, loadAlertRules, loadDevices, loadMaintenanceWindows, loadAccuracy])
 
   const handleRefresh = useCallback(
-    () => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices(); loadMaintenanceWindows() },
-    [loadDrifts, loadHistory, loadAlertRules, loadDevices, loadMaintenanceWindows])
+    () => { loadDrifts(); loadHistory(); loadAlertRules(); loadDevices(); loadMaintenanceWindows(); loadAccuracy() },
+    [loadDrifts, loadHistory, loadAlertRules, loadDevices, loadMaintenanceWindows, loadAccuracy])
 
   // Run a mutating request and surface failures instead of swallowing them. A
   // 401 means no/invalid API key — the single most common cause of a write
@@ -322,6 +334,8 @@ export default function Dashboard({ initialFilter = null }) {
         </div>
       )}
 
+      <AccuracyBanner accuracy={accuracy} />
+
       {visibleDrifts && visibleDrifts.length > 0 && (
         <StatsBar drifts={visibleDrifts} devices={devices} windows={maintenanceWindows} />
       )}
@@ -369,6 +383,16 @@ export default function Dashboard({ initialFilter = null }) {
                   <tr
                     className={`sev-${d.severity} expandable${isExpanded ? ' is-open' : ''}${d.acknowledged ? ' acknowledged' : ''}`}
                     onClick={() => setExpandedId(isExpanded ? null : d.id)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setExpandedId(isExpanded ? null : d.id)
+                      }
+                    }}
+                    tabIndex={0}
+                    role="button"
+                    aria-expanded={isExpanded}
+                    aria-label={`${d.device} ${d.object} ${d.field} — ${isExpanded ? 'collapse' : 'expand'} details`}
                   >
                     <td>{d.device}</td>
                     <td className="col-object" title={d.object}>
@@ -1011,7 +1035,9 @@ function DeviceHistory({ device, buckets, maxCount }) {
             key={b.detected_at}
             className={`history-bar history-bar--${worstSeverity(b)}`}
             style={{ height: `${Math.max((b.count / maxCount) * 100, 4)}%` }}
-            title={`${b.detected_at}: ${b.count} drift(s)`}
+            role="img"
+            aria-label={`${b.detected_at}: ${b.count} drift(s), worst severity ${worstSeverity(b)}`}
+            title={`${b.detected_at}: ${b.count} drift(s) · ${worstSeverity(b)}`}
           />
         ))}
       </div>
@@ -1041,6 +1067,43 @@ function formatTimestamp(iso) {
   return d.toLocaleString(undefined, {
     month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit',
   })
+}
+
+// AccuracyBanner — the headline "is your inventory true?" metric. One number a
+// director can read at a glance: the share of inventory devices whose live
+// reality matches their intended state (NetBox/Nautobot). Self-guarding: renders
+// nothing until a well-formed /inventory-accuracy payload arrives, so an empty
+// inventory or a failed fetch simply shows no banner rather than a broken card.
+function AccuracyBanner({ accuracy }) {
+  if (!accuracy || typeof accuracy.accuracy_pct !== 'number') return null
+  const pct = accuracy.accuracy_pct
+  const tone = pct >= 95 ? 'good' : pct >= 80 ? 'warn' : 'bad'
+  const window = accuracy.window_minutes
+  return (
+    <section className="accuracy" aria-label="Inventory accuracy">
+      <div className={`accuracy__score accuracy__score--${tone}`}>
+        <span className="accuracy__pct">{pct}%</span>
+        <span className="accuracy__caption">
+          inventory verified accurate
+          {window ? <span className="accuracy__window"> · last {window} min</span> : null}
+        </span>
+      </div>
+      <dl className="accuracy__breakdown">
+        <div className="accuracy__stat">
+          <dt>Devices</dt><dd>{accuracy.total_devices}</dd>
+        </div>
+        <div className="accuracy__stat accuracy__stat--good">
+          <dt>Accurate</dt><dd>{accuracy.accurate}</dd>
+        </div>
+        <div className="accuracy__stat accuracy__stat--drifted">
+          <dt>Drifted</dt><dd>{accuracy.drifted}</dd>
+        </div>
+        <div className="accuracy__stat accuracy__stat--stale">
+          <dt>Not seen</dt><dd>{accuracy.stale}</dd>
+        </div>
+      </dl>
+    </section>
+  )
 }
 
 // StatsBar — at-a-glance summary cards across the top of the console. Derived
