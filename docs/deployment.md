@@ -11,18 +11,30 @@ before exposing it.
 
 ## The go-live security gate
 
-**The HTTP API ships without authentication before v3.5.** Until in-app auth
-lands, choose one of:
+**Mutating endpoints require an API key (since v3.5).** Every write
+(POST/PUT/PATCH/DELETE — every dashboard action button, plus the
+remediation/apply routes) needs a valid `X-API-Key`; read-only GETs
+(`GET /drifts`, `/health`) are public by design. Mint a key with
+`driftcheck create-api-key` and paste it into the dashboard's API-key field.
 
-- **Read-only / demo deployment** — serve only the detection dashboard, with no
-  device-mutating surface reachable. This is the safe public posture.
+Choose a posture:
+
+- **Read-only / demo deployment** — serve only the detection dashboard. Writes
+  stay locked behind the key, so the device-mutating surface is unreachable.
+  The safe public posture.
 - **Trusted-network deployment** — run the full stack, including the
-  remediation/apply endpoints, only on a network you control, behind your own
-  authentication layer (a reverse proxy with auth, a VPN, or an ingress with
-  basic-auth / an OAuth2 proxy).
+  remediation/apply endpoints, on a network you control. For a local dashboard
+  where pasting a key in each browser is needless friction, set
+  `NETDRIFT_DISABLE_API_AUTH=true` to drop the key requirement entirely.
 
-Do **not** expose the API — in particular the `POST .../remediate/apply` and
-`auto-apply` routes — directly to an untrusted network before v3.5.
+> **`NETDRIFT_DISABLE_API_AUTH` turns off the key check for all mutating routes.**
+> It is off by default and is for trusted/local networks only — never set it on a
+> public instance, where the apply routes push config to live devices. Front a
+> public deployment with your own auth layer (reverse proxy, VPN, or an ingress
+> with basic-auth / an OAuth2 proxy) instead.
+
+Do **not** expose the apply/`auto-apply` routes directly to an untrusted network
+without an auth layer in front.
 
 ## Secrets
 
