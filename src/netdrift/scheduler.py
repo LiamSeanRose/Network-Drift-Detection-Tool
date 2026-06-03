@@ -38,15 +38,17 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from netdrift.auto_apply import run_auto_apply
 from netdrift.cli import load_devices
 from netdrift.pipeline import run_drift_check
+from netdrift.reachability import check_reachability
 from netdrift.sla import evaluate_sla
 from netdrift.storage.database import get_sessionmaker
-from netdrift.storage.repository import delete_drifts_older_than
+from netdrift.storage.repository import delete_drifts_older_than, record_reachability
 from netdrift.syslog_receiver import SyslogReceiver, DEFAULT_PORT as DEFAULT_SYSLOG_PORT
 from netdrift.webhook import WebhookDispatcher
 
 logger = logging.getLogger("netdrift.scheduler")
 
 DEFAULT_INTERVAL_MINUTES = 5
+DEFAULT_REACHABILITY_INTERVAL_MINUTES = 1
 REPOLL_DELAY_SECONDS = 60
 DEFAULT_RETENTION_DAYS = 90
 RETENTION_INTERVAL_HOURS = 24
@@ -139,6 +141,50 @@ def schedule_drift_checks(scheduler, devices, interval_minutes=DEFAULT_INTERVAL_
             minutes=interval_minutes,
             args=[device],
             id=f"drift-check:{name}",
+        )
+        job_ids.append(job.id)
+    return job_ids
+
+
+def _probe_one(device, *, session_factory=None, check_fn=check_reachability):
+    """Probe one device's reachability and persist the result, swallowing
+    per-device errors so one bad probe never kills the loop.
+
+    Storage-only by design: it records reachable/last-seen but does NOT fire
+    webhooks. The ``device_unreachable`` alert is owned by SLA evaluation off
+    collection silence, so the cheap probe stays a pure status signal and cannot
+    double-page.
+    """
+    if session_factory is None:
+        session_factory = get_sessionmaker()
+    name = device["name"]
+    try:
+        result = check_fn(device)
+        with session_factory() as session:
+            record_reachability(session, name, result["reachable"])
+            session.commit()
+        logger.info("%s: reachable=%s", name, result["reachable"])
+    except Exception as e:  # noqa: BLE001 — a poller must not die on one device
+        logger.error("%s: reachability probe failed: %s", name, e)
+
+
+def schedule_reachability_checks(
+    scheduler, devices,
+    interval_minutes=DEFAULT_REACHABILITY_INTERVAL_MINUTES, check=_probe_one,
+):
+    """Register one recurring reachability-probe job per device.
+
+    A separate, faster cadence than schedule_drift_checks: liveness is cheap and
+    operators expect "is it up?" to refresh more often than full compliance.
+    Returns the list of job ids (one per device). ``check`` is injectable so
+    tests assert registration without probing.
+    """
+    job_ids = []
+    for name, details in devices.items():
+        device = {"name": name, **details}
+        job = scheduler.add_job(
+            check, trigger="interval", minutes=interval_minutes,
+            args=[device], id=f"reachability:{name}",
         )
         job_ids.append(job.id)
     return job_ids
@@ -261,6 +307,14 @@ def main():
         "--syslog-port", type=int, default=DEFAULT_SYSLOG_PORT,
         help=f"UDP port to listen for syslog triggers (default {DEFAULT_SYSLOG_PORT})",
     )
+    parser.add_argument(
+        "--reachability-interval", type=int,
+        default=DEFAULT_REACHABILITY_INTERVAL_MINUTES,
+        help=(
+            "minutes between lightweight reachability probes "
+            f"(default {DEFAULT_REACHABILITY_INTERVAL_MINUTES})"
+        ),
+    )
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -306,6 +360,15 @@ def main():
     # drift that has outlived an alert rule's window.
     session_factory = get_sessionmaker()
 
+    # Reachability probes run on their own faster cadence (storage-only).
+    def probe(device):
+        _probe_one(device, session_factory=session_factory)
+
+    reach_ids = schedule_reachability_checks(
+        scheduler, devices,
+        interval_minutes=args.reachability_interval, check=probe,
+    )
+
     # A device silent for 2 poll cycles is treated as unreachable, so a stale
     # drift never produces a false SLA breach.
     unreachable_after = 2 * args.interval
@@ -324,10 +387,11 @@ def main():
 
     schedule_retention(scheduler, retention_job)
     logger.info(
-        "Scheduled %d device(s) every %d min: %s. Syslog trigger on UDP:%d. "
-        "SLA evaluation every %d min. Drift retention %d day(s). Webhooks %s. "
-        "Ctrl+C to stop.",
-        len(ids), args.interval, ", ".join(sorted(devices)), args.syslog_port,
+        "Scheduled %d device(s) every %d min: %s. Reachability probe every %d min "
+        "(%d job(s)). Syslog trigger on UDP:%d. SLA evaluation every %d min. "
+        "Drift retention %d day(s). Webhooks %s. Ctrl+C to stop.",
+        len(ids), args.interval, ", ".join(sorted(devices)),
+        args.reachability_interval, len(reach_ids), args.syslog_port,
         args.interval, retention_days, "enabled" if dispatcher.enabled else "disabled",
     )
     try:

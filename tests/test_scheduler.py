@@ -244,3 +244,57 @@ def test_run_sla_evaluation_swallows_errors_and_closes_session(caplog):
 
     assert sess.closed is True  # finally still closed it
     assert any("sla boom" in r.message for r in caplog.records)
+
+
+def test_registers_one_reachability_job_per_device():
+    from netdrift.scheduler import schedule_reachability_checks
+    sched = _fresh_scheduler()
+    ids = schedule_reachability_checks(sched, DEVICES, check=lambda dev: None)
+    assert len(ids) == 2
+    assert "reachability:core-sw-01" in ids
+    assert "reachability:core-sw-02" in ids
+
+
+def test_probe_one_persists_reachability_with_injected_probe():
+    """_probe_one records the probe result without a socket or the real DB."""
+    from sqlalchemy import create_engine
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.pool import StaticPool
+
+    from netdrift.scheduler import _probe_one
+    from netdrift.storage.models import Base
+    from netdrift.storage.repository import get_device_setting
+
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(engine)
+    session_factory = sessionmaker(bind=engine)
+
+    def fake_check(device):
+        return {
+            "name": device["name"], "reachable": True,
+            "latency_ms": 1.0, "error": None, "checked_at": "2026-06-03T12:00:00Z",
+        }
+
+    _probe_one(
+        {"name": "core-sw-01", "hostname": "h"},
+        session_factory=session_factory, check_fn=fake_check,
+    )
+
+    with session_factory() as s:
+        setting = get_device_setting(s, "core-sw-01")
+        assert setting.reachable is True
+
+
+def test_probe_one_swallows_errors(caplog):
+    from netdrift.scheduler import _probe_one
+
+    def boom(device):
+        raise RuntimeError("probe boom")
+
+    with caplog.at_level("ERROR"):
+        _probe_one(
+            {"name": "core-sw-01"}, session_factory=lambda: None, check_fn=boom
+        )
+    assert any("probe boom" in r.message for r in caplog.records)

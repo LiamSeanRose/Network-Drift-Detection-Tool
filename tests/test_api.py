@@ -89,6 +89,19 @@ def test_inventory_accuracy_endpoint(client, monkeypatch):
     assert client.get("/inventory-accuracy", headers={}).status_code == 200
 
 
+def test_devices_endpoint_includes_reachability(client, monkeypatch):
+    """Each device carries reachability fields; null until the first probe."""
+    import netdrift.api.app as app_module
+    monkeypatch.setattr(app_module, "_load_devices", lambda: {"core-sw-01": {}})
+    response = client.get("/devices")
+    assert response.status_code == 200
+    device = response.json()[0]
+    assert device["name"] == "core-sw-01"
+    assert device["reachable"] is None  # never probed yet
+    assert "reachability_checked_at" in device
+    assert "last_reachable_at" in device
+
+
 def test_drifts_returns_all_events(client):
     response = client.get("/drifts")
     assert response.status_code == 200

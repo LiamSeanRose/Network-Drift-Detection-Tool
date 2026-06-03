@@ -203,11 +203,23 @@ class DeviceSetting(Base):
     last_collected_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    # Lightweight liveness probe (reachability.py), independent of full
+    # collection. ``reachable`` is the last probe result (null = never probed);
+    # ``reachability_checked_at`` is when that probe ran; ``last_reachable_at``
+    # is the most recent time the device answered ("last seen"), retained even
+    # after it goes down so the UI can show how long it has been unreachable.
+    reachable: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    reachability_checked_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    last_reachable_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     def __repr__(self):
         return (
             f"<DeviceSetting device_name={self.device_name!r} "
-            f"paused={self.auto_remediation_paused}>"
+            f"paused={self.auto_remediation_paused} reachable={self.reachable}>"
         )
 
 
