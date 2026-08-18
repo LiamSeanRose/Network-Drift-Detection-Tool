@@ -1,0 +1,1605 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source network drift detection — the self-hosted alternative to NetBox Assurance.">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>netdrift — Pre-Launch Audit & Forward Plan - Network Drift Detection Tool</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#netdrift-pre-launch-audit-forward-plan" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Network Drift Detection Tool" class="md-header__button md-logo" aria-label="Network Drift Detection Tool" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Network Drift Detection Tool
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              netdrift — Pre-Launch Audit &amp; Forward Plan
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/LiamSeanRose/Network-Drift-Detection-Tool" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LiamSeanRose/Network-Drift-Detection-Tool
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../lab/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../deployment/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Deployment & Hardening
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../remediation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Remediation & Auto-Apply
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../schema/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Schema Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../PROJECT_PLAN/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Network Drift Detection Tool" class="md-nav__button md-logo" aria-label="Network Drift Detection Tool" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Network Drift Detection Tool
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/LiamSeanRose/Network-Drift-Detection-Tool" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LiamSeanRose/Network-Drift-Detection-Tool
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment & Hardening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../remediation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Remediation & Auto-Apply
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROJECT_PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#how-to-read-this" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        How to read this
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#0-the-one-paragraph-verdict" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        0. The one-paragraph verdict
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#1-pillar-i-audit-findings-correctness-optimisation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Pillar I — Audit findings (correctness &amp; optimisation)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1. Pillar I — Audit findings (correctness &amp; optimisation)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#11-p0-launch-blockers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.1 P0 — launch blockers
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="1.1 P0 — launch blockers">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#b1-unauthenticated-endpoints-push-config-to-live-devices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B1. Unauthenticated endpoints push config to live devices
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b2-cisco-applier-reports-appliedtrue-after-a-rollback" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B2. Cisco applier reports applied=True after a rollback
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b3-committed-default-credentials-exposed-database-root-containers" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B3. Committed default credentials, exposed database, root containers
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#b4-no-security-disclosure-policy" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        B4. No security disclosure policy
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#12-p1-correctness-data-integrity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.2 P1 — correctness &amp; data integrity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#13-p1-performance-scale-measure-first-these-are-the-reasoned-hot-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.3 P1 — performance &amp; scale (measure first; these are the reasoned hot paths)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#14-p1-security-hardening-the-go-live-checklist" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.4 P1 — security hardening (the go-live checklist)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#15-p1-platform-operations" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.5 P1 — platform &amp; operations
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#16-p1-structural-readiness-what-the-architecture-needs-next-before-v40" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.6 P1 — structural readiness (what the architecture needs next, before v4.0)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#17-p1-test-coverage-on-the-dangerous-paths" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.7 P1 — test coverage on the dangerous paths
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#18-p1-documentation-gaps-that-block-a-safe-launch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1.8 P1 — documentation gaps that block a safe launch
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-pillar-ii-pre-launch-security-the-go-live-gate" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Pillar II — Pre-launch security: the go-live gate
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Pillar II — Pre-launch security: the go-live gate">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#the-decision" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        The decision
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pre-launch-hardening-checklist-demo-mode" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Pre-launch hardening checklist (demo-mode)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#additional-gate-for-the-live-mutating-instance" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Additional gate for the live (mutating) instance
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-pillar-iii-future-roadmap-post-v30" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Pillar III — Future roadmap (post-v3.0)
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Pillar III — Future roadmap (post-v3.0)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#inherited-and-settled-listed-not-re-debated" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Inherited and settled (listed, not re-debated)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#new-re-prioritised" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New / re-prioritised
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-pillar-iv-low-cost-aillm-opportunities" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Pillar IV — Low-cost AI/LLM opportunities
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="4. Pillar IV — Low-cost AI/LLM opportunities">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#build-genuinely-low-cost-and-beneficial" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Build (genuinely low-cost and beneficial)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#defer" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Defer
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#do-not-build-theatre-or-actively-harmful" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Do not build (theatre or actively harmful)
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#appendix-finding-index" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Appendix — finding index
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="netdrift-pre-launch-audit-forward-plan">netdrift — Pre-Launch Audit &amp; Forward Plan<a class="headerlink" href="#netdrift-pre-launch-audit-forward-plan" title="Permanent link">&para;</a></h1>
+<p><strong>Date:</strong> 2026-06-01
+<strong>Method:</strong> design-council review, 9 role-specialised seats, findings-only (no code changed by this pass).
+<strong>Codebase state:</strong> v3.0 merged. Repo is <strong>public</strong>.</p>
+<blockquote>
+<p><strong>Public-repo notice.</strong> This document is a <em>hardening checklist</em> — what to fix, why it
+matters, how to verify. It deliberately contains no step-by-step attack instructions and no
+live-host details. Security findings are written so a maintainer can act on them without
+handing a reader an exploit.</p>
+</blockquote>
+<h2 id="how-to-read-this">How to read this<a class="headerlink" href="#how-to-read-this" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>P0 = launch blocker.</strong> Do not expose a public instance with these open.</li>
+<li><strong>P1 = high.</strong> Fix before the tool is promoted for production use; none individually blocks a
+  read-only demo launch.</li>
+<li>Every finding names evidence (<code>file:line</code>) and an owner side — <strong>Liam</strong> (data-in:
+  <code>collectors/</code>, <code>netbox_client.py</code>, <code>lab/</code>, appliers data side) or <strong>Matthew</strong> (logic-and-out:
+  <code>differ.py</code>, <code>storage/</code>, <code>api/</code>, <code>scheduler.py</code>, <code>frontend/</code>). Items on the schema contract
+  are flagged as proposals — <code>docs/schema.md</code> needs both partners' sign-off.</li>
+<li>Two items are <strong>deliberately deferred and are NOT bugs</strong> (Nokia 57-port chassis noise;
+  Loopback0 not seeded). They are excluded here by design — do not re-raise them.</li>
+</ul>
+<hr />
+<h2 id="0-the-one-paragraph-verdict">0. The one-paragraph verdict<a class="headerlink" href="#0-the-one-paragraph-verdict" title="Permanent link">&para;</a></h2>
+<p>netdrift is in good structural shape for v3.0, and the test suite (378+) is real. But the
+codebase crossed a line at v2.5/v3.0 that the <em>deployment posture has not caught up to</em>: it now
+<strong>pushes configuration to live network devices</strong>, and the API that triggers that push <strong>ships
+with no authentication</strong> (auth is roadmapped for v3.5). For a private lab that is fine. For a
+public instance it is not — unauthenticated plus network-mutating is a whole-network blast
+radius, not a "wait for v3.5" gap. The launch that is safe today is the <strong>read-only demo-mode</strong>
+instance already approved by a prior council. Everything live and mutating waits for v3.5 auth
+plus the hardening below. Separately, the audit found one genuine <strong>correctness bug in the
+config-push path</strong> (Cisco applier reports success after a rollback) that should be fixed
+regardless of launch timing.</p>
+<hr />
+<h2 id="1-pillar-i-audit-findings-correctness-optimisation">1. Pillar I — Audit findings (correctness &amp; optimisation)<a class="headerlink" href="#1-pillar-i-audit-findings-correctness-optimisation" title="Permanent link">&para;</a></h2>
+<h3 id="11-p0-launch-blockers">1.1 P0 — launch blockers<a class="headerlink" href="#11-p0-launch-blockers" title="Permanent link">&para;</a></h3>
+<h4 id="b1-unauthenticated-endpoints-push-config-to-live-devices">B1. Unauthenticated endpoints push config to live devices<a class="headerlink" href="#b1-unauthenticated-endpoints-push-config-to-live-devices" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Evidence:</strong> <code>api/app.py:507</code> (<code>POST /known-issues/{id}/remediate/apply</code>), <code>:425</code> (dry-run),
+  <code>:321</code> / <code>:383</code> (auto-apply enable / per-device pause). The only FastAPI dependency anywhere in
+  the file is <code>get_session</code> — there is no auth dependency on any route.</li>
+<li><strong>Why P0:</strong> anyone who can reach the API can render and push config to real
+  Arista/Cisco/Nokia/Junos devices via NAPALM/gNMI. The blast radius is the managed network, not
+  just drift data. This is the single highest-impact issue in the review.</li>
+<li><strong>Fix:</strong> gate every state-changing route (everything that is not <code>GET /health</code>, <code>GET /drifts*</code>,
+  <code>GET /known-issues*</code>) behind an auth check before public exposure. Minimum viable: a
+  constant-time-compared bearer token from env, 401 on absence/mismatch. Full auth is the v3.5
+  work. If a token gate cannot land first, <strong>do not expose the mutating routes to the public
+  origin at all</strong> (split router / ingress path allow-list).</li>
+<li><strong>Verify:</strong> curl each mutating route with no/invalid token → 401; read-only routes still 200.</li>
+<li><strong>Owner:</strong> Matthew (<code>api/</code>).</li>
+</ul>
+<h4 id="b2-cisco-applier-reports-appliedtrue-after-a-rollback">B2. Cisco applier reports <code>applied=True</code> after a rollback<a class="headerlink" href="#b2-cisco-applier-reports-appliedtrue-after-a-rollback" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Evidence:</strong> <code>appliers/cisco.py:144-160</code> — on a non-empty post-commit diff it logs a warning,
+  calls <code>rollback()</code>, then returns <code>ApplyResult(..., applied=True)</code> unconditionally.
+  <code>tests/test_cisco_applier.py:273</code> asserts <code>applied is True</code> on this path, locking the wrong
+  value in as the tested contract.</li>
+<li><strong>Why P0:</strong> <code>auto_apply.py</code> records this as a success — writes <code>result="success"</code>, increments
+  <code>confirmed_count</code>, leaves <code>auto_apply_enabled</code> live — on a device that IOS-XE did <em>not</em>
+  converge and may have left partially modified. The next scheduler cycle re-applies to a device
+  in an unknown state. This is a correctness bug on the most dangerous path in the system.</li>
+<li><strong>Fix:</strong> return <code>applied=False</code> (or an explicit <code>applied_with_warning</code>) when
+  <code>post_diff.strip()</code> is truthy; correct the test to assert the safe value.</li>
+<li><strong>Verify:</strong> unit test with a non-empty post-commit diff asserts the result is not counted as
+  success by <code>auto_apply</code>.</li>
+<li><strong>Owner:</strong> Liam (applier) with Matthew (the <code>auto_apply</code> success-accounting contract).</li>
+</ul>
+<h4 id="b3-committed-default-credentials-exposed-database-root-containers">B3. Committed default credentials, exposed database, root containers<a class="headerlink" href="#b3-committed-default-credentials-exposed-database-root-containers" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Evidence:</strong> <code>helm/netdrift/values.yaml:53</code> ships <code>password: "changeme"</code>;
+  <code>docker-compose.yml:42</code> sets <code>POSTGRES_PASSWORD: devpassword</code> and <code>:62/:71/:101</code> hardcode it in
+  three <code>DATABASE_URL</code> strings; <code>docker-compose.yml:47</code> binds Postgres <code>5432:5432</code> on all
+  interfaces; <code>dockerfile:9</code> has no <code>USER</code> directive, so api/scheduler/migrate all run as UID 0
+  with the mounted <code>devices.yml</code> (device credentials) readable by root.</li>
+<li><strong>Why P0:</strong> any operator who copies the documented compose/Helm path onto an internet-facing
+  host exposes Postgres with a well-known password and runs every process as root. The dev
+  passwords are now permanent in git history.</li>
+<li><strong>Fix:</strong> (a) replace the Helm literal with a <code>required</code> template guard so an unset password is a
+  hard install error; (b) in compose, move the DB password to <code>${POSTGRES_PASSWORD}</code> (add to
+  <code>.env.example</code>) and bind <code>127.0.0.1:5432:5432</code>; (c) add a system user + <code>USER netdrift</code> to the
+  Dockerfile and <code>securityContext.runAsNonRoot: true</code> to the Helm deployments.</li>
+<li><strong>Verify:</strong> <code>helm template</code> with no password set fails; <code>docker compose config</code> shows no literal
+  password and localhost-only DB binding; <code>docker run ... id</code> shows non-root.</li>
+<li><strong>Owner:</strong> Liam/Matthew joint (deploy surface).</li>
+</ul>
+<h4 id="b4-no-security-disclosure-policy">B4. No security disclosure policy<a class="headerlink" href="#b4-no-security-disclosure-policy" title="Permanent link">&para;</a></h4>
+<ul>
+<li><strong>Evidence:</strong> no <code>SECURITY.md</code> at repo root or <code>.github/</code>.</li>
+<li><strong>Why P0 for a public tool:</strong> a tool that pushes device config and ships an unauthenticated API
+  has the highest-consequence bug class there is. With no private disclosure channel, a researcher
+  who finds an apply-path or SSRF hole either goes public or stays silent. It is the cheapest P0
+  to close.</li>
+<li><strong>Fix:</strong> add <code>SECURITY.md</code> — supported versions, a private contact (GitHub security advisory or
+  email, not public issues), a response-time expectation, and a one-line scope note that pre-v3.5
+  builds ship without API auth (so "no auth" reports aren't duplicate noise). A policy, not an
+  exploit catalogue.</li>
+<li><strong>Owner:</strong> Liam.</li>
+</ul>
+<h3 id="12-p1-correctness-data-integrity">1.2 P1 — correctness &amp; data integrity<a class="headerlink" href="#12-p1-correctness-data-integrity" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Evidence</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>COR1</td>
+<td><strong>Webhook treats HTTP 4xx/5xx as success.</strong> <code>_dispatch</code> logs the status at INFO and never calls <code>raise_for_status()</code>, so a 401/429/503 from Slack/PagerDuty is recorded as delivered and never retried — the notification path fails silently.</td>
+<td><code>webhook.py:200-205</code>; no failing-status test in <code>tests/test_webhook.py</code></td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td>COR2</td>
+<td><strong>Migration downgrade misrepresents data.</strong> <code>c3d4e5f6a1b2</code> restores <code>confirmed_count</code> with <code>server_default='1'</code> on rollback; every existing row gets count=1 rather than the safe 0, which a pre-v2.5 auto-apply gate would read as "one confirmed success."</td>
+<td><code>migrations/versions/c3d4e5f6a1b2_v2_5_remediation.py:69</code></td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td>COR3</td>
+<td><strong><code>dry_run_diff</code> is a misnomer and an enum is out of sync.</strong> Every applier sets <code>dry_run_diff</code> to <code>compare_config()</code> output even on a committed apply (so it holds the diff that <em>was</em> applied), and <code>RemediationEvent.result</code>'s model comment lists <code>"dry_run_only"</code> while <code>auto_apply.py</code> actually writes <code>"blocked"</code>. This is the forensic record of what was pushed to devices — it should say what it means.</td>
+<td><code>appliers/base.py:30-33</code>, <code>appliers/arista.py:99-117</code>, <code>auto_apply.py:160-211</code>, <code>storage/models.py:127-129</code></td>
+<td>Matthew</td>
+</tr>
+</tbody>
+</table>
+<h3 id="13-p1-performance-scale-measure-first-these-are-the-reasoned-hot-paths">1.3 P1 — performance &amp; scale (measure first; these are the reasoned hot paths)<a class="headerlink" href="#13-p1-performance-scale-measure-first-these-are-the-reasoned-hot-paths" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Evidence</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PERF1</td>
+<td><strong><code>drift_events</code> has no index on <code>(device, detected_at)</code>.</strong> Every hot query (<code>get_drifts</code>, <code>get_drift_history</code>) filters/sorts on these columns on the largest table; later tables got their indexes, this one was missed. <code>get_drift_history</code> also materialises all rows in Python before bucketing — push the 5-min bucket into SQL (<code>date_trunc</code>).</td>
+<td><code>migrations/.../133d1490bda7...py:24-35</code>, <code>storage/repository.py:49-90</code></td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td>PERF2</td>
+<td><strong><code>running_config</code> drift payload is unbounded.</strong> A config drift writes the full normalised config into <em>both</em> <code>intent</code> and <code>reality</code> JSON columns, re-created every poll while drift persists; <code>_normalize_config</code> is also called 3× per check on multi-thousand-line configs. Decide a seam: store a unified diff + hash, not two full blobs. (Touches the drift-record contract — proposal, not a unilateral fix.)</td>
+<td><code>differ.py:323-335</code>, <code>storage/models.py:35-36</code>, <code>storage/repository.py:31-44</code></td>
+<td>Matthew + Liam (paired seam)</td>
+</tr>
+<tr>
+<td>PERF3</td>
+<td><strong>N+1 NetBox calls in <code>get_intent</code>.</strong> One <code>ip_addresses.filter(interface_id=...)</code> HTTP round-trip per interface — 26 calls for a 24-port switch, ~50 for a 48-port chassis, sequential, every poll. Replace with one <code>filter(device_id=...)</code> and a local join.</td>
+<td><code>netbox_client.py:218-222</code></td>
+<td>Liam</td>
+</tr>
+<tr>
+<td>PERF4</td>
+<td><strong>N+1 <code>COUNT(*)</code> on <code>GET /drifts</code>.</strong> <code>confirmed_count</code> is called once per known issue in a dict comprehension → K+2 queries per dashboard fetch. Replace with one <code>GROUP BY known_issue_id</code>. Same pattern on <code>GET /known-issues</code>.</td>
+<td><code>api/app.py:253-254</code>, <code>repository.py:172-184</code></td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td>PERF5</td>
+<td><strong>Syslog repoll has no per-device rate limit.</strong> A flapping device or syslog storm queues unbounded one-shot repoll jobs, each opening NAPALM/gNMI + a NetBox call — thread exhaustion. Add a per-device cooldown. <em>(An <code>origin/fix/syslog-cooldown-sentinel</code> branch may already address this — reconcile before filing.)</em></td>
+<td><code>scheduler.py:204-218</code>, <code>syslog_receiver.py</code></td>
+<td>Liam/Matthew</td>
+</tr>
+</tbody>
+</table>
+<h3 id="14-p1-security-hardening-the-go-live-checklist">1.4 P1 — security hardening (the go-live checklist)<a class="headerlink" href="#14-p1-security-hardening-the-go-live-checklist" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Evidence</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>SEC1</td>
+<td><strong>Pin CORS explicitly.</strong> No <code>CORSMiddleware</code> today (safe by default), but nothing <em>records</em> that intent — the next person who "fixes" the dashboard with <code>allow_origins=["*"]</code> turns an unauthenticated mutating API into a drive-by target. Serve the dashboard same-origin, or set an exact allow-list; forbid wildcard while the API is unauthenticated.</td>
+<td><code>grep CORSMiddleware src/ → 0 hits</code>; <code>frontend/vite.config.js:9</code></td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td>SEC2</td>
+<td><strong>Bound <code>limit</code> and <code>hours</code>.</strong> Both are untyped-bound ints flowing straight into queries; <code>?hours=876000</code> forces a full-history scan into memory on the unauthenticated box. Add FastAPI <code>Query(ge=1, le=...)</code> (e.g. limit ≤ 1000, hours ≤ 168). <em>(Reported independently by three seats.)</em></td>
+<td><code>api/app.py:241,248</code></td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td>SEC3</td>
+<td><strong>Ingress has no TLS and no edge auth.</strong> If an operator flips <code>ingress.enabled=true</code>, the API and its data serve over plaintext with no edge protection. Make TLS the default expectation for public ingress; document that public exposure requires HTTPS + an edge auth layer until v3.5.</td>
+<td><code>helm/netdrift/templates/ingress.yaml</code>, <code>values.yaml:24-28</code></td>
+<td>Liam/Matthew</td>
+</tr>
+<tr>
+<td>SEC4</td>
+<td><strong>Sanitise apply error responses.</strong> <code>detail=f"Apply failed: {exc}"</code> / <code>"Dry-run failed: {exc}"</code> echo raw NAPALM/gNMI exception text — hostnames, IPs, partial config — to an unauthenticated client. Return a generic message + server-side ref; log the detail. (Webhook handling is already good: <code>webhook.py:47</code> redacts the URL, <code>_validate_url</code> blocks SSRF.)</td>
+<td><code>api/app.py:485,571,601</code></td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td>SEC5</td>
+<td><strong>Keep the webhook SSRF guard singular.</strong> Outbound webhook is the one attacker-influenceable request from inside the network, dispatched from <em>two</em> paths (scheduler + API). Ensure both funnel through one validated <code>WebhookDispatcher.fire</code>, and <code>WEBHOOK_ALLOW_PRIVATE</code> is read in exactly one place — not re-implemented per path.</td>
+<td><code>webhook.py</code>, <code>auto_apply.py</code>, <code>api/app.py</code> background dispatch</td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td>SEC6</td>
+<td><strong><code>httpx</code> is a production dependency declared dev-only.</strong> Prod <code>webhook.py</code> imports <code>httpx</code>, but it sits under <code>[project.optional-dependencies].dev</code>, and the Dockerfile installs without dev extras — a production/container install can fail to import the webhook path. Move <code>httpx</code> to the main <code>[project]</code> dependencies.</td>
+<td><code>pyproject.toml:27</code> vs <code>webhook.py</code></td>
+<td>Liam/Matthew</td>
+</tr>
+</tbody>
+</table>
+<h3 id="15-p1-platform-operations">1.5 P1 — platform &amp; operations<a class="headerlink" href="#15-p1-platform-operations" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Evidence</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>OPS1</td>
+<td><strong>Helm deployments have no resource limits and the scheduler has no liveness probe.</strong> A runaway poll consumes unbounded node CPU/memory; a deadlocked scheduler thread is never restarted (the API has a <code>/health</code> probe; the scheduler has none). Add <code>resources:</code> and a scheduler liveness check.</td>
+<td><code>helm/netdrift/templates/{api,scheduler}-deployment.yaml</code>, <code>values.yaml</code></td>
+<td>Liam/Matthew</td>
+</tr>
+<tr>
+<td>OPS2</td>
+<td><strong>The Helm chart points at an image CI never builds.</strong> <code>values.yaml:6</code> references <code>ghcr.io/liamseanrose/...</code> but <code>.github/workflows/</code> only lints+tests — nothing builds or pushes the image, so a fresh <code>helm install</code> pulls a tag that does not exist. Add a <code>release.yml</code> (SHA-pinned <code>build-push-action</code>) on <code>v*</code> tags.</td>
+<td><code>helm/netdrift/values.yaml:6</code>, <code>_helpers.tpl:52-54</code>, <code>.github/workflows/</code></td>
+<td>Liam/Matthew</td>
+</tr>
+<tr>
+<td>OPS3</td>
+<td><strong>Database growth needs a TTL before any public instance.</strong> ~2–4 GB/year of <code>drift_events</code> at 10 devices / 5-min polls; the Helm PVC defaults to 5 Gi (~fills in months). The v3.5 retention migration is <strong>mandatory</strong> before promoting a public box; raise the PVC default to 20 Gi with a documented growth model; add a TTL for <code>RemediationEvent</code> rows too.</td>
+<td><code>ROADMAP_POST_V2.5.md:302</code>, <code>helm/netdrift/values.yaml:51</code>, <code>storage/models.py</code></td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td>OPS4</td>
+<td><strong>Syslog receiver uses <code>print()</code>.</strong> The two operational signals (bind, per-trigger poll) bypass the logging framework — no level, no timestamp, invisible to log aggregation. Use <code>logging.getLogger("netdrift.syslog_receiver")</code>.</td>
+<td><code>syslog_receiver.py:72,108</code></td>
+<td>Liam</td>
+</tr>
+</tbody>
+</table>
+<h3 id="16-p1-structural-readiness-what-the-architecture-needs-next-before-v40">1.6 P1 — structural readiness (what the architecture needs next, before v4.0)<a class="headerlink" href="#16-p1-structural-readiness-what-the-architecture-needs-next-before-v40" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Evidence</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>ARCH1</td>
+<td><strong>Promote one canonical <code>fingerprint(drift) -&gt; str</code>.</strong> The <code>object_type\|field\|drift_kind</code> identity that ties drift → known-issue → pattern → fuzzy-match is re-derived in <code>auto_apply._fingerprint</code>, <code>diagnose.py</code>'s tuple keys, and will be again in the v4.0 pattern loader and v5.0 <code>fingerprint.py</code>. The whole post-v3.0 pattern/matching roadmap depends on this string matching exactly — give it one owner before v4.0 opens.</td>
+<td><code>auto_apply.py:53-56</code>, <code>diagnose.py:1-60</code>, <code>fingerprint.py</code></td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td>ARCH2</td>
+<td><strong>De-duplicate intent-resolution.</strong> <code>cli.py</code> re-implements <code>_resolve_intent_fn</code> byte-for-byte from <code>pipeline.py</code> and repeats the collector-dispatch-or-error block. The registry unified the collector <em>table</em> but not the glue around it — a divergence trap as more intent sources land. Extract one shared resolver.</td>
+<td><code>cli.py:31-45,111-117</code> vs <code>pipeline.py:37-51,95-101</code></td>
+<td>Liam + Matthew</td>
+</tr>
+</tbody>
+</table>
+<h3 id="17-p1-test-coverage-on-the-dangerous-paths">1.7 P1 — test coverage on the dangerous paths<a class="headerlink" href="#17-p1-test-coverage-on-the-dangerous-paths" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Evidence</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>TEST1</td>
+<td><strong>No partial-failure test for multi-drift auto-apply.</strong> The most dangerous path (pushes config to multiple devices in one call) has no test for "two matched issues, one succeeds, one fails" — including whether the consecutive-failure counter is contaminated by a mid-loop commit.</td>
+<td><code>tests/test_auto_apply.py:427</code>; <code>auto_apply.py</code> loop</td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td>TEST2</td>
+<td><strong>Nokia gNMI fixtures are unvalidated against a live device.</strong> The BGP/OSPF collector is live pipeline code, but its tests pass against <code>FakeGNMIClient</code> shapes hand-derived from the YANG spec. Add <code>pytest.mark.xfail</code>/<code>skip</code> with the documented reason so the team is forced to re-verify when the Nokia gets routing — otherwise false-green tests mask a live collection failure.</td>
+<td><code>tests/test_nokia.py</code>, <code>collectors/nokia.py</code>, conventions note</td>
+<td>Liam</td>
+</tr>
+</tbody>
+</table>
+<h3 id="18-p1-documentation-gaps-that-block-a-safe-launch">1.8 P1 — documentation gaps that block a safe launch<a class="headerlink" href="#18-p1-documentation-gaps-that-block-a-safe-launch" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Finding</th>
+<th>Evidence</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DOC1</td>
+<td><strong>Docs say v1.0; the code is v3.0.</strong> README and <code>docs/index.md</code> describe a v1.0 <em>detector</em> and omit that the tool now writes config back to devices — the single most important safety fact about it. Update status/features (Cisco + Juniper, config-level drift, opt-in auto-remediation, webhooks, remediate/apply API); re-verify the Quickstart runs.</td>
+<td><code>README.md:8</code>, <code>docs/index.md:59</code></td>
+<td>Liam</td>
+</tr>
+<tr>
+<td>DOC2</td>
+<td><strong>Auto-remediation is undocumented for users.</strong> Zero user-facing hits for remediate/auto-apply/webhook; the three-layer kill-switch (<code>AUTO_REMEDIATION_ENABLED</code> → per-issue <code>auto_apply_enabled</code> → per-device pause), the do-not-apply list, and the dry-run flow live only in <code>.env.example</code> and <code>schema.md §9</code>. Add <code>docs/remediation.md</code> (linked in <code>mkdocs.yml</code>): what apply does, the kill-switches, "off by default."</td>
+<td><code>grep remediat README.md docs/ → 0</code></td>
+<td>Matthew (with Liam)</td>
+</tr>
+<tr>
+<td>DOC3</td>
+<td><strong>No deploy/operations + secrets-hardening guide.</strong> No document tells an operator how to run netdrift safely against a real network. Add <code>docs/deployment.md</code>: prod env vars, "change the default Postgres password," do-not-expose-the-API-until-v3.5-auth guidance, the webhook SSRF note, Helm quickstart — as a hardening checklist, not exploit detail.</td>
+<td>no <code>docs/*deploy*</code> / <code>*security*</code></td>
+<td>Liam</td>
+</tr>
+</tbody>
+</table>
+<p><em>P2 follow-ups (noted, not filed): the two <code>CONTRIBUTING</code> files diverge; there is no
+<code>CHANGELOG.md</code> for a release-tagged public tool.</em></p>
+<hr />
+<h2 id="2-pillar-ii-pre-launch-security-the-go-live-gate">2. Pillar II — Pre-launch security: the go-live gate<a class="headerlink" href="#2-pillar-ii-pre-launch-security-the-go-live-gate" title="Permanent link">&para;</a></h2>
+<h3 id="the-decision">The decision<a class="headerlink" href="#the-decision" title="Permanent link">&para;</a></h3>
+<p><strong>Recommendation: launch the read-only demo-mode instance now; gate the live, mutating
+instance behind v3.5 auth plus the SEC/B hardening above.</strong></p>
+<p>This is not a new tradeoff — a prior council already settled on demo-mode (static seeded data,
+no scheduler, no live devices) as the public-launch vehicle. That decision also <em>resolves</em> the
+security seat's BLOCK: demo-mode never exposes the network-mutating surface, so B1 and the apply
+paths are simply not reachable on the public box. The "zero known vulnerabilities at go-live"
+bar is reachable for demo-mode once B3, B4, SEC1, SEC2, and SEC4 are closed.</p>
+<p>The live instance is a separate gate. It should not be publicly reachable until: v3.5 auth lands
+(B1), TLS + edge auth front it (SEC3), error responses are sanitised (SEC4), and the webhook
+SSRF guard is confirmed singular (SEC5).</p>
+<blockquote>
+<p><strong>This is the one item to confirm with Liam.</strong> The recommendation aligns with the settled
+demo-mode plan, but "go public before v3.5" is a product/risk call. If the answer is "live
+data now," then B1 (a bearer-token gate) becomes a hard P0 prerequisite, not a v3.5 item.</p>
+</blockquote>
+<h3 id="pre-launch-hardening-checklist-demo-mode">Pre-launch hardening checklist (demo-mode)<a class="headerlink" href="#pre-launch-hardening-checklist-demo-mode" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] <strong>B4</strong> <code>SECURITY.md</code> with a private disclosure channel.</li>
+<li>[ ] <strong>B3</strong> No default credentials; DB bound to localhost; containers non-root.</li>
+<li>[x] <strong>SEC1</strong> CORS posture pinned (same-origin preferred); wildcard forbidden.</li>
+<li>[x] <strong>SEC2</strong> <code>limit</code>/<code>hours</code> bounded at the API boundary.</li>
+<li>[x] <strong>SEC4</strong> Apply/dry-run error responses sanitised.</li>
+<li>[ ] <strong>SEC6</strong> <code>httpx</code> moved to runtime dependencies (prod import path works).</li>
+<li>[ ] <strong>DOC3</strong> Deployment/hardening guide published.</li>
+</ul>
+<h3 id="additional-gate-for-the-live-mutating-instance">Additional gate for the live (mutating) instance<a class="headerlink" href="#additional-gate-for-the-live-mutating-instance" title="Permanent link">&para;</a></h3>
+<ul>
+<li>[ ] <strong>B1</strong> Auth on every state-changing route (v3.5).</li>
+<li>[ ] <strong>SEC3</strong> TLS + edge auth in front of the ingress.</li>
+<li>[ ] <strong>SEC5</strong> Single validated webhook dispatch path.</li>
+</ul>
+<hr />
+<h2 id="3-pillar-iii-future-roadmap-post-v30">3. Pillar III — Future roadmap (post-v3.0)<a class="headerlink" href="#3-pillar-iii-future-roadmap-post-v30" title="Permanent link">&para;</a></h2>
+<h3 id="inherited-and-settled-listed-not-re-debated">Inherited and settled (listed, not re-debated)<a class="headerlink" href="#inherited-and-settled-listed-not-re-debated" title="Permanent link">&para;</a></h3>
+<p>v3.5 API auth + drift-acknowledge behind it; the <code>WebhookDispatcher</code> daemon-thread pattern;
+per-device <code>auto_remediation_paused</code> kill-switch; Juniper as Liam's parallel track; static
+landing page + MkDocs docs site on free Pages hosting; demo-mode as the public-launch vehicle.</p>
+<h3 id="new-re-prioritised">New / re-prioritised<a class="headerlink" href="#new-re-prioritised" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>R1 — Pull firmware-version drift and change-window suppression into v3.5.</strong> Both are among
+  the highest value-to-effort items in the backlog (~1 week combined) but sit unscheduled in
+  <code>PROPOSED_ADDITIONS.md</code> while 4–8-week items are version-locked. Firmware drift
+  (<code>get_facts().os_version</code> vs intent) is the most universally relevant drift type and needs only
+  a one-line schema field (<code>software_version: str</code> — two-partner sign-off). Change-window
+  suppression directly serves v3.5's "safe in a shared environment" theme and shares the
+  suppression code path with drift-acknowledge. <em>(Evidence: <code>PROPOSED_ADDITIONS.md:135-157,
+  236-267</code>.)</em></li>
+<li><strong>R2 — Make demo-mode the default first-run experience, not just hosting plumbing.</strong> Today a
+  user needs NetBox + Containerlab + a vendor image + Postgres before seeing a single drift
+  event — a funnel that kills most evaluators. <code>pip install</code> → <code>driftcheck demo</code> → a dashboard
+  with realistic seeded drift (the pattern Grafana/Sentry/Supabase all ship) should be step 1 of
+  the README. This builds on the settled demo-mode decision rather than re-opening it.</li>
+<li><strong>Structural prerequisites:</strong> ARCH1 (canonical fingerprint) is the gate for the v4.0 pattern
+  library and v5.0 fuzzy matching — land it before that work opens.</li>
+</ul>
+<hr />
+<h2 id="4-pillar-iv-low-cost-aillm-opportunities">4. Pillar IV — Low-cost AI/LLM opportunities<a class="headerlink" href="#4-pillar-iv-low-cost-aillm-opportunities" title="Permanent link">&para;</a></h2>
+<p>Framing from the review: netdrift already has a deterministic <code>diagnose.py</code> cause-hint table and
+a deterministic fingerprint/matching core. Those are assets, not gaps — the bar for "why AI beats
+what's here" is therefore <em>high</em>, and every credible LLM feature must <strong>augment, not replace</strong>
+the deterministic paths. The right shape for an open-source, self-hostable tool is: <strong>opt-in,
+read-only, generate-once-and-cache, local model by default, bring-your-own-key for hosted.</strong></p>
+<h3 id="build-genuinely-low-cost-and-beneficial">Build (genuinely low-cost and beneficial)<a class="headerlink" href="#build-genuinely-low-cost-and-beneficial" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>AI1 — Natural-language drift explanations.</strong> Give an LLM the actual intent/reality values +
+  platform + co-occurring drift; get a specific plain-English root-cause hint ("Ethernet3 is
+  admin-down but intent expects up; went down 14:32 alongside 3 other ports — likely a bulk
+  shut"). The static <code>diagnose.py</code> table is the offline fallback <em>and</em> the grounding prompt.
+  <strong>Cost:</strong> ~100–200 input + ~250 output tokens per event ≈ <strong>$0.0002</strong> on a small hosted model
+  (gpt-4o-mini), ~<strong>$6/month</strong> at 1,000 events/day — or <strong>$0</strong> self-hosted (Ollama <code>llama3.2:3b</code>
+  on the lab VM). The design choices that keep it cheap: store the result in a nullable
+  <code>explanation</code> column keyed on fingerprint (one explanation per <em>structural</em> drift, not per
+  row); generate on the scheduler cycle, <strong>never</strong> on the <code>GET /drifts</code> read path. The expensive-
+  theatre failure mode is a hosted call per page load with no cache. <em>(Ties into ARCH1: the
+  fingerprint is the cache key.)</em></li>
+<li><strong>AI2 — Remediation summaries.</strong> Same token profile as AI1; input is the existing
+  <code>rendered_commands</code> + <code>dry_run_diff</code>. Ship alongside AI1.</li>
+<li><strong>AI3 — Root-cause hints for novel fingerprints.</strong> Adds value only where no <code>KnownIssue.cause</code>
+  exists yet; low cost. Build after AI1/AI2.</li>
+<li><strong>AI4 — Anomaly triage (expected noise vs real incident).</strong> Low cost (~500 tokens), pairs with
+  v3.5 SLA alerting, but needs enough history to evaluate accuracy first — target v4.5.</li>
+</ul>
+<h3 id="defer">Defer<a class="headerlink" href="#defer" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>AI5 — Chat-over-drift-history.</strong> <em>Council arbitrated.</em> Product valued it as the second-best
+  AI bet; finops costed it at RAG over a 21M-row/year table, ~$25/month, and 4–8 weeks of
+  chunking infrastructure for a feature one engineer uses at a time. <strong>Decision: DEFER</strong> — the
+  value is convenience, not insight, and the dashboard already serves the common cases. <em>Revisit
+  when:</em> there is multi-user demand, or after AI1 ships and the v3.5 retention TTL bounds history
+  size. If built, it must be strictly read-only and must emit the structured query it ran.</li>
+</ul>
+<h3 id="do-not-build-theatre-or-actively-harmful">Do not build (theatre or actively harmful)<a class="headerlink" href="#do-not-build-theatre-or-actively-harmful" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Config translation between vendors</strong> — not a cost problem, a <em>reliability</em> problem; output
+  needs human review every time, which eliminates the automation value. <strong>Block</strong> until a
+  validation harness exists.</li>
+<li><strong>LLM-generated remediation config</strong> — dangerous: the appliers push to live devices with a
+  whole-network blast radius; a hallucinated snippet is a P0 outage. An LLM may <em>suggest</em> a fix
+  for human review, but must <strong>never</strong> feed the auto-apply path. Remediation stays the settled
+  deterministic <code>restore_intent</code>/<code>raw_snippet</code> union.</li>
+<li><strong>LLM-based fuzzy fingerprint matching</strong> — already correctly rejected in the roadmap; embeddings
+  break the self-hosted 2-vCPU promise, and template-normalisation + Jaccard solves it
+  deterministically and testably. Do not reopen.</li>
+<li><strong>Opaque AI anomaly <em>scoring</em></strong> (distinct from AI4's triage) — an unexplained score over a tool
+  whose entire value is <em>explainable, auditable</em> diffs is a net negative for trust.</li>
+</ul>
+<p><strong>Net AI recommendation:</strong> build AI1 + AI2 now as opt-in, read-only, cached add-ons defaulting to
+a local model; everything touching device config or the matching core stays deterministic.</p>
+<hr />
+<h2 id="appendix-finding-index">Appendix — finding index<a class="headerlink" href="#appendix-finding-index" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Pillar</th>
+<th>Priority</th>
+<th>Seat(s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>B1</td>
+<td>Security/Audit</td>
+<td>P0</td>
+<td>security, technical-writer</td>
+</tr>
+<tr>
+<td>B2</td>
+<td>Audit</td>
+<td>P0</td>
+<td>test</td>
+</tr>
+<tr>
+<td>B3</td>
+<td>Security</td>
+<td>P0</td>
+<td>devops (+security, platform)</td>
+</tr>
+<tr>
+<td>B4</td>
+<td>Docs/Security</td>
+<td>P0</td>
+<td>technical-writer</td>
+</tr>
+<tr>
+<td>COR1</td>
+<td>Audit</td>
+<td>P1</td>
+<td>test</td>
+</tr>
+<tr>
+<td>COR2</td>
+<td>Audit</td>
+<td>P1</td>
+<td>platform</td>
+</tr>
+<tr>
+<td>COR3</td>
+<td>Audit</td>
+<td>P1</td>
+<td>principal</td>
+</tr>
+<tr>
+<td>PERF1</td>
+<td>Performance</td>
+<td>P1</td>
+<td>platform, performance</td>
+</tr>
+<tr>
+<td>PERF2</td>
+<td>Performance</td>
+<td>P1</td>
+<td>principal, performance</td>
+</tr>
+<tr>
+<td>PERF3</td>
+<td>Performance</td>
+<td>P1</td>
+<td>performance</td>
+</tr>
+<tr>
+<td>PERF4</td>
+<td>Performance</td>
+<td>P1</td>
+<td>performance</td>
+</tr>
+<tr>
+<td>PERF5</td>
+<td>Performance</td>
+<td>P1</td>
+<td>finops</td>
+</tr>
+<tr>
+<td>SEC1–SEC6</td>
+<td>Security</td>
+<td>P1</td>
+<td>security (+principal)</td>
+</tr>
+<tr>
+<td>OPS1–OPS4</td>
+<td>Platform</td>
+<td>P1</td>
+<td>platform, devops, finops</td>
+</tr>
+<tr>
+<td>ARCH1–ARCH2</td>
+<td>Architecture</td>
+<td>P1</td>
+<td>principal</td>
+</tr>
+<tr>
+<td>TEST1–TEST2</td>
+<td>Testing</td>
+<td>P1</td>
+<td>test</td>
+</tr>
+<tr>
+<td>DOC1–DOC3</td>
+<td>Docs</td>
+<td>P1</td>
+<td>technical-writer</td>
+</tr>
+<tr>
+<td>R1–R2</td>
+<td>Roadmap</td>
+<td>feature</td>
+<td>product</td>
+</tr>
+<tr>
+<td>AI1–AI5</td>
+<td>AI/LLM</td>
+<td>feature</td>
+<td>product, finops</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Glossary:</strong> <em>drift</em> — a difference between intent and reality. <em>intent</em> — desired state from
+NetBox/Nautobot. <em>reality</em> — live device state. <em>remediation</em> — config that restores intent.
+<em>restore_intent</em> — the deterministic, auto-apply-eligible remediation grant. <em>known_issue</em> — a
+recognised, fingerprinted recurring drift. <em>fingerprint</em> — the <code>object_type|field|drift_kind</code>
+identity of a drift.</p>
+<p><em>Generated by a design-council review pass on 2026-06-01. Findings only — no code was changed.
+Detailed orchestration log retained outside the repo.</em></p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.top", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>

@@ -1,0 +1,1075 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Open-source network drift detection — the self-hosted alternative to NetBox Assurance.">
+      
+      
+      
+      
+      
+      
+        
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.7">
+    
+    
+      
+        <title>docs/schema-v4.75-tunnels-proposal.md — Tunnel/Overlay Drift (Proposal) - Network Drift Detection Tool</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.ec1eaa64.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#docsschema-v475-tunnels-proposalmd-tunneloverlay-drift-proposal" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="Network Drift Detection Tool" class="md-header__button md-logo" aria-label="Network Drift Detection Tool" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Network Drift Detection Tool
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              docs/schema-v4.75-tunnels-proposal.md — Tunnel/Overlay Drift (Proposal)
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a4 4 0 0 0-4 4 4 4 0 0 0 4 4 4 4 0 0 0 4-4 4 4 0 0 0-4-4m0 10a6 6 0 0 1-6-6 6 6 0 0 1 6-6 6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="indigo" data-md-color-accent="indigo"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 18c-.89 0-1.74-.2-2.5-.55C11.56 16.5 13 14.42 13 12s-1.44-4.5-3.5-5.45C10.26 6.2 11.11 6 12 6a6 6 0 0 1 6 6 6 6 0 0 1-6 6m8-9.31V4h-4.69L12 .69 8.69 4H4v4.69L.69 12 4 15.31V20h4.69L12 23.31 15.31 20H20v-4.69L23.31 12z"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/LiamSeanRose/Network-Drift-Detection-Tool" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LiamSeanRose/Network-Drift-Detection-Tool
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href=".." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../lab/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Getting Started
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../deployment/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Deployment & Hardening
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../remediation/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Remediation & Auto-Apply
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../schema/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Schema Reference
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../PROJECT_PLAN/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Roadmap
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../contributing/" class="md-tabs__link">
+        
+  
+  
+    
+  
+  Contributing
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="Network Drift Detection Tool" class="md-nav__button md-logo" aria-label="Network Drift Detection Tool" data-md-component="logo">
+      
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+
+    </a>
+    Network Drift Detection Tool
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/LiamSeanRose/Network-Drift-Detection-Tool" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    LiamSeanRose/Network-Drift-Detection-Tool
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../lab/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../deployment/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Deployment & Hardening
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../remediation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Remediation & Auto-Apply
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../schema/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Schema Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../PROJECT_PLAN/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Roadmap
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#1-purpose-of-this-document" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Purpose of this document
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#2-proposed-device-state-addition" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Proposed device-state addition
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="2. Proposed device-state addition">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#new-field-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        New field reference
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#3-decisions-and-rationale" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Decisions and rationale
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="3. Decisions and rationale">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#decision-1-tunnels-is-an-optional-top-level-key-not-always-present" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision 1 — tunnels is an optional top-level key, not always-present
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision-2-keyed-by-tunnel-interface-name-scoped-to-gre-vti-in-v1" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision 2 — keyed by tunnel interface name, scoped to GRE + VTI in v1
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision-3-tunnel_state-is-the-one-operational-field-by-analogy-to-session_state" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision 3 — tunnel_state is the one operational field, by analogy to session_state
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision-4-source-and-destination-are-plain-strings-when-unset" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision 4 — source and destination are plain strings, "" when unset
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision-5-intent-comes-from-netbox-local_context_data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision 5 — intent comes from NetBox local_context_data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#decision-6-no-napalm-getter-exists-this-is-per-vendor-collection" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Decision 6 — no NAPALM getter exists; this is per-vendor collection
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#4-proposed-severity-defaults" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        4. Proposed severity defaults
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#5-open-questions-for-the-schema-call" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        5. Open questions for the schema call
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#6-ownership-from-the-v475-ownership-table" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        6. Ownership (from the v4.75 ownership table)
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="docsschema-v475-tunnels-proposalmd-tunneloverlay-drift-proposal"><code>docs/schema-v4.75-tunnels-proposal.md</code> — Tunnel/Overlay Drift (Proposal)<a class="headerlink" href="#docsschema-v475-tunnels-proposalmd-tunneloverlay-drift-proposal" title="Permanent link">&para;</a></h1>
+<blockquote>
+<p><strong>Status:</strong> Folded into <code>docs/schema.md</code> on branch <code>feat/v4.75-tunnel-drift</code>
+(2026-06-02) — <strong>pending Matthew's <code>schema-sign-off</code></strong> before that PR merges.
+<strong>Owner:</strong> Liam (data-in). <strong>Requires:</strong> both partners' sign-off on the schema
+shape (<code>schema-sign-off</code>).
+<strong>Gate:</strong> v4.0 is functionally complete (all DoD items checked) but not yet
+tagged; Liam directed the implementation PR to proceed ahead of the tag,
+accepting minor rework risk, consistent with the collectors already merged.</p>
+</blockquote>
+<hr />
+<h2 id="1-purpose-of-this-document">1. Purpose of this document<a class="headerlink" href="#1-purpose-of-this-document" title="Permanent link">&para;</a></h2>
+<p>v4.75 extends drift detection to overlay tunnels — GRE and VTI to start. It adds
+one optional top-level block, <code>tunnels</code>, to the device-state object. This follows
+the same path the <code>bgp_neighbors</code> and <code>ospf</code> blocks took in the v0.3 proposal:
+agree the normalized shape here, ratify each decision, then fold it into
+<code>docs/schema.md</code> Section 2 in a separate implementation PR.</p>
+<p>The design council (2026-06-01) approved tunnel drift as "clean, in-identity,
+fits the existing architecture exactly." Its one hard constraint: a device with
+no tunnels must produce zero diff noise. The optional-key design below delivers
+that by construction.</p>
+<hr />
+<h2 id="2-proposed-device-state-addition">2. Proposed device-state addition<a class="headerlink" href="#2-proposed-device-state-addition" title="Permanent link">&para;</a></h2>
+<p>A new <strong>optional</strong> top-level key, <code>tunnels</code>. Unlike <code>bgp_neighbors</code> (always <code>{}</code>)
+and <code>ospf</code> (always <code>{"adjacencies": {}}</code>), <code>tunnels</code> may be <strong>absent entirely</strong>.
+A collector that does not implement tunnels, and an intent with none declared,
+both omit the key. The differ reads it with <code>.get("tunnels", {})</code>, so absent on
+both sides compares nothing — no diff noise on the 99% of devices with no
+overlay.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>    <span class="c1"># ... existing interfaces / vlans / bgp_neighbors / ospf / running_config ...</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>    <span class="c1"># --- v4.75 addition (optional) ---</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>    <span class="s2">"tunnels"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>        <span class="c1"># key = canonical tunnel interface name (Rule 1 applies: full, not "Tu0")</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>        <span class="s2">"Tunnel0"</span><span class="p">:</span> <span class="p">{</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>            <span class="s2">"type"</span><span class="p">:</span> <span class="s2">"gre"</span><span class="p">,</span>                  <span class="c1"># "gre" | "vti"</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>            <span class="s2">"source"</span><span class="p">:</span> <span class="s2">"192.0.2.1"</span><span class="p">,</span>          <span class="c1"># str — local endpoint IP, "" if unset</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>            <span class="s2">"destination"</span><span class="p">:</span> <span class="s2">"198.51.100.1"</span><span class="p">,</span>  <span class="c1"># str — remote endpoint IP, "" if unset</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>            <span class="s2">"enabled"</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>                <span class="c1"># bool — admin state (no shutdown)</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a>            <span class="s2">"tunnel_state"</span><span class="p">:</span> <span class="s2">"up"</span><span class="p">,</span>           <span class="c1"># str, lower-cased — operational, IS drift</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>        <span class="p">},</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a>    <span class="p">},</span>
+<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="new-field-reference">New field reference<a class="headerlink" href="#new-field-reference" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tunnels</code></td>
+<td><code>dict</code> (optional)</td>
+<td>Overlay tunnels keyed by canonical tunnel interface name. Key absent or <code>{}</code> = no tunnel intent and none collected.</td>
+</tr>
+<tr>
+<td><code>tunnels[].type</code></td>
+<td><code>str</code></td>
+<td>Encapsulation: <code>gre</code> or <code>vti</code>. A discriminator that lets the block grow to other types later without reshaping.</td>
+</tr>
+<tr>
+<td><code>tunnels[].source</code></td>
+<td><code>str</code></td>
+<td>Tunnel source (local endpoint) IP. <code>""</code> if unset — never <code>None</code> (Rule 4).</td>
+</tr>
+<tr>
+<td><code>tunnels[].destination</code></td>
+<td><code>str</code></td>
+<td>Tunnel destination (remote endpoint) IP. <code>""</code> if unset — never <code>None</code>.</td>
+</tr>
+<tr>
+<td><code>tunnels[].enabled</code></td>
+<td><code>bool</code></td>
+<td>Administrative state: configured <code>no shutdown</code> vs shut. Mirrors <code>interfaces[].enabled</code>.</td>
+</tr>
+<tr>
+<td><code>tunnels[].tunnel_state</code></td>
+<td><code>str</code></td>
+<td>Operational line-protocol state, lower-cased (<code>up</code>, <code>down</code>). Operational but in scope for drift, exactly like <code>session_state</code> (Rule 10).</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2 id="3-decisions-and-rationale">3. Decisions and rationale<a class="headerlink" href="#3-decisions-and-rationale" title="Permanent link">&para;</a></h2>
+<h3 id="decision-1-tunnels-is-an-optional-top-level-key-not-always-present">Decision 1 — <code>tunnels</code> is an optional top-level key, not always-present<a class="headerlink" href="#decision-1-tunnels-is-an-optional-top-level-key-not-always-present" title="Permanent link">&para;</a></h3>
+<p>The council's binding constraint is "no diff noise for devices without tunnels."
+Making the key optional (vs the always-present <code>{}</code>/<code>{"adjacencies": {}}</code> of BGP
+and OSPF) means a collector with no tunnel support and an intent with no tunnels
+declared are byte-identical: the key is simply not there. The differ's
+<code>.get("tunnels", {})</code> already has precedent in <code>running_config</code> and
+<code>software_version</code>, which skip when either side is empty.</p>
+<h3 id="decision-2-keyed-by-tunnel-interface-name-scoped-to-gre-vti-in-v1">Decision 2 — keyed by tunnel interface name, scoped to GRE + VTI in v1<a class="headerlink" href="#decision-2-keyed-by-tunnel-interface-name-scoped-to-gre-vti-in-v1" title="Permanent link">&para;</a></h3>
+<p>GRE and VTI are interface-based: each is a <code>Tunnel0</code> / <code>gr-0/0/0.0</code> interface with
+a clear admin state and a single line-protocol up/down. That maps cleanly onto the
+existing per-object model and onto the council's "tunnel-down-when-intent-up =
+critical" signal. Policy-based IPsec SAs (no interface, keyed by peer) and MPLS
+LDP sessions (keyed by LDP router-id) are a different shape and are <strong>deferred</strong>
+(see Open Questions). Starting interface-based keeps v1 honest, the way v0.3
+captured "intent-like BGP fields, not full telemetry."</p>
+<h3 id="decision-3-tunnel_state-is-the-one-operational-field-by-analogy-to-session_state">Decision 3 — <code>tunnel_state</code> is the one operational field, by analogy to <code>session_state</code><a class="headerlink" href="#decision-3-tunnel_state-is-the-one-operational-field-by-analogy-to-session_state" title="Permanent link">&para;</a></h3>
+<p>A configured tunnel that is down is the single most useful tunnel-drift signal,
+just as a down BGP session is for routing. So <code>tunnel_state</code> is compared as drift,
+lower-cased by the collector for like-for-like comparison (Rule 10). Everything
+else in the block (<code>type</code>, <code>source</code>, <code>destination</code>, <code>enabled</code>) is configuration.</p>
+<h3 id="decision-4-source-and-destination-are-plain-strings-when-unset">Decision 4 — <code>source</code> and <code>destination</code> are plain strings, <code>""</code> when unset<a class="headerlink" href="#decision-4-source-and-destination-are-plain-strings-when-unset" title="Permanent link">&para;</a></h3>
+<p>A wrong tunnel destination silently misroutes the overlay, so both endpoints are
+first-class compared fields. They follow Rule 4: empty string for absent, never
+<code>None</code>, always present as keys.</p>
+<h3 id="decision-5-intent-comes-from-netbox-local_context_data">Decision 5 — intent comes from NetBox <code>local_context_data</code><a class="headerlink" href="#decision-5-intent-comes-from-netbox-local_context_data" title="Permanent link">&para;</a></h3>
+<p>NetBox has no native tunnel model, so tunnel intent is read from each device's
+<code>local_context_data</code>, the same mechanism <code>netbox_client</code> already uses for BGP and
+OSPF routing intent. No new NetBox object type is required.</p>
+<h3 id="decision-6-no-napalm-getter-exists-this-is-per-vendor-collection">Decision 6 — no NAPALM getter exists; this is per-vendor collection<a class="headerlink" href="#decision-6-no-napalm-getter-exists-this-is-per-vendor-collection" title="Permanent link">&para;</a></h3>
+<p>NAPALM has no tunnel getter. Each collector parses its own source (council notes):
+Arista <code>show interfaces tunnel</code> via eAPI; Cisco IOS-XE <code>show interfaces tunnel</code>
+via NAPALM CLI; Juniper via NETCONF/CLI; Nokia openconfig paths via pygnmi. This
+is collector work (Liam), invisible to the schema contract — listed here only so
+the schema-call accounts for the collection cost.</p>
+<hr />
+<h2 id="4-proposed-severity-defaults">4. Proposed severity defaults<a class="headerlink" href="#4-proposed-severity-defaults" title="Permanent link">&para;</a></h2>
+<p>Mirrors the council's guidance ("tunnel-down when intent says up → critical;
+config mismatch → warning") and the existing Section 7 conventions.</p>
+<table>
+<thead>
+<tr>
+<th>Situation</th>
+<th>Severity</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tunnel missing in reality (intent has it)</td>
+<td><code>critical</code></td>
+</tr>
+<tr>
+<td>Tunnel missing in intent (undocumented)</td>
+<td><code>info</code></td>
+</tr>
+<tr>
+<td><code>tunnel_state</code> mismatch (intent <code>up</code>, reality not <code>up</code>)</td>
+<td><code>critical</code></td>
+</tr>
+<tr>
+<td><code>tunnel_state</code> mismatch (intent down, reality up)</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td><code>destination</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td><code>source</code> mismatch</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td><code>type</code> mismatch (e.g. gre vs vti)</td>
+<td><code>warning</code></td>
+</tr>
+<tr>
+<td><code>enabled</code> mismatch (intent up, reality down)</td>
+<td><code>critical</code></td>
+</tr>
+<tr>
+<td><code>enabled</code> mismatch (intent down, reality up)</td>
+<td><code>warning</code></td>
+</tr>
+</tbody>
+</table>
+<p>Whole-tunnel missing/undocumented records use a sentinel field <code>_tunnel</code>, the same
+convention the differ already uses for <code>_interface</code>, <code>_vlan</code>, <code>_bgp_neighbor</code>, and
+<code>_ospf_adjacency</code>.</p>
+<hr />
+<h2 id="5-open-questions-for-the-schema-call">5. Open questions for the schema call<a class="headerlink" href="#5-open-questions-for-the-schema-call" title="Permanent link">&para;</a></h2>
+<ol>
+<li><strong>Scope of v1 — GRE + VTI only.</strong> Liam signed off: v1 is GRE + VTI only.
+   Policy-based IPsec SAs and MPLS LDP sessions are deferred — they do not fit the
+   interface-keyed shape and are more telemetry than config. Matthew to confirm.</li>
+<li><strong>Key form — tunnel interface name.</strong> Liam signed off: key by canonical tunnel
+   interface name. If IPsec/MPLS are ever folded in, they get a <code>&lt;type&gt;:&lt;peer&gt;</code>
+   key under their own convention rather than reshaping this one. Matthew to
+   confirm.</li>
+<li><strong><code>type</code> vocabulary.</strong> <code>gre</code> and <code>vti</code> for v1. Confirm we want the discriminator
+   present now even though only two values exist, for forward-compat.</li>
+<li><strong><code>tunnel_state</code> vocabulary.</strong> <code>up</code> / <code>down</code> only for v1. Sufficient for GRE/VTI?</li>
+<li><strong>Pattern bundle.</strong> The council wants ≥4 tunnel patterns in <code>patterns/</code> from day
+   one. Those depend on the final field names ratified here.</li>
+</ol>
+<hr />
+<h2 id="6-ownership-from-the-v475-ownership-table">6. Ownership (from the v4.75 ownership table)<a class="headerlink" href="#6-ownership-from-the-v475-ownership-table" title="Permanent link">&para;</a></h2>
+<table>
+<thead>
+<tr>
+<th>Work stream</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>tunnels</code> schema block design (this doc)</td>
+<td>Joint sign-off</td>
+</tr>
+<tr>
+<td><code>collectors/{arista,cisco,junos,nokia}.py</code> tunnel reality</td>
+<td>Liam</td>
+</tr>
+<tr>
+<td><code>netbox_client.py</code> tunnel intent from <code>local_context_data</code></td>
+<td>Liam</td>
+</tr>
+<tr>
+<td><code>differ.py</code> tunnel diff rules</td>
+<td>Matthew</td>
+</tr>
+<tr>
+<td><code>docs/schema.md</code> Section 2 fold-in</td>
+<td>Joint sign-off</td>
+</tr>
+<tr>
+<td>Initial tunnel patterns in <code>patterns/</code></td>
+<td>Liam (vendor) + Matthew (diff rules)</td>
+</tr>
+</tbody>
+</table>
+<p>The schema shape (Sections 2–4 above) is the only part needing joint sign-off
+before work starts. Once ratified and v4.0 is tagged, the collector work is
+Liam's lane and the differ rules are Matthew's, in the now-standard feature split.</p>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "..", "features": ["navigation.tabs", "navigation.top", "search.highlight", "content.code.copy"], "search": "../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.d7400e89.min.js"></script>
+      
+    
+  </body>
+</html>
