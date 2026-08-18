@@ -339,14 +339,14 @@ Claim before you build. Every DoD item is a GitHub Issue, version-labelled, with
 Cadence.
 One short weekly sync: what's blocked, what's next, any schema changes.
 Don't let a branch live longer than ~a week — merge small and often.
-Documentation lives in the repo. docs/ is canonical. A Claude Project (see below) can hold copies for convenience, but the repo wins any conflict.
+Documentation lives in the repo. docs/ is canonical. A shared workspace (see below) can hold copies for convenience, but the repo wins any conflict.
 Testing discipline.
 differ.py and any pure logic: real unit tests, from day one.
 Collectors: integration-tested against the Containerlab lab.
 CI must pass before any merge.
-On using Claude / AI assistants.
-Do create a shared Claude Project. Put this plan, docs/schema.md, and architecture decisions in it so any chat — yours or your partner's — has accurate context and you don't have to re-explain the project every time.
-Understand the limit: a Project shares documents, not live memory. Your Claude conversation and your partner's are independent — they do not see each other and cannot auto-deduplicate your work. There is no "two chatbots coordinating" feature.
+On using AI assistants.
+Do create a shared workspace. Put this plan, docs/schema.md, and architecture decisions in it so any chat — yours or your partner's — has accurate context and you don't have to re-explain the project every time.
+Understand the limit: a Project shares documents, not live memory. Your assistant conversation and your partner's are independent — they do not see each other and cannot auto-deduplicate your work. There is no "two chatbots coordinating" feature.
 Deduplication of actual work comes from you two: the schema contract, clear issue ownership, and staying aware of each other's merge requests. Git catches literal conflicts. The Project just keeps both assistants on the same page about the plan.
 When asking an assistant for help, paste in the relevant docs/ file so the answer fits the real, current design.
 
@@ -455,8 +455,8 @@ Paired seams (joint sign-off, owned by neither alone):
 
 Plugin architecture — agreed design (2026-05-31, signed off by Liam + Matthew)
 Decided via design council; full rationale in the decision log (outside the repo, in Liam's
-`~/.claude/councils/2026-05-31-netdrift-plugin-architecture/`). Summary of what changes and
-the interface both sides build against, so either Claude session has the contract:
+local design-council notes). Summary of what changes and
+the interface both sides build against, so either session has the contract:
 
 - **Contract:** `collectors/base.py` defines a structural `typing.Protocol` `Collector` over
   `get_reality(device: dict) -> dict` plus a `@register(platform, *, netbox_slugs=(...))`
@@ -526,7 +526,7 @@ v2.5
 
 v2.5 Ownership
 Payload shape decided by design council 2026-05-31; full decision log at
-`~/.claude/councils/2026-05-31-netdrift-v2.5-remediation-payload/log.md`.
+the local design-council notes.
 Contract written into `docs/schema.md` §9 (merged, joint sign-off).
 
 | v2.5 work stream | Owner | Notes |
@@ -597,7 +597,7 @@ v3.5 — Security + SLA + Acknowledge
 v3.5 Ownership
 Roadmap and ownership agreed in docs/ROADMAP_POST_V2.5.md (design council 2026-06-01).
 Open questions #1 (acknowledgements keyed by (device, fingerprint)) and #2 (GET /drifts
-public-by-default) were resolved on Claude's recommendation, ratified by Matthew for both
+public-by-default) were resolved on the design review's recommendation, ratified by Matthew for both
 partners.
 
 | v3.5 work stream | Owner | Notes |

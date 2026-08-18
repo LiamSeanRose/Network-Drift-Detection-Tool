@@ -151,7 +151,7 @@ regardless of launch timing.
 | ID | Finding | Evidence | Owner |
 |----|---------|----------|-------|
 | TEST1 | **No partial-failure test for multi-drift auto-apply.** The most dangerous path (pushes config to multiple devices in one call) has no test for "two matched issues, one succeeds, one fails" — including whether the consecutive-failure counter is contaminated by a mid-loop commit. | `tests/test_auto_apply.py:427`; `auto_apply.py` loop | Matthew |
-| TEST2 | **Nokia gNMI fixtures are unvalidated against a live device.** The BGP/OSPF collector is live pipeline code, but its tests pass against `FakeGNMIClient` shapes hand-derived from the YANG spec. Add `pytest.mark.xfail`/`skip` with the CLAUDE.md reason so the team is forced to re-verify when the Nokia gets routing — otherwise false-green tests mask a live collection failure. | `tests/test_nokia.py`, `collectors/nokia.py`, CLAUDE.md note | Liam |
+| TEST2 | **Nokia gNMI fixtures are unvalidated against a live device.** The BGP/OSPF collector is live pipeline code, but its tests pass against `FakeGNMIClient` shapes hand-derived from the YANG spec. Add `pytest.mark.xfail`/`skip` with the documented reason so the team is forced to re-verify when the Nokia gets routing — otherwise false-green tests mask a live collection failure. | `tests/test_nokia.py`, `collectors/nokia.py`, conventions note | Liam |
 
 ### 1.8 P1 — documentation gaps that block a safe launch
 

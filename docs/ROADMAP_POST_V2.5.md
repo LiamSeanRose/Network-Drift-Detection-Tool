@@ -495,7 +495,7 @@ to `docs/schema.md`. This is deferred to a post-v4.0 schema call with joint sign
 
 Work is divided by **feature**, not layer. One person owns a feature end-to-end
 (collector → differ → API → frontend → tests); the other reviews. See `docs/drift-record.md`
-and `CLAUDE.md § Work division model` for the full rules. `patterns/` YAML schema design
+and the project conventions note (§ Work division model) for the full rules. `patterns/` YAML schema design
 requires joint sign-off before any feature branch opens.
 
 | Feature | Owner | Scope |
@@ -664,7 +664,7 @@ Fuzzy matching is behind a feature flag `FUZZY_MATCHING_ENABLED` (default `false
 ### `netmap` — Network Discovery + Topology
 
 **Decision source:** Design council 2026-06-01. BLOCK on building this inside netdrift.
-See `~/.claude/councils/2026-06-01-netdrift-discovery-topology/log.md` for full rationale.
+See the local design-council notes for full rationale.
 
 **Status:** Not started. Opens after v4.75 (tunnel drift) proves out the collector transport
 reuse pattern, and when Liam has bandwidth beyond the main netdrift roadmap.

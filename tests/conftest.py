@@ -5,7 +5,7 @@ SR Linux BGP/OSPF collector tests.
 
 Those tests pass against ``FakeGNMIClient`` payloads whose shapes were modelled
 from the SR Linux YANG spec, not captured from a live routing node (see
-CLAUDE.md, "Open design questions"). They give real parser coverage today, but
+the project conventions note, "Open design questions"). They give real parser coverage today, but
 the fixture shapes must be re-verified against the device once routing is
 actually configured on the Nokia — SR Linux gNMI path/JSON encoding has
 historically differed from the spec examples, and a mismatch would let the
@@ -65,7 +65,7 @@ def pytest_configure(config):
         "markers",
         "unvalidated_fixture: relies on a fixture shape not yet verified against "
         "a live device (Nokia SR Linux BGP/OSPF gNMI; Arista EOS tunnels — see "
-        "CLAUDE.md).",
+        "the project conventions note).",
     )
 
 

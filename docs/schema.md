@@ -762,7 +762,7 @@ The v1.0 config-level drift addition. Settled jointly from the v1.0 proposal
 
 The v2.5 auto-remediation payload. Settled jointly from the design council
 decision log
-(`~/.claude/councils/2026-05-31-netdrift-v2.5-remediation-payload/log.md`).
+(the local design-council notes).
 
 27. **`remediation` is a discriminated union on `kind`.** A flat command blob was
     rejected: it cannot survive the fingerprint abstraction (breaks C1) and cannot
